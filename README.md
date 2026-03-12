@@ -77,18 +77,58 @@ CleanScout_rover/
 - `Servo`（Arduino 内置）
 - `SoftwareSerial`（Arduino 内置）
 
-## 4. 当前阶段编译检查结论（C-0.0.1）
+## 4. 当前阶段编译检查结论（C-0.0.1B）
 
-- 本地未检测到 `arduino-cli`，无法在当前环境直接执行 CLI 编译校验。
-- 结论：源码已纳管并完成结构核对，但“自动化编译通过”待补工具链后执行。
+已在本机完成 UNO 编译验证（使用你提供的 Arduino 安装路径）：
 
-建议后续补充步骤：
+- Arduino 工具链路径：`F:\AcademicHub\Arduino`
+- 编译目标：`arduino:avr:uno`
+- 示例入口：`Tyler_1_Library/examples/Tyler_1/Tyler_1.ino`
+- 编译结果：通过
+- 占用：`Flash 6584 bytes (20%)`，`RAM 212 bytes (10%)`
 
-1. 安装 `arduino-cli` 与目标板卡 core（如 `arduino:avr`）。
-2. 安装/确认 `AFMotor` 依赖。
-3. 对 `examples/Tyler_1/Tyler_1.ino` 执行一次标准编译检查并留痕到文档或提交记录。
+说明：
 
-## 5. 分支与版本约定（执行摘要）
+- 当前环境虽未安装 `arduino-cli`，但可使用 `arduino-builder.exe` 完成命令行编译。
+- AFMotor 库会出现若干上游 warning（如未使用参数），不影响当前示例编译通过。
+
+可复现命令（PowerShell）：
+
+```powershell
+& "F:\AcademicHub\Arduino\arduino-builder.exe" `
+  -compile `
+  -hardware "F:\AcademicHub\Arduino\hardware" `
+  -tools "F:\AcademicHub\Arduino\tools-builder" `
+  -tools "F:\AcademicHub\Arduino\hardware\tools\avr" `
+  -built-in-libraries "F:\AcademicHub\Arduino\libraries" `
+  -libraries "F:\Project\CleanScout_rover" `
+  -fqbn arduino:avr:uno `
+  -build-path "F:\Project\CleanScout_rover\.build\tyler1_uno" `
+  -warnings all `
+  "F:\Project\CleanScout_rover\Tyler_1_Library\examples\Tyler_1\Tyler_1.ino"
+```
+
+仓库内也提供了脚本：`tools/compile_uno.ps1`。
+
+## 5. VSCode 推荐环境
+
+为保证后续 C 线稳定开发，建议在 VSCode 使用以下任一方案：
+
+1. Arduino CLI 方案（推荐）
+- 安装 `arduino-cli`
+- 安装扩展：`Arduino`（Microsoft）或 `Arduino Community Edition`
+- 安装 UNO 板卡 core：`arduino:avr`
+- 在 CLI 或任务里调用 `arduino-cli compile`
+
+2. Arduino IDE 1.x 工具链方案（当前可用）
+- 保持 `F:\AcademicHub\Arduino` 可用
+- 使用 `arduino-builder.exe` 命令行编译（本仓已验证）
+
+3. PlatformIO 方案（可选）
+- 安装 `PlatformIO IDE` 扩展
+- 新建/迁移为 PlatformIO 工程后管理依赖与构建
+
+## 6. 分支与版本约定（执行摘要）
 
 - C/J 版本独立维护（示例：`C-0.0.1`、`J-0.0.1`）。
 - 开工先 checkpoint，再进入施工提交。
