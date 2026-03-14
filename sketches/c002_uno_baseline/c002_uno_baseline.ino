@@ -61,6 +61,8 @@ SoftwareSerial softSerial(9, 2);
 
 char cmdChar = '5';             // 存放串口控制指令字符
 byte systemMode = MAN;          // 用于控制系统运行模式
+byte previousMode = MAN;        // 用于检测模式切换
+bool fanTogglePending = false;  // 一次性风机翻转事件
                            
 void setup() {
 
@@ -76,7 +78,13 @@ void setup() {
 void loop() {
 
   if(softSerial.available()){           // 如果软件串口收到信息
-    cmdChar = softSerial.read();        // 将信息传递给cmdChar变量
+    char incomingChar = softSerial.read();
+
+    if (incomingChar == 'G') {
+      fanTogglePending = true;
+    } else {
+      cmdChar = incomingChar;        // 将信息传递给cmdChar变量
+    }
   }   
 
   runMode();                           // 执行运行模式并实施相应控制
@@ -84,6 +92,8 @@ void loop() {
 
 // 执行运行模式并实施相应控制
 void runMode(){
+  previousMode = systemMode;
+
   switch(cmdChar){
     case 'A':                       // 用户输入控制指令字符为自动运行字符'A'
       systemMode = AUTO;            // 将当前运行模式控制变量设置为AUTO
@@ -95,14 +105,35 @@ void runMode(){
       cmdChar =  '5';               // 并且将控制指令字符设置为'5'（停车字符）
       break;      
 
-    case 'G':                       // 用户输入控制指令字符为自动运行字符'G'          
+    case 'T':                       // 用户输入控制指令字符为体感运行字符'T'          
       systemMode = GEST;             // 将当前运行模式控制变量设置为体感模式
       tyler_1.stop();               // 切换为体感模式后自动停车
       cmdChar =  '5';               // 并且将控制指令字符设置为'5'（停车字符）
       break;        
   }
 
-  fan.update(systemMode, millis());
+  unsigned long nowMs = millis();
+  bool wasManualMode = previousMode == MAN || previousMode == GEST;
+  bool isManualMode = systemMode == MAN || systemMode == GEST;
+
+  if (previousMode != systemMode) {
+    if (systemMode == AUTO) {
+      fan.setControlSourceAuto(nowMs);
+    } else if (previousMode == AUTO) {
+      fan.setControlSourceManual(false);
+    } else if (wasManualMode && isManualMode) {
+      fan.setControlSourceManual(true);
+    }
+  }
+
+  if (fanTogglePending) {
+    if (isManualMode) {
+      fan.toggleManualLatch();
+    }
+    fanTogglePending = false;
+  }
+
+  fan.update(systemMode, nowMs);
   
   if (systemMode == MAN || systemMode == GEST ){  // 如果当前运行模式为手动或体感
     manMode();                      // 则使用手动控制函数控制太乐1号（体感和手动模式的控制字符相同）
@@ -226,7 +257,8 @@ void turnR90(){
 模式控制
 A --- AUTO 自动避障模式
 M --- MAN  人工控制模式
-G --- GEST 体感控制模式
+T --- GEST 体感控制模式
+G --- FAN  风机翻转指令
 
 运行控制
 8  ---  前进
@@ -240,5 +272,6 @@ G --- GEST 体感控制模式
 3  ---  右后
 A  ---  自动模式
 M  ---  手动模式
-G  ---  体感模式
+T  ---  体感模式
+G  ---  风机开关翻转
 */

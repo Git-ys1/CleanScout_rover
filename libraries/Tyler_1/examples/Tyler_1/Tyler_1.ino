@@ -35,6 +35,7 @@ http://www.taichi-maker.com/homepage/arduino-tutorial-index/arduino-hardware/#ta
 
 ***********************************************************************/
 #include <Tyler_1.h>
+#include <CleanScoutFan.h>
 #include <SoftwareSerial.h>
 
 #define OK_DIST 35        // 避障距离参数（cm）
@@ -44,22 +45,31 @@ http://www.taichi-maker.com/homepage/arduino-tutorial-index/arduino-hardware/#ta
 
 #define TURN_LEFT_90   900        // 左转90度延迟参数
 #define TURN_RIGHT_90   1000      // 右转90度延迟参数
+#define FAN_RELAY_PIN A2
+#define FAN_ACTIVE_HIGH true
+#define FAN_COOLDOWN_MS 3000UL
+#define FAN_RUN_MS 6000UL
 
 // 建立太乐1号对象。其中对象参数分别是：
 // (车轮电机1运转方向, 车轮电机2运转方向, 车轮电机3运转方向, 车轮电机4运转方向,
 // 车轮电机运转速度，测距传感器TRIG引脚， 测距传感器ECHO引脚，头部舵机信号引脚 )
 Tyler_1 tyler_1(1, 0, 1, 1, 200, A0, A1, 10); 
+CleanScoutFan fan(FAN_COOLDOWN_MS, FAN_RUN_MS);
                                                                                                
 // 建立SoftwareSerial对象，HC-06的TX接Arduino引脚9（AFMOTOR SERVO-2引脚）
 SoftwareSerial softSerial(9, 2);    
 
 char cmdChar = '5';             // 存放串口控制指令字符
 byte systemMode = MAN;          // 用于控制系统运行模式
+byte previousMode = MAN;        // 用于检测模式切换
+bool fanTogglePending = false;  // 一次性风机翻转事件
                            
 void setup() {
 
-  softSerial.begin(9600);     // 启动软件串口（用于接收手机控制指令信息）
+  softSerial.begin(9600);     // 启动软件串口（用于接收手机控制指令信息）  
   delay(100);   
+
+  fan.begin(FAN_RELAY_PIN, FAN_ACTIVE_HIGH);
   
   tyler_1.headServoIni();    //头部舵机初始化
   tyler_1.setHeadPos(90);    // 系统启动时将头部设置为90位置
@@ -69,7 +79,13 @@ void setup() {
 void loop() {
 
   if(softSerial.available()){           // 如果软件串口收到信息
-    cmdChar = softSerial.read();        // 将信息传递给cmdChar变量
+    char incomingChar = softSerial.read();
+
+    if (incomingChar == 'G') {
+      fanTogglePending = true;
+    } else {
+      cmdChar = incomingChar;        // 将信息传递给cmdChar变量
+    }
   }   
 
   runMode();                           // 执行运行模式并实施相应控制
@@ -77,6 +93,8 @@ void loop() {
 
 // 执行运行模式并实施相应控制
 void runMode(){
+  previousMode = systemMode;
+
   switch(cmdChar){
     case 'A':                       // 用户输入控制指令字符为自动运行字符'A'
       systemMode = AUTO;            // 将当前运行模式控制变量设置为AUTO
@@ -88,12 +106,35 @@ void runMode(){
       cmdChar =  '5';               // 并且将控制指令字符设置为'5'（停车字符）
       break;      
 
-    case 'G':                       // 用户输入控制指令字符为自动运行字符'G'          
+    case 'T':                       // 用户输入控制指令字符为体感运行字符'T'          
       systemMode = GEST;             // 将当前运行模式控制变量设置为体感模式
       tyler_1.stop();               // 切换为体感模式后自动停车
       cmdChar =  '5';               // 并且将控制指令字符设置为'5'（停车字符）
       break;        
   }
+
+  unsigned long nowMs = millis();
+  bool wasManualMode = previousMode == MAN || previousMode == GEST;
+  bool isManualMode = systemMode == MAN || systemMode == GEST;
+
+  if (previousMode != systemMode) {
+    if (systemMode == AUTO) {
+      fan.setControlSourceAuto(nowMs);
+    } else if (previousMode == AUTO) {
+      fan.setControlSourceManual(false);
+    } else if (wasManualMode && isManualMode) {
+      fan.setControlSourceManual(true);
+    }
+  }
+
+  if (fanTogglePending) {
+    if (isManualMode) {
+      fan.toggleManualLatch();
+    }
+    fanTogglePending = false;
+  }
+
+  fan.update(systemMode, nowMs);
   
   if (systemMode == MAN || systemMode == GEST ){  // 如果当前运行模式为手动或体感
     manMode();                      // 则使用手动控制函数控制太乐1号（体感和手动模式的控制字符相同）
@@ -155,6 +196,7 @@ void autoMode(){
   if(frontDist >= OK_DIST){          // 如果检测前方距离读数大于等于允许距离参数
     tyler_1.forward();               // 太乐1号向前
   } else {                           // 如果检测前方距离小于允许距离参数
+    fan.pauseByObstacle();
     tyler_1.stop();                  // 太乐1号停止   
     autoTurn();                      // 检测左右侧距离并做出自动转向 
   }
@@ -188,10 +230,12 @@ void autoTurn(){
   
   //检查左右距离并做出转向决定
   if ( rightDist >= leftDist){               // 如果右边距离大于左边距离              
-    turnR90();                                      // 右转90度
+    turnR90();                               // 右转90度
+    fan.notifyTurnCompleted();
     return;
   } else {                                         // 如果左边距离大于右边距离              
-    turnL90();                                     // 左转90度
+    turnL90();                              // 左转90度
+    fan.notifyTurnCompleted();
     return;
   }
 }
@@ -214,7 +258,8 @@ void turnR90(){
 模式控制
 A --- AUTO 自动避障模式
 M --- MAN  人工控制模式
-G --- GEST 体感控制模式
+T --- GEST 体感控制模式
+G --- FAN  风机翻转指令
 
 运行控制
 8  ---  前进
@@ -228,5 +273,6 @@ G --- GEST 体感控制模式
 3  ---  右后
 A  ---  自动模式
 M  ---  手动模式
-G  ---  体感模式
+T  ---  体感模式
+G  ---  风机开关翻转
 */
