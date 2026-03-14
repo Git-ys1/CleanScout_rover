@@ -48,7 +48,7 @@ http://www.taichi-maker.com/homepage/arduino-tutorial-index/arduino-hardware/#ta
 // 建立太乐1号对象。其中对象参数分别是：
 // (车轮电机1运转方向, 车轮电机2运转方向, 车轮电机3运转方向, 车轮电机4运转方向,
 // 车轮电机运转速度，测距传感器TRIG引脚， 测距传感器ECHO引脚，头部舵机信号引脚 )
-Tyler_1 tyler_1(1, 1, 1, 1, 200, A0, A1, 10); 
+Tyler_1 tyler_1(1, 0, 1, 1, 200, A0, A1, 10); 
                                                                                                
 // 建立SoftwareSerial对象，HC-06的TX接Arduino引脚9（AFMOTOR SERVO-2引脚）
 SoftwareSerial softSerial(9, 2);    
