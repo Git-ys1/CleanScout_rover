@@ -63,6 +63,11 @@ char cmdChar = '5';             // 存放串口控制指令字符
 byte systemMode = MAN;          // 用于控制系统运行模式
 byte previousMode = MAN;        // 用于检测模式切换
 bool fanTogglePending = false;  // 一次性风机翻转事件
+
+bool isModeCommand(char command);
+bool isEventCommand(char command);
+bool isMotionCommand(char command);
+void classifyBluetoothCommand(char incomingChar);
                            
 void setup() {
 
@@ -78,16 +83,46 @@ void setup() {
 void loop() {
 
   if(softSerial.available()){           // 如果软件串口收到信息
-    char incomingChar = softSerial.read();
-
-    if (incomingChar == 'G') {
-      fanTogglePending = true;
-    } else {
-      cmdChar = incomingChar;        // 将信息传递给cmdChar变量
-    }
+    classifyBluetoothCommand(softSerial.read());
   }   
 
   runMode();                           // 执行运行模式并实施相应控制
+}
+
+bool isModeCommand(char command) {
+  return command == 'A' || command == 'M' || command == 'T';
+}
+
+bool isEventCommand(char command) {
+  return command == 'G';
+}
+
+bool isMotionCommand(char command) {
+  switch (command) {
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      return true;
+    default:
+      return false;
+  }
+}
+
+void classifyBluetoothCommand(char incomingChar) {
+  if (isEventCommand(incomingChar)) {
+    fanTogglePending = true;
+    return;
+  }
+
+  if (isModeCommand(incomingChar) || isMotionCommand(incomingChar)) {
+    cmdChar = incomingChar;
+  }
 }
 
 // 执行运行模式并实施相应控制
