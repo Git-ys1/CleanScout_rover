@@ -50,7 +50,7 @@ if ([string]::IsNullOrWhiteSpace($BuildPath)) {
     $BuildPath = Join-Path $RepoRoot ".build\c002_uno_cli"
 }
 
-$tylerLibPath = Join-Path $RepoRoot "libraries\Tyler_1"
+$librariesRoot = Join-Path $RepoRoot "libraries"
 $afmotorLibPath = Join-Path $RepoRoot "Adafruit-Motor-Shield-library-master"
 $cli = Resolve-ArduinoCli -ManualPath $ArduinoCliPath
 
@@ -58,8 +58,8 @@ if (-not (Test-Path $SketchDir)) {
     throw "Sketch directory not found: $SketchDir"
 }
 
-if (-not (Test-Path $tylerLibPath)) {
-    throw "Tyler controlled library path not found: $tylerLibPath"
+if (-not (Test-Path $librariesRoot)) {
+    throw "Controlled libraries root not found: $librariesRoot"
 }
 
 if (-not (Test-Path $afmotorLibPath)) {
@@ -90,7 +90,7 @@ New-Item -ItemType Directory -Force $BuildPath | Out-Null
     --fqbn $Fqbn `
     --warnings all `
     --build-path $BuildPath `
-    --library $tylerLibPath `
+    --libraries $librariesRoot `
     --library $afmotorLibPath `
     $SketchDir
 

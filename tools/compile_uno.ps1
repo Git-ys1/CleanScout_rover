@@ -10,11 +10,11 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($SketchPath)) {
-    $SketchPath = Join-Path $RepoRoot "Tyler_1_Library\examples\Tyler_1\Tyler_1.ino"
+    $SketchPath = Join-Path $RepoRoot "sketches\c002_uno_baseline\c002_uno_baseline.ino"
 }
 
 if ([string]::IsNullOrWhiteSpace($BuildPath)) {
-    $BuildPath = Join-Path $RepoRoot ".build\tyler1_uno"
+    $BuildPath = Join-Path $RepoRoot ".build\c002_uno_builder"
 }
 
 $builder = Join-Path $ArduinoHome "arduino-builder.exe"
@@ -22,6 +22,7 @@ $hardware = Join-Path $ArduinoHome "hardware"
 $toolsBuilder = Join-Path $ArduinoHome "tools-builder"
 $toolsAvr = Join-Path $ArduinoHome "hardware\tools\avr"
 $builtinLibs = Join-Path $ArduinoHome "libraries"
+$controlledLibs = Join-Path $RepoRoot "libraries"
 
 if (-not (Test-Path $builder)) {
     throw "arduino-builder not found: $builder"
@@ -29,6 +30,10 @@ if (-not (Test-Path $builder)) {
 
 if (-not (Test-Path $SketchPath)) {
     throw "Sketch not found: $SketchPath"
+}
+
+if (-not (Test-Path $controlledLibs)) {
+    throw "Controlled libraries root not found: $controlledLibs"
 }
 
 New-Item -ItemType Directory -Force $BuildPath | Out-Null
@@ -40,6 +45,7 @@ New-Item -ItemType Directory -Force $BuildPath | Out-Null
     -tools $toolsBuilder `
     -tools $toolsAvr `
     -built-in-libraries $builtinLibs `
+    -libraries $controlledLibs `
     -libraries $RepoRoot `
     -fqbn arduino:avr:uno `
     -build-path $BuildPath `
