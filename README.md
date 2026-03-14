@@ -37,6 +37,22 @@
 - 当前蓝牙为单向接法，仅作为下行控制通道。
 - 当前硬件扩展余量有限，未来多传感器方案可能触发主控或 IO 重评估。
 
+## 2.2 C-1.1.3 Software Entry
+
+当前蓝牙协议冻结文档入口：
+
+- `docs/SOFTWARE/C-1.1.3_bluetooth_protocol.md`
+- `docs/SOFTWARE/C-1.1.3_fan_control_ownership.md`
+- `docs/SOFTWARE/C-1.1.3_test_cases.md`
+
+当前 `C-1.1.3` 协议摘要：
+
+- `A`：进入自动模式
+- `M`：进入手动模式
+- `T`：进入体感模式
+- `G`：人工风机开关翻转
+- 自动模式下 `G` 无效，风机继续由自动逻辑控制
+
 ## 3. 目录结构
 
 ```text
@@ -104,13 +120,32 @@ arduino-cli lib install Servo
 - 检查 `arduino:avr` core 是否安装
 - 检查 `Servo` 库是否安装
 - 以 `arduino:avr:uno` 编译 `sketches/c002_uno_baseline/`
-- 显式指定库路径（`libraries/Tyler_1` + `Adafruit-Motor-Shield-library-master`）
+- 显式指定库路径（`libraries/` + `Adafruit-Motor-Shield-library-master`）
 
 回退命令（过渡方案）：
 
 ```powershell
 .\tools\compile_uno.ps1
 ```
+
+## 5.1 Arduino IDE 直接 Verify 兼容
+
+如果你希望在 Arduino IDE 或插件里直接点 Verify，而不是只走仓库脚本，请先运行：
+
+```powershell
+.\tools\install_sketchbook_links.ps1
+```
+
+该脚本会把仓库内需要的库补到 Arduino sketchbook，避免出现：
+
+- `CleanScoutFan.h: No such file or directory`
+
+说明：
+
+- 仓库脚本仍然是官方主标准入口。
+- Arduino IDE 直接 Verify 是兼容入口。
+- 若 sketchbook 中已存在兼容库，脚本会保留现有库，不会直接覆盖。
+- `"Servo.h" 对应多个库` 只是库选择提示，不是 `CleanScoutFan.h` 缺失的根因。
 
 ## 6. VSCode 使用方式
 
