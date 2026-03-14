@@ -4,6 +4,8 @@
 
 当前主线为 C 系列（车体）。C-0.0.2 的目标是把 Tyler 基线收编为可长期维护的受控库，并建立 VSCode + arduino-cli 的标准编译流程。
 
+当前硬件冻结版本为 `C-1.1.1`。
+
 ## 1. 项目定位
 
 - 项目代号：`CleanScout_rover`
@@ -20,6 +22,20 @@
 - 标准编译入口：`sketches/c002_uno_baseline/c002_uno_baseline.ino`
 
 本轮不做功能开发，不改 `Tyler_1` 外部 API，不改动作语义与默认控制流程。
+
+## 2.1 C-1.1.1 Hardware Entry
+
+当前硬件冻结文档入口：
+
+- `docs/HARDWARE/C-1.1.1_hardware_freeze.md`
+- `docs/HARDWARE/C-1.1.1_pin_budget.md`
+- `docs/HARDWARE/C-1.1.1_power_and_relay_plan.md`
+
+当前硬件冻结摘要：
+
+- 当前风机方案仅为继电器开关版，不包含调速实现。
+- 当前蓝牙为单向接法，仅作为下行控制通道。
+- 当前硬件扩展余量有限，未来多传感器方案可能触发主控或 IO 重评估。
 
 ## 3. 目录结构
 
