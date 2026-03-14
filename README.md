@@ -37,21 +37,22 @@
 - 当前蓝牙为单向接法，仅作为下行控制通道。
 - 当前硬件扩展余量有限，未来多传感器方案可能触发主控或 IO 重评估。
 
-## 2.2 C-1.1.3 Software Entry
+## 2.2 C-1.1.3B Software Entry
 
 当前蓝牙协议冻结文档入口：
 
-- `docs/SOFTWARE/C-1.1.3_bluetooth_protocol.md`
-- `docs/SOFTWARE/C-1.1.3_fan_control_ownership.md`
-- `docs/SOFTWARE/C-1.1.3_test_cases.md`
+- `docs/SOFTWARE/C-1.1.3B_protocol_freeze.md`
+- `docs/SOFTWARE/C-1.1.3B_event_vs_mode.md`
+- `docs/SOFTWARE/C-1.1.3B_test_cases.md`
 
-当前 `C-1.1.3` 协议摘要：
+当前 `C-1.1.3B` 协议摘要：
 
 - `A`：进入自动模式
 - `M`：进入手动模式
 - `T`：进入体感模式
-- `G`：人工风机开关翻转
-- 自动模式下 `G` 无效，风机继续由自动逻辑控制
+- `G`：一次性风机翻转事件
+- 自动模式下 `G` 无效但立即消费，不改变当前模式
+- `Tyler_1_Library/` 中旧协议仅作为上游历史证据，不作为现行协议依据
 
 ## 3. 目录结构
 
