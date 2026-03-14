@@ -27,7 +27,10 @@ CleanScoutFan::CleanScoutFan(unsigned long cooldownMsValue, unsigned long runMsV
   : relayPin(A2),
     relayActiveHigh(true),
     initialized(false),
+    outputEnabled(false),
     pendingTurnResume(false),
+    manualLatchOn(false),
+    controlSource(MANUAL_SOURCE),
     state(DISABLED),
     stateStartedAt(0),
     cooldownMs(cooldownMsValue),
@@ -48,52 +51,114 @@ void CleanScoutFan::update(uint8_t currentMode, unsigned long nowMs) {
     return;
   }
 
+  if (controlSource == MANUAL_SOURCE) {
+    applyCurrentOutput();
+    return;
+  }
+
   if (currentMode != kAutoMode) {
-    forceOff();
+    pendingTurnResume = false;
+    state = DISABLED;
+    stateStartedAt = 0;
+    applyCurrentOutput();
     return;
   }
 
   if (state == DISABLED) {
-    setOutputEnabled(false);
     setState(COOLDOWN, nowMs);
+    applyCurrentOutput();
     return;
   }
 
   if (state == PAUSED_BY_OBSTACLE) {
     if (pendingTurnResume) {
       pendingTurnResume = false;
-      setOutputEnabled(false);
       setState(COOLDOWN, nowMs);
+      applyCurrentOutput();
     }
     return;
   }
 
   if (state == COOLDOWN) {
     if (nowMs - stateStartedAt >= cooldownMs) {
-      setOutputEnabled(true);
       setState(RUNNING, nowMs);
+      applyCurrentOutput();
     }
     return;
   }
 
   if (state == RUNNING && nowMs - stateStartedAt >= runMs) {
-    setOutputEnabled(false);
     setState(COOLDOWN, nowMs);
+    applyCurrentOutput();
   }
 }
 
+void CleanScoutFan::setControlSourceAuto(unsigned long nowMs) {
+  if (!initialized) {
+    return;
+  }
+
+  controlSource = AUTO_SOURCE;
+  manualLatchOn = false;
+  pendingTurnResume = false;
+  setState(COOLDOWN, nowMs);
+  applyCurrentOutput();
+}
+
+void CleanScoutFan::setControlSourceManual(bool preserveManualLatch) {
+  if (!initialized) {
+    return;
+  }
+
+  controlSource = MANUAL_SOURCE;
+  pendingTurnResume = false;
+  state = DISABLED;
+  stateStartedAt = 0;
+
+  if (!preserveManualLatch) {
+    manualLatchOn = false;
+  }
+
+  applyCurrentOutput();
+}
+
+void CleanScoutFan::toggleManualLatch() {
+  if (!initialized || controlSource != MANUAL_SOURCE) {
+    return;
+  }
+
+  manualLatchOn = !manualLatchOn;
+  applyCurrentOutput();
+}
+
+void CleanScoutFan::applyCurrentOutput() {
+  if (!initialized) {
+    return;
+  }
+
+  bool shouldEnable = false;
+
+  if (controlSource == MANUAL_SOURCE) {
+    shouldEnable = manualLatchOn;
+  } else if (state == RUNNING) {
+    shouldEnable = true;
+  }
+
+  setOutputEnabled(shouldEnable);
+}
+
 void CleanScoutFan::pauseByObstacle() {
-  if (!initialized || state == DISABLED) {
+  if (!initialized || controlSource != AUTO_SOURCE || state == DISABLED) {
     return;
   }
 
   pendingTurnResume = false;
-  setOutputEnabled(false);
   setState(PAUSED_BY_OBSTACLE, millis());
+  applyCurrentOutput();
 }
 
 void CleanScoutFan::notifyTurnCompleted() {
-  if (!initialized || state != PAUSED_BY_OBSTACLE) {
+  if (!initialized || controlSource != AUTO_SOURCE || state != PAUSED_BY_OBSTACLE) {
     return;
   }
 
@@ -110,9 +175,10 @@ void CleanScoutFan::forceOff() {
   }
 
   pendingTurnResume = false;
-  setOutputEnabled(false);
+  manualLatchOn = false;
   state = DISABLED;
   stateStartedAt = 0;
+  applyCurrentOutput();
 
 #if CLEANSCOUT_FAN_DEBUG
   Serial.println(F("fan: forced off"));
@@ -120,7 +186,7 @@ void CleanScoutFan::forceOff() {
 }
 
 bool CleanScoutFan::isRunning() const {
-  return state == RUNNING;
+  return outputEnabled;
 }
 
 uint8_t CleanScoutFan::getState() const {
@@ -131,7 +197,16 @@ bool CleanScoutFan::isPausedByObstacle() const {
   return state == PAUSED_BY_OBSTACLE;
 }
 
+CleanScoutFan::ControlSource CleanScoutFan::getControlSource() const {
+  return controlSource;
+}
+
+bool CleanScoutFan::isManualLatchOn() const {
+  return manualLatchOn;
+}
+
 void CleanScoutFan::setOutputEnabled(bool enabled) {
+  outputEnabled = enabled;
   digitalWrite(relayPin, enabled == relayActiveHigh ? HIGH : LOW);
 
 #if CLEANSCOUT_FAN_DEBUG
