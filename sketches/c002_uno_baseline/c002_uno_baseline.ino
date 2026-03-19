@@ -37,6 +37,11 @@ http://www.taichi-maker.com/homepage/arduino-tutorial-index/arduino-hardware/#ta
 #include <Tyler_1.h>
 #include <CleanScoutFan.h>
 #include <SoftwareSerial.h>
+#include <string.h>
+
+#ifndef CJ_COMM_POC_BUILD
+#define CJ_COMM_POC_BUILD 1
+#endif
 
 #define OK_DIST 35        // 避障距离参数（cm）
 #define MAN 0             // 手动模式
@@ -49,6 +54,8 @@ http://www.taichi-maker.com/homepage/arduino-tutorial-index/arduino-hardware/#ta
 #define FAN_ACTIVE_HIGH true
 #define FAN_COOLDOWN_MS 3000UL
 #define FAN_RUN_MS 6000UL
+#define BRIDGE_BAUD 9600
+#define BRIDGE_LINE_BUFFER_LEN 32
 
 // 建立太乐1号对象。其中对象参数分别是：
 // (车轮电机1运转方向, 车轮电机2运转方向, 车轮电机3运转方向, 车轮电机4运转方向,
@@ -58,20 +65,35 @@ CleanScoutFan fan(FAN_COOLDOWN_MS, FAN_RUN_MS);
                                                                                                
 // 建立SoftwareSerial对象，HC-06的TX接Arduino引脚9（AFMOTOR SERVO-2引脚）
 SoftwareSerial softSerial(9, 2);    
+SoftwareSerial bridgeSerial(A3, A4);
 
 char cmdChar = '5';             // 存放串口控制指令字符
 byte systemMode = MAN;          // 用于控制系统运行模式
 byte previousMode = MAN;        // 用于检测模式切换
 bool fanTogglePending = false;  // 一次性风机翻转事件
+bool externalPauseActive = false;
+bool externalPauseSourceJ = false;
+char bridgeLineBuffer[BRIDGE_LINE_BUFFER_LEN];
+uint8_t bridgeLineLength = 0;
 
 bool isModeCommand(char command);
 bool isEventCommand(char command);
 bool isMotionCommand(char command);
 void classifyBluetoothCommand(char incomingChar);
+void pollControlInputs();
+void pollBridgeSerial();
+void processBridgeLine(const char* line);
+void sendBridgeLine(const char* line);
+void enterExternalPause();
+void exitExternalPause();
                            
 void setup() {
-
+#if CJ_COMM_POC_BUILD
+  bridgeSerial.begin(BRIDGE_BAUD);
+  bridgeSerial.listen();
+#else
   softSerial.begin(9600);     // 启动软件串口（用于接收手机控制指令信息）
+#endif
   delay(100);   
 
   fan.begin(FAN_RELAY_PIN, FAN_ACTIVE_HIGH);
@@ -81,10 +103,12 @@ void setup() {
 }
 
 void loop() {
+  pollControlInputs();
 
-  if(softSerial.available()){           // 如果软件串口收到信息
-    classifyBluetoothCommand(softSerial.read());
-  }   
+  if (externalPauseActive && externalPauseSourceJ) {
+    tyler_1.stop();
+    return;
+  }
 
   runMode();                           // 执行运行模式并实施相应控制
 }
@@ -123,6 +147,82 @@ void classifyBluetoothCommand(char incomingChar) {
   if (isModeCommand(incomingChar) || isMotionCommand(incomingChar)) {
     cmdChar = incomingChar;
   }
+}
+
+void pollControlInputs() {
+#if CJ_COMM_POC_BUILD
+  pollBridgeSerial();
+#else
+  if (softSerial.available()) {
+    classifyBluetoothCommand(softSerial.read());
+  }
+#endif
+}
+
+void pollBridgeSerial() {
+  while (bridgeSerial.available()) {
+    char incomingChar = bridgeSerial.read();
+
+    if (incomingChar == '\r') {
+      continue;
+    }
+
+    if (incomingChar == '\n') {
+      if (bridgeLineLength == 0) {
+        continue;
+      }
+
+      bridgeLineBuffer[bridgeLineLength] = '\0';
+      processBridgeLine(bridgeLineBuffer);
+      bridgeLineLength = 0;
+      continue;
+    }
+
+    if (bridgeLineLength < BRIDGE_LINE_BUFFER_LEN - 1) {
+      bridgeLineBuffer[bridgeLineLength++] = incomingChar;
+      continue;
+    }
+
+    // 行缓冲区溢出时直接丢弃本行，等待下一次换行重新同步。
+    bridgeLineLength = 0;
+  }
+}
+
+void processBridgeLine(const char* line) {
+  if (strcmp(line, "PING") == 0) {
+    sendBridgeLine("PONG");
+    return;
+  }
+
+  if (strcmp(line, "STOP_REQ") == 0) {
+    enterExternalPause();
+    sendBridgeLine("STOP_ACK");
+    return;
+  }
+
+  if (strcmp(line, "RESUME_REQ") == 0) {
+    exitExternalPause();
+    sendBridgeLine("RESUME_ACK");
+  }
+}
+
+void sendBridgeLine(const char* line) {
+  bridgeSerial.println(line);
+}
+
+void enterExternalPause() {
+  if (!externalPauseActive) {
+    tyler_1.stop();
+    fan.forceOff();
+  }
+
+  externalPauseActive = true;
+  externalPauseSourceJ = true;
+}
+
+void exitExternalPause() {
+  externalPauseActive = false;
+  externalPauseSourceJ = false;
 }
 
 // 执行运行模式并实施相应控制
