@@ -38,16 +38,27 @@
 - `docs/SOFTWARE/C-1.1.3B_protocol_freeze.md`
 - `docs/SOFTWARE/C-1.1.3B_event_vs_mode.md`
 - `docs/SOFTWARE/C-1.1.3B_test_cases.md`
+- `docs/PLAN/C-1.2.0.md`
+- `docs/SOFTWARE/C-1.2.0_cj_comm_poc_protocol.md`
+- `docs/HARDWARE/C-1.2.0_cj_comm_wiring.md`
+- `docs/VERIFY/C-1.2.0_test_log.md`
 
 ### 2.3 J 线资料评估
 
 - `docs/JLINE/C-1.1.6_J_line_material_inventory.md`
 - `docs/JLINE/C-1.1.6_J_line_system_assessment.md`
 
+### 2.4 J 线受控实验副本
+
+- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/README.md`
+- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/wiring.md`
+- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/test_record.md`
+
 说明：
 
 - `J-jixiebi/` 当前未纳入 Git 历史。
-- 本轮只基于本地卖家资料做 J 线评估，不做机械臂代码施工。
+- `J-jixiebi/` 仍作为卖家原始资料证据链保留。
+- `jixiebi/` 目录中的 `C-1.2.0` 内容是受控实验副本，可继续二开。
 
 ## 3. 当前阶段判断
 
@@ -70,6 +81,7 @@
 - 风机方案当前仅为继电器开关版，不包含调速实现
 - 蓝牙当前作为下行控制通道
 - 主控与 IO 余量有限，后续扩展可能触发重评估
+- `C-1.2.0` 已新增 `UNO <-> F411 <-> J(OpenMV)` 最小双向通信闭环的软件骨架
 
 ## 5. Windows 环境准备（arduino-cli 标准）
 
@@ -121,11 +133,18 @@ Arduino IDE 直接 Verify 兼容入口：
 .\tools\install_sketchbook_links.ps1
 ```
 
+`C-1.2.0` 的 F411 桥接最小产物构建：
+
+```powershell
+.\tools\build_f411_bridge.ps1
+```
+
 说明：
 
 - 仓库脚本仍然是主标准入口
 - Arduino IDE 直接 Verify 是兼容入口
 - `"Servo.h" 对应多个库` 只是库选择提示，不是 `CleanScoutFan.h` 缺失的根因
+- `build_f411_bridge.ps1` 当前只验证 F411 桥接源码能产出 `.elf/.hex`，不等同于实板 Gate0 已完成
 
 ## 7. VSCode 使用方式
 
