@@ -6,10 +6,13 @@ from pyb import Servo, UART, Pin, Timer, millis
 
 import cj_link
 
-############################ C-1.2.0 configuration ############################
+############################ C-1.2.1 configuration ############################
 STATE_SCAN = 0
 STATE_WAIT_PICK_WINDOW = 1
 STATE_PICKING = 2
+STATE_DONE = 3
+STATE_TIMEOUT = 4
+STATE_FAIL = 5
 
 COLOR_RED = 1
 COLOR_YELLOW = 2
@@ -19,6 +22,22 @@ UART_BAUD = 9600
 STABLE_FRAMES_REQUIRED = 3
 HEARTBEAT_INTERVAL_MS = 1000
 DEFAULT_PICK_WINDOW_MS = 10000
+WAIT_PICK_WINDOW_TIMEOUT_MS = 2000
+COLOR_FOUND_RETRY_INTERVAL_MS = 400
+MAX_COLOR_FOUND_RETRIES = 4
+RESULT_DISPLAY_HOLD_MS = 1000
+PIXELS_THRESHOLD = 500
+VERTICAL_BIAS = -30
+
+RED_THRESHOLD = [(38, 76, 22, 59, 0, 28)]
+YELLOW_THRESHOLD = [(53, 99, -13, 46, 29, 57)]
+BLUE_THRESHOLD = [(33, 80, -31, 18, -56, -21)]
+
+THRESHOLDS = {
+    COLOR_RED: RED_THRESHOLD,
+    COLOR_YELLOW: YELLOW_THRESHOLD,
+    COLOR_BLUE: BLUE_THRESHOLD,
+}
 
 ############################ vendor baseline motion ############################
 tim = Timer(2, freq=50)
@@ -51,16 +70,6 @@ def find_max(blobs):
     return max_blob
 
 
-yellow_threshold = [(53, 99, -13, 46, 29, 57)]
-red_threshold = [(38, 76, 22, 59, 0, 28)]
-blue_threshold = [(33, 80, -31, 18, -56, -21)]
-
-THRESHOLDS = {
-    COLOR_RED: red_threshold,
-    COLOR_YELLOW: yellow_threshold,
-    COLOR_BLUE: blue_threshold,
-}
-
 pan_pid = PID(p=0.09, i=0.0, imax=90)
 tilt_pid = PID(p=0.09, i=0.0, imax=90)
 
@@ -77,12 +86,89 @@ pan_servo.angle(90)
 
 link = cj_link.CjLink(UART(1, UART_BAUD))
 state = STATE_SCAN
+state_entered_ms = millis()
 last_color = 0
 stable_count = 0
 pending_color = 0
 pick_window_ms = DEFAULT_PICK_WINDOW_MS
 last_heartbeat_ms = 0
-vertical_bias = -30
+wait_started_ms = 0
+last_color_found_tx_ms = 0
+color_found_retry_count = 0
+result_hold_until_ms = 0
+state_banner_text = ""
+state_banner_until_ms = 0
+
+
+def color_name(color_id):
+    if color_id == COLOR_RED:
+        return "RED"
+    if color_id == COLOR_YELLOW:
+        return "YELLOW"
+    if color_id == COLOR_BLUE:
+        return "BLUE"
+    return "NONE"
+
+
+def state_label(current_state):
+    if current_state == STATE_SCAN:
+        return "SCAN"
+    if current_state == STATE_WAIT_PICK_WINDOW:
+        return "WAIT_PICK_WINDOW"
+    if current_state == STATE_PICKING:
+        return "PICKING"
+    if current_state == STATE_DONE:
+        return "DONE"
+    if current_state == STATE_TIMEOUT:
+        return "TIMEOUT"
+    if current_state == STATE_FAIL:
+        return "FAIL"
+    return "UNKNOWN"
+
+
+def set_state(new_state, banner_text=None, banner_hold_ms=0):
+    global state
+    global state_entered_ms
+    global state_banner_text
+    global state_banner_until_ms
+
+    state = new_state
+    state_entered_ms = millis()
+    print("[CJ] STATE -> " + state_label(new_state))
+
+    if banner_text is not None:
+        state_banner_text = banner_text
+        state_banner_until_ms = state_entered_ms + banner_hold_ms
+        print("[CJ] EVENT -> " + banner_text)
+
+
+def current_status_text(now_ms):
+    if state_banner_text and now_ms <= state_banner_until_ms:
+        return state_banner_text
+    return state_label(state)
+
+
+def draw_status(img, now_ms):
+    status_text = current_status_text(now_ms)
+    color_text = color_name(pending_color)
+    img.draw_string(2, 2, status_text, color=(255, 0, 0), scale=2)
+    img.draw_string(2, 22, "TARGET:" + color_text, color=(0, 255, 0), scale=1)
+
+
+def begin_wait_pick_window(color_id, now_ms):
+    global pending_color
+    global wait_started_ms
+    global last_color_found_tx_ms
+    global color_found_retry_count
+    global stable_count
+
+    pending_color = color_id
+    wait_started_ms = now_ms
+    last_color_found_tx_ms = now_ms
+    color_found_retry_count = 0
+    stable_count = 0
+    link.send_color_found(color_id)
+    set_state(STATE_WAIT_PICK_WINDOW, "COLOR_FOUND", 500)
 
 
 def reset_pose():
@@ -91,10 +177,28 @@ def reset_pose():
     claw_angle(60)
 
 
+def reset_to_scan():
+    global last_color
+    global stable_count
+    global pending_color
+    global color_found_retry_count
+    global wait_started_ms
+    global last_color_found_tx_ms
+
+    last_color = 0
+    stable_count = 0
+    pending_color = 0
+    color_found_retry_count = 0
+    wait_started_ms = 0
+    last_color_found_tx_ms = 0
+    reset_pose()
+    set_state(STATE_SCAN)
+
+
 def find_color_blob(img, color_id=None):
     search_order = [COLOR_RED, COLOR_YELLOW, COLOR_BLUE] if color_id is None else [color_id]
     for current_color in search_order:
-        blobs = img.find_blobs(THRESHOLDS[current_color], pixels_threshold=500)
+        blobs = img.find_blobs(THRESHOLDS[current_color], pixels_threshold=PIXELS_THRESHOLD)
         if blobs:
             return current_color, find_max(blobs)
     return 0, None
@@ -132,6 +236,7 @@ def run_pick_sequence(color_id, timeout_ms):
         clock.tick()
         img = sensor.snapshot()
         detected_color, max_blob = find_color_blob(img, color_id)
+        draw_status(img, millis())
 
         if detected_color == 0 or max_blob is None:
             reset_pose()
@@ -143,7 +248,7 @@ def run_pick_sequence(color_id, timeout_ms):
         ball_s = obj_distance((max_blob[2] + max_blob[3]) / 2)
 
         if 60 <= ball_s <= 110:
-            tilt_error = (img.height() / 2 + vertical_bias) - max_blob.cy()
+            tilt_error = (img.height() / 2 + VERTICAL_BIAS) - max_blob.cy()
             tilt_output = tilt_pid.get_pid(tilt_error, 1)
             tilt_servo.angle(tilt_servo.angle() - tilt_output)
             if abs(tilt_output) <= 0.5:
@@ -159,7 +264,7 @@ def run_pick_sequence(color_id, timeout_ms):
         align_count = 0
         if ball_s > 110:
             pan_error = img.width() / 2 - max_blob.cx()
-            tilt_error = (img.height() / 2 + vertical_bias) - max_blob.cy()
+            tilt_error = (img.height() / 2 + VERTICAL_BIAS) - max_blob.cy()
             pan_output = pan_pid.get_pid(pan_error, 1) / 2
             tilt_output = tilt_pid.get_pid(tilt_error, 1)
             tilt_angle = tilt_servo.angle() - tilt_output
@@ -174,13 +279,18 @@ def run_pick_sequence(color_id, timeout_ms):
     return False
 
 
+reset_to_scan()
+
 while True:
     clock.tick()
     now_ms = millis()
+    img = sensor.snapshot()
+    draw_status(img, now_ms)
 
     for frame in link.poll():
         frame_type = frame["type"]
         if frame_type == cj_link.TYPE_PING:
+            print("[CJ] RX PING")
             link.send_heartbeat(state)
         elif frame_type == cj_link.TYPE_PICK_WINDOW and state == STATE_WAIT_PICK_WINDOW:
             payload = frame["payload"]
@@ -188,19 +298,18 @@ while True:
                 pick_window_ms = payload[0] | (payload[1] << 8)
             else:
                 pick_window_ms = DEFAULT_PICK_WINDOW_MS
-            state = STATE_PICKING
+            print("[CJ] RX PICK_WINDOW timeout_ms=" + str(pick_window_ms))
+            link.send_arm_busy(1)
+            set_state(STATE_PICKING)
         elif frame_type == cj_link.TYPE_ABORT and state == STATE_WAIT_PICK_WINDOW:
-            state = STATE_SCAN
-            pending_color = 0
-            stable_count = 0
-            reset_pose()
+            print("[CJ] RX ABORT")
+            reset_to_scan()
 
     if now_ms - last_heartbeat_ms >= HEARTBEAT_INTERVAL_MS:
         link.send_heartbeat(state)
         last_heartbeat_ms = now_ms
 
     if state == STATE_SCAN:
-        img = sensor.snapshot()
         color_id, max_blob = find_color_blob(img)
         if color_id != 0 and max_blob is not None:
             img.draw_rectangle(max_blob.rect())
@@ -212,10 +321,7 @@ while True:
                 stable_count = 1
 
             if stable_count >= STABLE_FRAMES_REQUIRED:
-                pending_color = color_id
-                link.send_color_found(color_id)
-                state = STATE_WAIT_PICK_WINDOW
-                stable_count = 0
+                begin_wait_pick_window(color_id, now_ms)
         else:
             last_color = 0
             stable_count = 0
@@ -223,18 +329,41 @@ while True:
         continue
 
     if state == STATE_WAIT_PICK_WINDOW:
-        sensor.snapshot()
+        _, max_blob = find_color_blob(img, pending_color)
+        if max_blob is not None:
+            img.draw_rectangle(max_blob.rect())
+            img.draw_cross(max_blob.cx(), max_blob.cy())
+
+        if (now_ms - last_color_found_tx_ms) >= COLOR_FOUND_RETRY_INTERVAL_MS and color_found_retry_count < MAX_COLOR_FOUND_RETRIES:
+            color_found_retry_count += 1
+            last_color_found_tx_ms = now_ms
+            link.send_color_found(pending_color)
+            print("[CJ] RETRY COLOR_FOUND count=" + str(color_found_retry_count))
+
+        if (now_ms - wait_started_ms) >= WAIT_PICK_WINDOW_TIMEOUT_MS or color_found_retry_count >= MAX_COLOR_FOUND_RETRIES:
+            print("[CJ] WAIT_PICK_WINDOW timeout -> SCAN")
+            reset_to_scan()
         continue
 
     if state == STATE_PICKING:
-        link.send_arm_busy(1)
         try:
             if run_pick_sequence(pending_color, pick_window_ms):
                 link.send_pick_done(pending_color)
+                result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+                set_state(STATE_DONE)
             else:
                 link.send_pick_timeout(pending_color)
-        except Exception:
+                result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+                set_state(STATE_TIMEOUT)
+        except Exception as exc:
+            print("[CJ] PICK FAIL: " + str(exc))
             link.send_arm_fail(1)
+            result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+            set_state(STATE_FAIL)
         pending_color = 0
-        state = STATE_SCAN
         reset_pose()
+        continue
+
+    if state == STATE_DONE or state == STATE_TIMEOUT or state == STATE_FAIL:
+        if now_ms >= result_hold_until_ms:
+            reset_to_scan()
