@@ -112,6 +112,12 @@ static volatile uint32_t diag_j_ping_sent_count = 0U;
 static volatile uint32_t diag_j_heartbeat_count = 0U;
 static volatile uint32_t diag_j_ack_count = 0U;
 static volatile uint32_t diag_j_frame_count = 0U;
+static volatile uint32_t diag_color_found_count = 0U;
+static volatile uint32_t diag_pick_window_sent_count = 0U;
+static volatile uint32_t diag_pick_done_count = 0U;
+static volatile uint32_t diag_pick_timeout_count = 0U;
+static volatile uint32_t diag_arm_fail_count = 0U;
+static volatile uint32_t diag_early_j_result_count = 0U;
 static volatile bool diag_uno_link_confirmed = false;
 static volatile bool diag_j_link_confirmed = false;
 static volatile char diag_last_log_reason[REASON_BUFFER_LEN];
@@ -420,6 +426,13 @@ static void platform_service_keepalives(void) {
 }
 
 static void platform_observe_bridge_state(void) {
+  diag_color_found_count = bridge.diag_color_found_count;
+  diag_pick_window_sent_count = bridge.diag_pick_window_sent_count;
+  diag_pick_done_count = bridge.diag_pick_done_count;
+  diag_pick_timeout_count = bridge.diag_pick_timeout_count;
+  diag_arm_fail_count = bridge.diag_arm_fail_count;
+  diag_early_j_result_count = bridge.diag_early_j_result_count;
+
   if (observed_bridge_state != bridge.state) {
     observed_bridge_state = bridge.state;
     diag_bridge_state = bridge.state;

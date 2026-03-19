@@ -28,7 +28,7 @@ if ([string]::IsNullOrWhiteSpace($BuildPath)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($ArtifactDir)) {
-    $ArtifactDir = Join-Path $RepoRoot "artifacts\C-1.2.1\f411"
+    $ArtifactDir = Join-Path $RepoRoot "artifacts\C-1.2.2\f411"
 }
 
 $projectRoot = Join-Path $RepoRoot "firmware\cj_bridge_f411_cubeide"

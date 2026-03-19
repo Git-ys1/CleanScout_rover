@@ -28,6 +28,12 @@ typedef struct {
   uint8_t active_color;
   uint8_t last_j_seq;
   uint8_t last_j_type;
+  uint32_t diag_color_found_count;
+  uint32_t diag_pick_window_sent_count;
+  uint32_t diag_pick_done_count;
+  uint32_t diag_pick_timeout_count;
+  uint32_t diag_arm_fail_count;
+  uint32_t diag_early_j_result_count;
 } cj_bridge_t;
 
 void cj_bridge_init(cj_bridge_t *bridge, const cj_bridge_io_t *io);

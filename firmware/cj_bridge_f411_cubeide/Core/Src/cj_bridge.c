@@ -85,6 +85,7 @@ void cj_bridge_on_uno_line(cj_bridge_t *bridge, const char *line) {
       (uint8_t)((CJ_J_LOCAL_TIMEOUT_MS >> 8U) & 0xFFU)
     };
     send_j_message(bridge, CJ_MSG_PICK_WINDOW, timeout_payload, sizeof(timeout_payload));
+    bridge->diag_pick_window_sent_count++;
     set_state(bridge, CJ_BRIDGE_WAIT_J_RESULT, CJ_J_WATCHDOG_TIMEOUT_MS);
     return;
   }
@@ -103,6 +104,7 @@ void cj_bridge_on_j_frame(cj_bridge_t *bridge, const cj_frame_t *frame) {
 
   switch (frame->type) {
     case CJ_MSG_COLOR_FOUND:
+      bridge->diag_color_found_count++;
       if (bridge->state != CJ_BRIDGE_IDLE) {
         return;
       }
@@ -114,10 +116,29 @@ void cj_bridge_on_j_frame(cj_bridge_t *bridge, const cj_frame_t *frame) {
       return;
 
     case CJ_MSG_PICK_DONE:
+      bridge->diag_pick_done_count++;
+      break;
+    case CJ_MSG_PICK_TIMEOUT:
+      bridge->diag_pick_timeout_count++;
+      break;
+    case CJ_MSG_ARM_FAIL:
+      bridge->diag_arm_fail_count++;
+      break;
+    default:
+      break;
+  }
+
+  switch (frame->type) {
+    case CJ_MSG_PICK_DONE:
     case CJ_MSG_PICK_TIMEOUT:
     case CJ_MSG_ARM_FAIL:
-      if (bridge->state != CJ_BRIDGE_WAIT_J_RESULT) {
+      if (bridge->state != CJ_BRIDGE_WAIT_J_RESULT &&
+          bridge->state != CJ_BRIDGE_WAIT_UNO_STOP_ACK) {
         return;
+      }
+      if (bridge->state == CJ_BRIDGE_WAIT_UNO_STOP_ACK) {
+        bridge->diag_early_j_result_count++;
+        log_line(bridge, "bridge: early J result, forcing resume");
       }
       if (bridge->io.send_uno_line != 0) {
         bridge->io.send_uno_line("RESUME_REQ");
