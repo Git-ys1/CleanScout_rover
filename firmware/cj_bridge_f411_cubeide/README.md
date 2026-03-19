@@ -12,8 +12,9 @@
 当前实现边界：
 
 - 已落仓：桥接状态机、ASCII 行协议解析、J 侧定界帧协议、环形缓冲区、主循环集成桩、最小启动文件与链接脚本
+- 已补 Gate0 最小板级验证：`PB2` 心跳灯、`SysTick` 毫秒节拍
 - 已产物：`artifacts/C-1.2.0/f411/cj_bridge_f411.elf`、`cj_bridge_f411.hex`
-- 未完成：真实板级时钟/GPIO/UART 初始化、烧录、LED 心跳与 UART 回环
+- 未完成：`USART1/USART2` 真实初始化、烧录验证、UART 回环
 
 原因：
 
@@ -24,4 +25,4 @@
 
 1. 把当前源码接回真正的 CubeIDE 工程外壳
 2. 绑定 `SysTick/HAL_GetTick`、`USART1/USART2 IRQ` 和 LED 心跳
-3. 完成 Gate0 的烧录/串口回环
+3. 先验证 `PB2` 心跳，再继续做 UART 回环

@@ -6,6 +6,7 @@
 .global g_pfnVectors
 .global Reset_Handler
 .global Default_Handler
+.global SysTick_Handler
 
 .word _sidata
 .word _sdata
@@ -33,7 +34,7 @@ g_pfnVectors:
   .word Default_Handler
   .word 0
   .word Default_Handler
-  .word Default_Handler
+  .word SysTick_Handler
   .rept 82
   .word Default_Handler
   .endr
