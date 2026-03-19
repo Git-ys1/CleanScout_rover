@@ -6,6 +6,8 @@
 - `main.py`：已增加夹爪原语抽象、分层恢复模式和结果回传保留
 - `claw_selftest.py`：已新增，用于独立验证夹爪 `OPEN / CLOSE / OPEN`
 - `claw_runtime.py`：已新增，作为夹爪共享原语与默认参数源
+- `vendor_claw_smoketest.py`：已新增，用于绕过抽象层直接验证 vendor `B10 + Timer2 CH3` 链路
+- `vendor_pwm_sweep.py`：已新增，用于直接扫 PWM 百分比排除角度语义干扰
 - `cj_link.py`：已保留，继续承担结果回传协议
 - 实板测试：未执行
 
@@ -59,8 +61,38 @@
 5. `MODE_VISION_LOCAL_GRAB` 下完成识别后本地抓取
 6. 最后再把结果挂回 `MODE_CJ_LINKED`
 
-## 6. 当前已知限制
+## 6. C-1.2.4 vendor 直通验证口径
+
+- 本轮不再优先调 `WAIT_PICK_WINDOW / PICK_WINDOW`
+- 本轮不再优先调 `LOCAL_PICK_FALLBACK`
+- 当前要先证明 vendor 原始 `Timer(2) + CH3 + B10` 夹爪链路到底是否存活
+- `vendor_claw_smoketest.py` 与 `vendor_pwm_sweep.py` 都不依赖 `claw_runtime.py`
+
+### 6.1 待记录结果
+
+- `vendor_claw_smoketest.py` 是否让夹爪动了：`PENDING HARDWARE TEST`
+- `vendor_pwm_sweep.py` 是否让夹爪动了：`PENDING HARDWARE TEST`
+- 已尝试占空比：
+  - `2.5`
+  - `5.0`
+  - `7.5`
+  - `10.0`
+  - `12.5`
+- 与当前 `claw_runtime.py` 行为是否一致：`PENDING`
+- 本轮最终结论：
+  - `A = vendor path alive`
+  - `B = board-level problem`
+  - 当前状态：`PENDING HARDWARE RESULT`
+
+### 6.2 若落到结论 B，优先怀疑
+
+- `B10` 信号链是否真接在卖家定义通道
+- 夹爪舵机 5V / GND 供电是否稳定
+- 是否加载了 LCD / WiFi / 图传 / 串口附件
+- `MENGFEI_OPENMV4-STM32H7xx` 平台 IO 复用冲突
+
+## 7. 当前已知限制
 
 - 当前 `60 / 150` 只是冻结值，还不是实测确认值
 - `B10 + Timer2 Channel3` 本轮先继续沿用；若自检完全无动作，应优先怀疑通道/供电/复用问题
-- 本轮不再优先调 `WAIT_PICK_WINDOW / PICK_WINDOW`，而是优先验证夹爪原语是否已恢复
+- 本轮不再优先调 `WAIT_PICK_WINDOW / PICK_WINDOW`，而是先做 vendor 直通证伪
