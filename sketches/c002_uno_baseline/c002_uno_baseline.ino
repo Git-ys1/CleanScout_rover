@@ -89,6 +89,7 @@ void exitExternalPause();
                            
 void setup() {
 #if CJ_COMM_POC_BUILD
+  Serial.begin(115200);
   bridgeSerial.begin(BRIDGE_BAUD);
   bridgeSerial.listen();
 #else
@@ -151,6 +152,9 @@ void classifyBluetoothCommand(char incomingChar) {
 
 void pollControlInputs() {
 #if CJ_COMM_POC_BUILD
+  while (Serial.available()) {
+    classifyBluetoothCommand((char)Serial.read());
+  }
   pollBridgeSerial();
 #else
   if (softSerial.available()) {
@@ -195,12 +199,18 @@ void processBridgeLine(const char* line) {
   }
 
   if (strcmp(line, "STOP_REQ") == 0) {
+#if CJ_COMM_POC_BUILD
+    Serial.println(F("CJ STOP_REQ"));
+#endif
     enterExternalPause();
     sendBridgeLine("STOP_ACK");
     return;
   }
 
   if (strcmp(line, "RESUME_REQ") == 0) {
+#if CJ_COMM_POC_BUILD
+    Serial.println(F("CJ RESUME_REQ"));
+#endif
     exitExternalPause();
     sendBridgeLine("RESUME_ACK");
   }
