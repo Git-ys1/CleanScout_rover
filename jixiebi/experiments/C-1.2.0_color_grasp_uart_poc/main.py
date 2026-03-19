@@ -9,10 +9,11 @@ import cj_link
 ############################ C-1.2.1 configuration ############################
 STATE_SCAN = 0
 STATE_WAIT_PICK_WINDOW = 1
-STATE_PICKING = 2
-STATE_DONE = 3
-STATE_TIMEOUT = 4
-STATE_FAIL = 5
+STATE_LOCAL_PICK_FALLBACK = 2
+STATE_PICKING = 3
+STATE_DONE = 4
+STATE_TIMEOUT = 5
+STATE_FAIL = 6
 
 COLOR_RED = 1
 COLOR_YELLOW = 2
@@ -23,9 +24,10 @@ STABLE_FRAMES_REQUIRED = 3
 HEARTBEAT_INTERVAL_MS = 1000
 DEFAULT_PICK_WINDOW_MS = 10000
 WAIT_PICK_WINDOW_TIMEOUT_MS = 2000
+LOCAL_PICK_FALLBACK_DELAY_MS = 1400
 COLOR_FOUND_RETRY_INTERVAL_MS = 400
 MAX_COLOR_FOUND_RETRIES = 4
-RESULT_DISPLAY_HOLD_MS = 1000
+POST_PICK_COOLDOWN_MS = 1800
 PIXELS_THRESHOLD = 500
 VERTICAL_BIAS = -30
 
@@ -115,6 +117,8 @@ def state_label(current_state):
         return "SCAN"
     if current_state == STATE_WAIT_PICK_WINDOW:
         return "WAIT_PICK_WINDOW"
+    if current_state == STATE_LOCAL_PICK_FALLBACK:
+        return "LOCAL_PICK_FALLBACK"
     if current_state == STATE_PICKING:
         return "PICKING"
     if current_state == STATE_DONE:
@@ -292,7 +296,7 @@ while True:
         if frame_type == cj_link.TYPE_PING:
             print("[CJ] RX PING")
             link.send_heartbeat(state)
-        elif frame_type == cj_link.TYPE_PICK_WINDOW and state == STATE_WAIT_PICK_WINDOW:
+        elif frame_type == cj_link.TYPE_PICK_WINDOW and (state == STATE_WAIT_PICK_WINDOW or state == STATE_LOCAL_PICK_FALLBACK):
             payload = frame["payload"]
             if len(payload) >= 2:
                 pick_window_ms = payload[0] | (payload[1] << 8)
@@ -301,7 +305,7 @@ while True:
             print("[CJ] RX PICK_WINDOW timeout_ms=" + str(pick_window_ms))
             link.send_arm_busy(1)
             set_state(STATE_PICKING)
-        elif frame_type == cj_link.TYPE_ABORT and state == STATE_WAIT_PICK_WINDOW:
+        elif frame_type == cj_link.TYPE_ABORT and (state == STATE_WAIT_PICK_WINDOW or state == STATE_LOCAL_PICK_FALLBACK):
             print("[CJ] RX ABORT")
             reset_to_scan()
 
@@ -329,8 +333,10 @@ while True:
         continue
 
     if state == STATE_WAIT_PICK_WINDOW:
-        _, max_blob = find_color_blob(img, pending_color)
-        if max_blob is not None:
+        detected_color, max_blob = find_color_blob(img, pending_color)
+        target_visible = detected_color == pending_color and max_blob is not None
+
+        if target_visible:
             img.draw_rectangle(max_blob.rect())
             img.draw_cross(max_blob.cx(), max_blob.cy())
 
@@ -340,25 +346,37 @@ while True:
             link.send_color_found(pending_color)
             print("[CJ] RETRY COLOR_FOUND count=" + str(color_found_retry_count))
 
-        if (now_ms - wait_started_ms) >= WAIT_PICK_WINDOW_TIMEOUT_MS or color_found_retry_count >= MAX_COLOR_FOUND_RETRIES:
+        if target_visible and (now_ms - wait_started_ms) >= LOCAL_PICK_FALLBACK_DELAY_MS:
+            print("[CJ] LOCAL PICK FALLBACK")
+            set_state(STATE_LOCAL_PICK_FALLBACK)
+            continue
+
+        if (now_ms - wait_started_ms) >= WAIT_PICK_WINDOW_TIMEOUT_MS:
             print("[CJ] WAIT_PICK_WINDOW timeout -> SCAN")
             reset_to_scan()
+        continue
+
+    if state == STATE_LOCAL_PICK_FALLBACK:
+        if (now_ms - state_entered_ms) < 200:
+            continue
+        link.send_arm_busy(1)
+        set_state(STATE_PICKING, "LOCAL_PICK_FALLBACK", 500)
         continue
 
     if state == STATE_PICKING:
         try:
             if run_pick_sequence(pending_color, pick_window_ms):
                 link.send_pick_done(pending_color)
-                result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+                result_hold_until_ms = millis() + POST_PICK_COOLDOWN_MS
                 set_state(STATE_DONE)
             else:
                 link.send_pick_timeout(pending_color)
-                result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+                result_hold_until_ms = millis() + POST_PICK_COOLDOWN_MS
                 set_state(STATE_TIMEOUT)
         except Exception as exc:
             print("[CJ] PICK FAIL: " + str(exc))
             link.send_arm_fail(1)
-            result_hold_until_ms = millis() + RESULT_DISPLAY_HOLD_MS
+            result_hold_until_ms = millis() + POST_PICK_COOLDOWN_MS
             set_state(STATE_FAIL)
         pending_color = 0
         reset_pose()
