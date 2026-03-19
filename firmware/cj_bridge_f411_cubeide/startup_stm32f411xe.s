@@ -7,6 +7,8 @@
 .global Reset_Handler
 .global Default_Handler
 .global SysTick_Handler
+.global USART1_IRQHandler
+.global USART2_IRQHandler
 
 .word _sidata
 .word _sdata
@@ -16,8 +18,6 @@
 
 .section .isr_vector,"a",%progbits
 .type g_pfnVectors, %object
-.size g_pfnVectors, .-g_pfnVectors
-
 g_pfnVectors:
   .word _estack
   .word Reset_Handler
@@ -35,9 +35,90 @@ g_pfnVectors:
   .word 0
   .word Default_Handler
   .word SysTick_Handler
-  .rept 82
+
   .word Default_Handler
-  .endr
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word USART1_IRQHandler
+  .word USART2_IRQHandler
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word 0
+  .word 0
+  .word Default_Handler
+  .word Default_Handler
+.size g_pfnVectors, .-g_pfnVectors
 
 .section .text.Reset_Handler
 .thumb_func

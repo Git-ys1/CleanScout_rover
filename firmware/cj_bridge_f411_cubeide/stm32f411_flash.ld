@@ -19,9 +19,28 @@ SECTIONS
   {
     *(.text*)
     *(.rodata*)
+    *(.init)
+    *(.fini)
     *(.glue_7)
     *(.glue_7t)
     *(.eh_frame)
+    . = ALIGN(4);
+    __preinit_array_start = .;
+    KEEP(*(.preinit_array*))
+    __preinit_array_end = .;
+    . = ALIGN(4);
+    __init_array_start = .;
+    KEEP(*(SORT(.init_array.*)))
+    KEEP(*(.init_array*))
+    __init_array_end = .;
+    . = ALIGN(4);
+    __fini_array_start = .;
+    KEEP(*(SORT(.fini_array.*)))
+    KEEP(*(.fini_array*))
+    __fini_array_end = .;
+    . = ALIGN(4);
+    *(.ARM.exidx*)
+    *(.ARM.extab*)
     _etext = .;
   } > FLASH
 
