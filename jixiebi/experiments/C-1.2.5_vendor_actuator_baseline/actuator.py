@@ -8,6 +8,8 @@ PAN_STEP_DEG = 2
 TILT_STEP_DEG = 2
 SERVO_DELAY_MS = 200
 LOOP_PAUSE_MS = 1000
+PAN_CALIBRATION_DELAY_MS = 900
+TILT_CALIBRATION_DELAY_MS = 900
 
 PAN_MIN_DEG = -90
 PAN_MAX_DEG = 90
@@ -20,8 +22,10 @@ CLAW_MAX_DEG = 90
 CLAW_CLOSE_SEED = 50
 CLAW_OPEN_ANGLE = -30
 CLAW_CLOSE_ANGLE = CLAW_CLOSE_SEED
-CLAW_CALIBRATION_ANGLES = (-60, -30, 0, 20, 35, 50, 65, 80)
+CLAW_CALIBRATION_ANGLES = (-60, -30, 0, 20, 30, 40)
 CLAW_CALIBRATION_DELAY_MS = 900
+PAN_CALIBRATION_ANGLES = (-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90)
+TILT_CALIBRATION_ANGLES = (-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90)
 
 
 def log_action(action):
@@ -83,6 +87,12 @@ class ActuatorRig:
 
     def tilt_center(self):
         self._set_tilt(TILT_CENTER_DEG, "TILT_CENTER")
+
+    def pan_to_angle(self, angle):
+        self._set_pan(angle, "PAN_CAL")
+
+    def tilt_to_angle(self, angle):
+        self._set_tilt(angle, "TILT_CAL")
 
     def center_all(self):
         log_action("CENTER")

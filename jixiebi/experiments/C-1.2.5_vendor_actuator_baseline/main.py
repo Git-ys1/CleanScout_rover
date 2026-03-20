@@ -6,6 +6,10 @@ from actuator import (
     CLAW_CALIBRATION_ANGLES,
     CLAW_CALIBRATION_DELAY_MS,
     LOOP_PAUSE_MS,
+    PAN_CALIBRATION_ANGLES,
+    PAN_CALIBRATION_DELAY_MS,
+    TILT_CALIBRATION_ANGLES,
+    TILT_CALIBRATION_DELAY_MS,
 )
 from command_source import (
     CMD_CENTER,
@@ -25,10 +29,12 @@ from command_source import (
 
 MODE_CALIBRATE_CLAW = 0
 MODE_DEMO_LOOP = 1
+MODE_CALIBRATE_PAN = 2
+MODE_CALIBRATE_TILT = 3
 
 # C-1.2.5 starts from calibration. After freezing open/close angles,
 # switch to MODE_DEMO_LOOP for the stable execution baseline.
-RUN_MODE = MODE_CALIBRATE_CLAW
+RUN_MODE = MODE_DEMO_LOOP
 
 
 def execute_command(rig, command):
@@ -66,6 +72,32 @@ def run_calibration_mode(rig):
             time.sleep_ms(CLAW_CALIBRATION_DELAY_MS)
 
 
+def run_pan_calibration_mode(rig):
+    print("MODE -> CALIBRATE_PAN")
+    print("CAL -> software sign: PAN+ = LEFT, PAN- = RIGHT")
+    print("CAL -> scan angles {}".format(PAN_CALIBRATION_ANGLES))
+    rig.center_all()
+
+    while True:
+        for angle in PAN_CALIBRATION_ANGLES:
+            print("CAL -> PAN angle={}".format(angle))
+            rig.pan_to_angle(angle)
+            time.sleep_ms(PAN_CALIBRATION_DELAY_MS)
+
+
+def run_tilt_calibration_mode(rig):
+    print("MODE -> CALIBRATE_TILT")
+    print("CAL -> software sign: TILT+ = DOWN, TILT- = UP")
+    print("CAL -> scan angles {}".format(TILT_CALIBRATION_ANGLES))
+    rig.center_all()
+
+    while True:
+        for angle in TILT_CALIBRATION_ANGLES:
+            print("CAL -> TILT angle={}".format(angle))
+            rig.tilt_to_angle(angle)
+            time.sleep_ms(TILT_CALIBRATION_DELAY_MS)
+
+
 def run_demo_mode(rig):
     print("MODE -> DEMO_LOOP")
     rig.center_all()
@@ -89,5 +121,9 @@ rig = ActuatorRig()
 
 if RUN_MODE == MODE_CALIBRATE_CLAW:
     run_calibration_mode(rig)
+elif RUN_MODE == MODE_CALIBRATE_PAN:
+    run_pan_calibration_mode(rig)
+elif RUN_MODE == MODE_CALIBRATE_TILT:
+    run_tilt_calibration_mode(rig)
 else:
     run_demo_mode(rig)
