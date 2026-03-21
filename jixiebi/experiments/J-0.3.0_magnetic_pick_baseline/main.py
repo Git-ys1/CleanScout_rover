@@ -36,6 +36,7 @@ TARGET_MODE = TARGET_MODE_BLACK_CAP
 ENABLE_SECOND_TARGET = False
 
 HOLD_OBSERVE_MS = 1000
+TARGET_LOCK_HOLD_MS = 500
 
 
 sensor.reset()
@@ -83,12 +84,13 @@ def reset_to_scan():
 
 def track_target(pan_error, tilt_error):
     pan_output = pan_pid.get_pid(pan_error, 1) / 2
-    tilt_output = tilt_pid.get_pid(tilt_error, 1)
     rig.pan_set(rig.pan_angle + pan_output, 0)
-    rig.tilt_set(rig.tilt_angle - tilt_output, 0)
 
 
 def perform_magnetic_pick_cycle():
+    print("LOCK -> HOLD_MS={}".format(TARGET_LOCK_HOLD_MS))
+    time.sleep_ms(TARGET_LOCK_HOLD_MS)
+
     set_state(STATE_CONTACT)
     rig.contact_pose(CONTACT_HOLD_MS)
 

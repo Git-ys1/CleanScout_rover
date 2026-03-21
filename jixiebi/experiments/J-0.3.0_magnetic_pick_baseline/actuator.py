@@ -6,14 +6,16 @@ PAN_CENTER_DEG = 0
 PAN_MIN_DEG = -90
 PAN_MAX_DEG = 90
 
-TILT_CENTER_DEG = 95
+TILT_SERVO_ENABLED = False
+
+TILT_CENTER_DEG = 85
 TILT_MIN_DEG = 0
-TILT_MAX_DEG = 105
+TILT_MAX_DEG = 90
 
 CLAW_OPEN_ANGLE = -60
 CLAW_CLOSE_ANGLE = 40
 
-CONTACT_TILT_DEG = 105
+CONTACT_TILT_DEG = 90
 LIFT_HOLD_TILT_DEG = 70
 
 SERVO_DELAY_MS = 200
@@ -55,11 +57,14 @@ def clamp_claw(angle):
 class ActuatorRig:
     def __init__(self):
         self.pan_servo = Servo(3)
-        self.tilt_servo = Servo(4)
+        self.tilt_servo = None
         self.claw_servo = Servo(1)
         self.pan_angle = PAN_CENTER_DEG
         self.tilt_angle = TILT_CENTER_DEG
         self.claw_angle = CLAW_CLOSE_ANGLE
+
+        if TILT_SERVO_ENABLED:
+            self.tilt_servo = Servo(4)
 
     def _delay(self, delay_ms):
         if delay_ms and delay_ms > 0:
@@ -73,6 +78,11 @@ class ActuatorRig:
 
     def tilt_set(self, angle, settle_ms=0):
         self.tilt_angle = clamp_tilt(angle)
+        if not TILT_SERVO_ENABLED or self.tilt_servo is None:
+            log_action("TILT_DISABLED request={}".format(self.tilt_angle))
+            self._delay(settle_ms)
+            return
+
         log_action("TILT_SET angle={}".format(self.tilt_angle))
         self.tilt_servo.angle(self.tilt_angle)
         self._delay(settle_ms)
