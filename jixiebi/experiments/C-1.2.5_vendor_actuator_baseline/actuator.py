@@ -3,7 +3,7 @@ from pyb import Servo
 
 
 PAN_CENTER_DEG = 0
-TILT_CENTER_DEG = -30
+TILT_CENTER_DEG = -85
 PAN_STEP_DEG = 2
 TILT_STEP_DEG = 2
 SERVO_DELAY_MS = 200
@@ -14,18 +14,18 @@ TILT_CALIBRATION_DELAY_MS = 900
 PAN_MIN_DEG = -90
 PAN_MAX_DEG = 90
 TILT_MIN_DEG = -90
-TILT_MAX_DEG = 90
+TILT_MAX_DEG = 0
 CLAW_MIN_DEG = -90
 CLAW_MAX_DEG = 90
 
-# Seed from the vendor template. Freeze after hardware calibration.
+# Vendor seed was Servo(1).angle(50). Freeze actual claw limits from hardware.
 CLAW_CLOSE_SEED = 50
-CLAW_OPEN_ANGLE = -30
-CLAW_CLOSE_ANGLE = CLAW_CLOSE_SEED
+CLAW_OPEN_ANGLE = -60
+CLAW_CLOSE_ANGLE = 40
 CLAW_CALIBRATION_ANGLES = (-60, -30, 0, 20, 30, 40)
 CLAW_CALIBRATION_DELAY_MS = 900
-PAN_CALIBRATION_ANGLES = (-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90)
-TILT_CALIBRATION_ANGLES = (-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90)
+PAN_CALIBRATION_ANGLES = (-90, -60, -30, 0, 30, 60, 90)
+TILT_CALIBRATION_ANGLES = (-90, -85, -70, -55, -40, -25, -10, 0)
 
 
 def log_action(action):
