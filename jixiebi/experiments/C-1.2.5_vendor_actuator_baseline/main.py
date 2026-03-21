@@ -87,7 +87,7 @@ def run_pan_calibration_mode(rig):
 
 def run_tilt_calibration_mode(rig):
     print("MODE -> CALIBRATE_TILT")
-    print("CAL -> software sign: TILT+ = DOWN, TILT- = UP")
+    print("CAL -> software sign: TILT0 = UP boundary, TILT+ = DOWN")
     print("CAL -> scan angles {}".format(TILT_CALIBRATION_ANGLES))
     rig.center_all()
 

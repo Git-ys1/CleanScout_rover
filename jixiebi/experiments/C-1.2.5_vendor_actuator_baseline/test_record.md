@@ -13,7 +13,7 @@
 ## 2. Frozen Runtime Defaults
 
 - `PAN_CENTER_DEG = 0`
-- `TILT_CENTER_DEG = -85`
+- `TILT_CENTER_DEG = 85`
 - `PAN_STEP_DEG = 2`
 - `TILT_STEP_DEG = 2`
 - `SERVO_DELAY_MS = 200`
@@ -21,8 +21,8 @@
 - `CLAW_CLOSE_SEED = 50`
 - `PAN_MIN_DEG = -90`
 - `PAN_MAX_DEG = 90`
-- `TILT_MIN_DEG = -90`
-- `TILT_MAX_DEG = 0`
+- `TILT_MIN_DEG = 0`
+- `TILT_MAX_DEG = 90`
 - `CLAW_OPEN_ANGLE = -60`
 - `CLAW_CLOSE_ANGLE = 40`
 - `CLAW_CALIBRATION_ANGLES = (-60, -30, 0, 20, 30, 40)`
@@ -87,17 +87,7 @@ Suggested scan list:
 Observed result:
 
 - `-90`: 右转 90 度，朝右
-- `-75`:
-- `-60`:
-- `-45`:
-- `-30`:
-- `-15`:
 - `0`: 正前中位
-- `15`:
-- `30`:
-- `45`:
-- `60`:
-- `75`:
 - `90`: 左转 90 度，朝左
 
 Frozen result:
@@ -110,34 +100,28 @@ Frozen result:
 
 Software sign:
 
+- `TILT 0` = up boundary
 - `TILT +` = down
-- `TILT -` = up
 
 Suggested scan list:
 
-- `TILT_CALIBRATION_ANGLES = (-90, -85, -70, -55, -40, -25, -10, 0)`
+- `TILT_CALIBRATION_ANGLES = (0, 10, 20, 30, 60, 85, 90)`
 
 Observed result:
 
-- `-90`: 机头朝地边界，已明显超出舒适运行范围
-- `-75`:
-- `-60`:
-- `-45`:
-- `-30`:
-- `-15`:
 - `0`: 上方边界，板面/摄像头朝向已接近向上
-- `15`:
+- `10`:
+- `20`:
 - `30`:
-- `45`:
 - `60`:
-- `75`:
-- `90`:
+- `85`: 默认运行位
+- `90`: 朝地边界，下方极限
 
 Frozen result:
 
-- `TILT_MIN_DEG = -90`
-- `TILT_MAX_DEG = 0`
-- `TILT_CENTER_DEG = -85`
+- `TILT_MIN_DEG = 0`
+- `TILT_MAX_DEG = 90`
+- `TILT_CENTER_DEG = 85`
 
 ## 8. Current Conclusion
 
