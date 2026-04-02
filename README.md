@@ -60,6 +60,18 @@
 - `J-jixiebi/` 仍作为卖家原始资料证据链保留。
 - `jixiebi/` 目录中的 `C-1.2.0` 内容是受控实验副本，可继续二开。
 
+### 2.5 树莓派端发布入口
+
+- `Raspberrypi/README.md`
+- `Raspberrypi/releases/README.md`
+- `docs/PLAN/C-2.0.5_raspberrypi_publish_path.md`
+
+说明：
+
+- `Raspberrypi/` 用于承接树莓派侧由 `opencode` 或本地端独立推进的结果发布。
+- 树莓派端每轮结果先在 `Raspberrypi/releases/` 下按版本目录留痕。
+- 树莓派端与当前 `UNO + AFMotor` 基线隔离推进，需回写主线时再单独立项。
+
 ## 3. 当前阶段判断
 
 - `C` 线已经具备核心终端原型地位，当前仓库中的受控代码与构建流程仍以 C 线为主。
