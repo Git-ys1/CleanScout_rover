@@ -1,0 +1,17 @@
+=== ROS ===
+ROS_DISTRO=noetic
+/opt/ros/noetic/bin/roscore
+/opt/ros/noetic/bin/roslaunch
+/opt/ros/noetic/bin/catkin_make
+noetic
+1.15.11
+ROS_DISTRO=noetic
+ROS_ETC_DIR=/opt/ros/noetic/etc/ros
+ROS_HOSTNAME=10.11.191.84
+ROS_IP=10.11.191.84
+ROSLISP_PACKAGE_DIRECTORIES=
+ROS_MASTER_URI=http://10.11.191.84:11311
+ROS_PACKAGE_PATH=/opt/ros/noetic/share
+ROS_PYTHON_VERSION=3
+ROS_ROOT=/opt/ros/noetic/share/ros
+ROS_VERSION=1
