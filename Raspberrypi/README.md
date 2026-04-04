@@ -47,3 +47,12 @@ Raspberrypi/
 
 - `docs/PLAN/C-2.0.5.md`
 - `docs/PLAN/C-2.0.5_raspberrypi_publish_path.md`
+
+## 当前正式归档入口
+
+- `Raspberrypi/releases/C-2.2.1_noetic_handover/README.md`
+
+说明：
+
+- `C-2.2.1` 是当前第一批正式树莓派环境接管归档。
+- 后续树莓派端每轮发布，继续按该轮次目录结构追加。

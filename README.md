@@ -72,6 +72,20 @@
 - 树莓派端每轮结果先在 `Raspberrypi/releases/` 下按版本目录留痕。
 - 树莓派端与当前 `UNO + AFMotor` 基线隔离推进，需回写主线时再单独立项。
 
+### 2.6 C-2.x 树莓派接管归档
+
+- `docs/PLAN/C-2.2.1.md`
+- `docs/SYSTEM/C-2.2.1_takeover_research_report.md`
+- `docs/HARDWARE/C-2.2.1_hardware_boundary_update.md`
+- `docs/SOFTWARE/C-2.2.1_noetic_entry_review.md`
+- `Raspberrypi/releases/C-2.2.1_noetic_handover/README.md`
+
+说明：
+
+- `C-2.2.1` 已将树莓派 `Noetic` 环境审计日志与镜像接管结论正式入库。
+- `C-1.1.1` 继续作为历史硬件冻结事实保留。
+- `C-2.x` 当前实施主线已切换到“树莓派上位接管 + 底层边界重映射”。
+
 ## 3. 当前阶段判断
 
 - `C` 线已经具备核心终端原型地位，当前仓库中的受控代码与构建流程仍以 C 线为主。
