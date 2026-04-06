@@ -19,50 +19,86 @@ https://www.bilibili.com/video/av66919153/
 -----------------------------------------------------------------------
 修订历史/Revision History  
 日期/Date    作者/Author      参考号/Ref    修订说明/Revision Description
-20190821	   CYNO朔			0.1			增加左后右后控制	
-20190917	   CYNO朔			0.2			增加了更详细的项目说明	
+20190821       CYNO朔            0.1         增加左后右后控制  
+20190917       CYNO朔            0.2         增加了更详细的项目说明 
 
 ***********************************************************************/
 #include <AFMotor.h>
 #include <Tyler_1.h>
 
-
-// 提供车轮电机方向设置参数，车轮电机速度参数， 测距传感器引脚参数以及舵机控制引脚参数的构造函数
-Tyler_1::Tyler_1(bool dir1, bool dir2, bool dir3, bool dir4, byte motorSpeed, int trigPin, int echoPin, int servoPin){
-  
+// 提供车轮电机方向设置参数，车轮电机速度参数，测距传感器引脚参数以及舵机控制引脚参数的构造函数
+Tyler_1::Tyler_1(bool dir1, bool dir2, bool dir3, bool dir4, byte motorSpeed, int trigPin, int echoPin, int servoPin) {
   headServoPin = servoPin;
   hcTrig = trigPin;
   hcEcho = echoPin;
-  
+  duration = 0;
+  cm = -1;
+  headPos = -1;
+  headServoAttached = false;
+  ultrasonicEnabled = !isPinDisabled(trigPin) && !isPinDisabled(echoPin);
+  servoEnabled = !isPinDisabled(servoPin);
+
   dcMotor1->setSpeed(motorSpeed);
   dcMotor2->setSpeed(motorSpeed);
   dcMotor3->setSpeed(motorSpeed);
   dcMotor4->setSpeed(motorSpeed);
 
-  dcMotorIni( dir1,  dir2,  dir3,  dir4);
+  dcMotorIni(dir1, dir2, dir3, dir4);
 
-  pinMode(hcTrig, OUTPUT);
-  pinMode(hcEcho, INPUT);  
+  if (ultrasonicEnabled) {
+    pinMode(hcTrig, OUTPUT);
+    pinMode(hcEcho, INPUT);
+  }
+}
+
+bool Tyler_1::isPinDisabled(int pin) const {
+  return pin < 0 || pin == DISABLED_PIN;
+}
+
+void Tyler_1::ensureHeadServoAttached() {
+  if (!servoEnabled || headServoAttached) {
+    return;
+  }
+
+  headServo.attach(headServoPin);
+  headServoAttached = true;
 }
 
 // 初始化舵机
-void Tyler_1::headServoIni(){
-  headServo.attach(headServoPin);               
+void Tyler_1::headServoIni() {
+  ensureHeadServoAttached();
 }
 
 // 设置舵机位置
-void Tyler_1::setHeadPos(int pos){
-    headServo.write(pos);               
+void Tyler_1::setHeadPos(int pos) {
+  if (!servoEnabled) {
+    return;
+  }
+
+  ensureHeadServoAttached();
+  headServo.write(pos);
+  headPos = pos;
 }
 
 // 获取舵机位置
-int Tyler_1::getHeadPos(){
-    return headServo.read();               
+int Tyler_1::getHeadPos() {
+  if (!servoEnabled) {
+    return -1;
+  }
+
+  if (headServoAttached) {
+    headPos = headServo.read();
+  }
+
+  return headPos;
 }
 
 // 读取传感器距离读数（单位为厘米）
-int Tyler_1::getDistance(){
-   
+int Tyler_1::getDistance() {
+  if (!ultrasonicEnabled) {
+    return -1;
+  }
+
   digitalWrite(hcTrig, LOW);
   delayMicroseconds(5);
   digitalWrite(hcTrig, HIGH);
@@ -70,31 +106,30 @@ int Tyler_1::getDistance(){
   digitalWrite(hcTrig, LOW);
 
   duration = pulseIn(hcEcho, HIGH);
-  cm = (duration/2) / 29.1;
-  
+  cm = (duration / 2) / 29.1;
+
   return cm;
 }
 
 // 车轮电机初始化(设置各个车轮转动方向，使其符合程序控制需要)
-void Tyler_1::dcMotorIni(bool dir1, bool dir2, bool dir3, bool dir4){
-  
-  if (dir1 == 1){
+void Tyler_1::dcMotorIni(bool dir1, bool dir2, bool dir3, bool dir4) {
+  if (dir1 == 1) {
     dcMotor1Forward = FORWARD;
     dcMotor1Backward = BACKWARD;
   } else {
     dcMotor1Forward = BACKWARD;
     dcMotor1Backward = FORWARD;
   }
-  
-  if (dir2 == 1){
+
+  if (dir2 == 1) {
     dcMotor2Forward = FORWARD;
     dcMotor2Backward = BACKWARD;
   } else {
     dcMotor2Forward = BACKWARD;
     dcMotor2Backward = FORWARD;
-  }  
+  }
 
-  if (dir3 == 1){
+  if (dir3 == 1) {
     dcMotor3Forward = FORWARD;
     dcMotor3Backward = BACKWARD;
   } else {
@@ -102,84 +137,83 @@ void Tyler_1::dcMotorIni(bool dir1, bool dir2, bool dir3, bool dir4){
     dcMotor3Backward = FORWARD;
   }
 
-  if (dir4 == 1){
+  if (dir4 == 1) {
     dcMotor4Forward = FORWARD;
     dcMotor4Backward = BACKWARD;
   } else {
     dcMotor4Forward = BACKWARD;
     dcMotor4Backward = FORWARD;
-  }    
+  }
 }
 
 // 前进
-void Tyler_1::forward(){  
+void Tyler_1::forward() {
   dcMotor1->run(dcMotor1Forward);
-  dcMotor2->run(dcMotor2Forward);  
+  dcMotor2->run(dcMotor2Forward);
   dcMotor3->run(dcMotor3Forward);
-  dcMotor4->run(dcMotor4Forward);   
+  dcMotor4->run(dcMotor4Forward);
 }
 
 // 后退
-void Tyler_1::backward(){
+void Tyler_1::backward() {
   dcMotor1->run(dcMotor1Backward);
   dcMotor2->run(dcMotor2Backward);
   dcMotor3->run(dcMotor3Backward);
-  dcMotor4->run(dcMotor4Backward);  
+  dcMotor4->run(dcMotor4Backward);
 }
 
 // 左转
-void Tyler_1::turnL(){
+void Tyler_1::turnL() {
   dcMotor1->run(dcMotor1Forward);
   dcMotor2->run(dcMotor2Forward);
   dcMotor3->run(dcMotor3Backward);
-  dcMotor4->run(dcMotor4Backward);    
+  dcMotor4->run(dcMotor4Backward);
 }
 
 // 右转
-void Tyler_1::turnR(){
+void Tyler_1::turnR() {
   dcMotor1->run(dcMotor1Backward);
   dcMotor2->run(dcMotor2Backward);
   dcMotor3->run(dcMotor3Forward);
-  dcMotor4->run(dcMotor4Forward);       
+  dcMotor4->run(dcMotor4Forward);
 }
 
 // 左前
-void Tyler_1::forwardL(){
-  dcMotor1->run(dcMotor1Forward);   
-  dcMotor2->run(dcMotor2Forward);   
+void Tyler_1::forwardL() {
+  dcMotor1->run(dcMotor1Forward);
+  dcMotor2->run(dcMotor2Forward);
   dcMotor3->run(RELEASE);
-  dcMotor4->run(RELEASE);    
-  
+  dcMotor4->run(RELEASE);
 }
 
 // 右前
-void Tyler_1::forwardR(){
-  dcMotor1->run(RELEASE);   
-  dcMotor2->run(RELEASE);   
+void Tyler_1::forwardR() {
+  dcMotor1->run(RELEASE);
+  dcMotor2->run(RELEASE);
   dcMotor3->run(dcMotor3Forward);
-  dcMotor4->run(dcMotor4Forward);  
+  dcMotor4->run(dcMotor4Forward);
 }
 
 // 左后
-void Tyler_1::backwardL(){
-  dcMotor1->run(RELEASE);   
-  dcMotor2->run(RELEASE);   
+void Tyler_1::backwardL() {
+  dcMotor1->run(RELEASE);
+  dcMotor2->run(RELEASE);
   dcMotor3->run(dcMotor3Backward);
-  dcMotor4->run(dcMotor4Backward);  
+  dcMotor4->run(dcMotor4Backward);
 }
 
 // 右后
-void Tyler_1::backwardR(){
-  dcMotor1->run(dcMotor1Backward);   
-  dcMotor2->run(dcMotor2Backward);   
+void Tyler_1::backwardR() {
+  dcMotor1->run(dcMotor1Backward);
+  dcMotor2->run(dcMotor2Backward);
   dcMotor3->run(RELEASE);
-  dcMotor4->run(RELEASE);    
+  dcMotor4->run(RELEASE);
 }
 
 // 停止
-void Tyler_1::stop(){
+void Tyler_1::stop() {
   dcMotor1->run(RELEASE);
   dcMotor2->run(RELEASE);
   dcMotor3->run(RELEASE);
-  dcMotor4->run(RELEASE);   
+  dcMotor4->run(RELEASE);
 }

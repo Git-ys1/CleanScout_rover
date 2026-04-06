@@ -2,12 +2,12 @@
 
 static const unsigned long SERIAL_BAUD = 115200UL;
 static const unsigned long COMMAND_TIMEOUT_MS = 400UL;
+static const unsigned long LED_PULSE_MS = 60UL;
 
-// 暂不修改 Tyler_1 库，通过占位脚绕开超声/舵机耦合。
-// A5 作为超声 trig 占位，D13 同时作为 echo/servo 占位。
-Tyler_1 tyler_1(1, 0, 1, 1, 200, A5, 13, 13);
+Tyler_1 tyler_1(1, 0, 1, 1, 200, 255, 255, 255);
 
 unsigned long lastCommandAtMs = 0;
+unsigned long ledOffAtMs = 0;
 bool motionCommandActive = false;
 
 bool isSupportedCommand(char command) {
@@ -24,6 +24,18 @@ bool isSupportedCommand(char command) {
       return true;
     default:
       return false;
+  }
+}
+
+void pulseStatusLed() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  ledOffAtMs = millis() + LED_PULSE_MS;
+}
+
+void updateStatusLed() {
+  if (ledOffAtMs != 0 && (long)(millis() - ledOffAtMs) >= 0) {
+    digitalWrite(LED_BUILTIN, LOW);
+    ledOffAtMs = 0;
   }
 }
 
@@ -68,6 +80,17 @@ void applyManualCommand(char command) {
   }
 }
 
+void reportValidCommand(char command) {
+  Serial.print(F("ACK:"));
+  Serial.println(command);
+  pulseStatusLed();
+}
+
+void reportInvalidCommand(char command) {
+  Serial.print(F("ERR:"));
+  Serial.println(command);
+}
+
 void pollUsbSerial() {
   while (Serial.available() > 0) {
     char incomingChar = (char)Serial.read();
@@ -77,11 +100,13 @@ void pollUsbSerial() {
     }
 
     if (!isSupportedCommand(incomingChar)) {
+      reportInvalidCommand(incomingChar);
       continue;
     }
 
     applyManualCommand(incomingChar);
     lastCommandAtMs = millis();
+    reportValidCommand(incomingChar);
   }
 }
 
@@ -97,13 +122,20 @@ void enforceCommandTimeout() {
 }
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+
   Serial.begin(SERIAL_BAUD);
   delay(100);
+
   tyler_1.stop();
   lastCommandAtMs = millis();
+
+  Serial.println(F("CSR_UNO_READY"));
 }
 
 void loop() {
   pollUsbSerial();
   enforceCommandTimeout();
+  updateStatusLed();
 }
