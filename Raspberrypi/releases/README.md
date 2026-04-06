@@ -19,3 +19,4 @@
 当前已存在的正式发布目录：
 
 - `C-2.2.1_noetic_handover`
+- `C-2.2.4_upper_lower_control_truth`
