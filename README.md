@@ -90,6 +90,8 @@
 
 - `docs/SOFTWARE/C-2.2.4_upper_lower_control_freeze.md`
 - `docs/SOFTWARE/C-2.2.4_serial_link_notes.md`
+- `docs/PLAN/C-2.2.5A.md`
+- `docs/SOFTWARE/C-2.2.5A_uno_encoder_architecture_freeze.md`
 - `Raspberrypi/releases/C-2.2.4_upper_lower_control_truth/README.md`
 
 说明：
@@ -97,6 +99,7 @@
 - `C-2.2.4` 冻结了“联调临时态 vs 正式速度控制态”的真相口径。
 - 当前 `1~9` 动作码只保留为联调过渡协议，不再作为长期正式接口冻结。
 - 长期正式方向已明确为“树莓派持续发送速度命令 + UNO 短超时急停 + 下一轮编码器闭环”。
+- `C-2.2.5A` 继续冻结 `UNO` 编码器接入架构、引脚映射与 `PCINT` 采样方向。
 
 ## 3. 当前阶段判断
 
