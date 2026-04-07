@@ -43,11 +43,11 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($SketchDir)) {
-    $SketchDir = Join-Path $RepoRoot "sketches\c002_uno_baseline"
+    $SketchDir = Join-Path $RepoRoot "sketches\c003_uno_encoder_pid_bridge"
 }
 
 if ([string]::IsNullOrWhiteSpace($BuildPath)) {
-    $BuildPath = Join-Path $RepoRoot ".build\c002_uno_cli"
+    $BuildPath = Join-Path $RepoRoot ".build\c003_uno_cli"
 }
 
 $librariesRoot = Join-Path $RepoRoot "libraries"

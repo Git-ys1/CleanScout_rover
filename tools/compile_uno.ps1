@@ -10,11 +10,11 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($SketchPath)) {
-    $SketchPath = Join-Path $RepoRoot "sketches\c002_uno_baseline\c002_uno_baseline.ino"
+    $SketchPath = Join-Path $RepoRoot "sketches\c003_uno_encoder_pid_bridge\c003_uno_encoder_pid_bridge.ino"
 }
 
 if ([string]::IsNullOrWhiteSpace($BuildPath)) {
-    $BuildPath = Join-Path $RepoRoot ".build\c002_uno_builder"
+    $BuildPath = Join-Path $RepoRoot ".build\c003_uno_builder"
 }
 
 $builder = Join-Path $ArduinoHome "arduino-builder.exe"

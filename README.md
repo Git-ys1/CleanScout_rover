@@ -92,6 +92,8 @@
 - `docs/SOFTWARE/C-2.2.4_serial_link_notes.md`
 - `docs/PLAN/C-2.2.5A.md`
 - `docs/SOFTWARE/C-2.2.5A_uno_encoder_architecture_freeze.md`
+- `docs/PLAN/C-2.2.6A.md`
+- `docs/SOFTWARE/C-2.2.6A_uno_encoder_pid_execution.md`
 - `Raspberrypi/releases/C-2.2.4_upper_lower_control_truth/README.md`
 
 说明：
@@ -100,6 +102,7 @@
 - 当前 `1~9` 动作码只保留为联调过渡协议，不再作为长期正式接口冻结。
 - 长期正式方向已明确为“树莓派持续发送速度命令 + UNO 短超时急停 + 下一轮编码器闭环”。
 - `C-2.2.5A` 继续冻结 `UNO` 编码器接入架构、引脚映射与 `PCINT` 采样方向。
+- `C-2.2.6A` 开始在 `UNO` 本地侧落地四轮编码器 `x1` 采样、四路 `PI` 和新的 `W,w1,w2,w3,w4` 桥接协议。
 
 ## 3. 当前阶段判断
 
@@ -115,7 +118,8 @@
 - 受控维护副本：`libraries/Tyler_1/`
 - 风机控制模块：`libraries/CleanScoutFan/`
 - 电机驱动依赖：`Adafruit-Motor-Shield-library-master/`
-- 标准编译入口：`sketches/c002_uno_baseline/c002_uno_baseline.ino`
+- 标准闭环编译入口：`sketches/c003_uno_encoder_pid_bridge/c003_uno_encoder_pid_bridge.ino`
+- 手动联调回退入口：`sketches/c002_uno_baseline/c002_uno_baseline.ino`
 
 当前 C 线硬件冻结摘要：
 
@@ -182,7 +186,8 @@ Arduino IDE 直接 Verify 兼容入口：
 
 说明：
 
-- 仓库脚本仍然是主标准入口
+- 仓库脚本当前默认编译 `c003_uno_encoder_pid_bridge`
+- `c002_uno_baseline` 保留为手动动作码回退线，可通过脚本参数手动指定
 - Arduino IDE 直接 Verify 是兼容入口
 - `"Servo.h" 对应多个库` 只是库选择提示，不是 `CleanScoutFan.h` 缺失的根因
 - `build_f411_bridge.ps1` 当前只验证 F411 桥接源码能产出 `.elf/.hex`，不等同于实板 Gate0 已完成
