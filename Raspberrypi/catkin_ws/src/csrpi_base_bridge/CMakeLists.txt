@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  scripts/base_bridge.py
+  scripts/wheel_bridge.py
+  scripts/cmdvel_to_wheels.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

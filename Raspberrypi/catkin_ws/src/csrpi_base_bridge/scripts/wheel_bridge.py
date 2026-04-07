@@ -5,32 +5,41 @@ import time
 
 import rospy
 import serial
-from geometry_msgs.msg import Twist
-from std_msgs.msg import Float32MultiArray, String
+from std_msgs.msg import Float32MultiArray, Int32MultiArray, String
 
 
-class BaseBridge:
+class WheelBridge:
     def __init__(self):
         self.port = rospy.get_param("~port", "/dev/csr_uno")
         self.baudrate = int(rospy.get_param("~baudrate", 115200))
         self.send_rate_hz = float(rospy.get_param("~send_rate_hz", 20.0))
         self.reconnect_delay = float(rospy.get_param("~reconnect_delay", 1.0))
         self.ready_timeout = float(rospy.get_param("~ready_timeout", 8.0))
+        self.default_targets = rospy.get_param("~default_targets", [0, 0, 0, 0])
 
         self.serial_conn = None
         self.serial_lock = threading.Lock()
         self.ready_seen = False
-        self.last_cmd = (0.0, 0.0, 0.0)
+        self.last_targets = self.normalize_targets(self.default_targets)
 
         self.raw_pub = rospy.Publisher("/csr_base/raw_serial_line", String, queue_size=50)
         self.enc_pub = rospy.Publisher("/csr_base/encoder_debug", Float32MultiArray, queue_size=20)
         self.pid_pub = rospy.Publisher("/csr_base/pid_debug", Float32MultiArray, queue_size=20)
         self.status_pub = rospy.Publisher("/csr_base/bridge_status", String, queue_size=20, latch=True)
+        self.ack_pub = rospy.Publisher("/csr_base/ack", String, queue_size=20)
 
-        rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=20)
+        rospy.Subscriber("/csr_base/wheel_targets", Int32MultiArray, self.targets_callback, queue_size=20)
 
-    def cmd_vel_callback(self, msg):
-        self.last_cmd = (msg.linear.x, msg.linear.y, msg.angular.z)
+    def normalize_targets(self, values):
+        if len(values) != 4:
+            raise ValueError("wheel target list must have exactly 4 values")
+        return tuple(int(value) for value in values)
+
+    def targets_callback(self, msg):
+        if len(msg.data) != 4:
+            rospy.logwarn("ignoring wheel target with %d entries", len(msg.data))
+            return
+        self.last_targets = self.normalize_targets(msg.data)
 
     def publish_status(self, text):
         rospy.loginfo(text)
@@ -59,7 +68,7 @@ class BaseBridge:
             line = self.read_line_once()
             if not line:
                 continue
-            if line == "CSR_UNO_READY" or line == "READY":
+            if line in ("CSR_UNO_READY", "READY"):
                 self.ready_seen = True
                 self.publish_status(f"received {line}")
                 return True
@@ -105,11 +114,7 @@ class BaseBridge:
         if not raw:
             return None
 
-        try:
-            line = raw.decode("utf-8", errors="replace").strip()
-        except Exception:
-            return None
-
+        line = raw.decode("utf-8", errors="replace").strip()
         if line:
             self.handle_line(line)
         return line
@@ -119,6 +124,10 @@ class BaseBridge:
 
         if line in ("CSR_UNO_READY", "READY"):
             self.ready_seen = True
+            return
+
+        if line == "ACK:W":
+            self.ack_pub.publish(String(data=line))
             return
 
         parts = [part.strip() for part in line.split(",")]
@@ -151,8 +160,8 @@ class BaseBridge:
             if not self.ensure_connection():
                 break
 
-            vx, vy, wz = self.last_cmd
-            frame = f"CMD,{vx:.4f},{vy:.4f},{wz:.4f}\n"
+            w1, w2, w3, w4 = self.last_targets
+            frame = f"W,{w1},{w2},{w3},{w4}\n"
 
             with self.serial_lock:
                 conn = self.serial_conn
@@ -160,7 +169,6 @@ class BaseBridge:
                     conn.write(frame.encode("utf-8"))
                     conn.flush()
                 except (AttributeError, serial.SerialException) as exc:
-                    conn = None
                     write_error = exc
                 else:
                     write_error = None
@@ -185,8 +193,8 @@ class BaseBridge:
 
 
 def main():
-    rospy.init_node("csrpi_base_bridge")
-    bridge = BaseBridge()
+    rospy.init_node("csrpi_wheel_bridge")
+    bridge = WheelBridge()
     bridge.spin()
 
 
