@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/catkin_ws/devel
+
+Name: clbrobot_follower
+Description: Description of clbrobot_follower
+Version: 2.3.7
+Cflags: 
+Libs: -L${prefix}/lib -lclbrobot_follower
+Requires: roscpp depth_image_proc cv_bridge image_transport

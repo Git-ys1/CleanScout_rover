@@ -1,0 +1,9 @@
+\subsubsection usage Usage
+\verbatim
+<node name="clb_pid" pkg="clb_pid" type="clb_pid">
+  <param name="p" type="double" value="0.1" />
+  <param name="d" type="double" value="0.2" />
+  <param name="i" type="double" value="0.2" />
+</node>
+\endverbatim
+

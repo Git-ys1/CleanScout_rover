@@ -1,0 +1,21 @@
+
+(cl:in-package :asdf)
+
+(defsystem "clb_msgs-srv"
+  :depends-on (:roslisp-msg-protocol :roslisp-utils )
+  :components ((:file "_package")
+    (:file "FaceVoiceSet" :depends-on ("_package_FaceVoiceSet"))
+    (:file "_package_FaceVoiceSet" :depends-on ("_package"))
+    (:file "Gripper" :depends-on ("_package_Gripper"))
+    (:file "_package_Gripper" :depends-on ("_package"))
+    (:file "Pose" :depends-on ("_package_Pose"))
+    (:file "_package_Pose" :depends-on ("_package"))
+    (:file "RobotVoiceCtrl" :depends-on ("_package_RobotVoiceCtrl"))
+    (:file "_package_RobotVoiceCtrl" :depends-on ("_package"))
+    (:file "ServoAngle" :depends-on ("_package_ServoAngle"))
+    (:file "_package_ServoAngle" :depends-on ("_package"))
+    (:file "Shoot" :depends-on ("_package_Shoot"))
+    (:file "_package_Shoot" :depends-on ("_package"))
+    (:file "Trajectory" :depends-on ("_package_Trajectory"))
+    (:file "_package_Trajectory" :depends-on ("_package"))
+  ))

@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Circle.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/CircleArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/CircleArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Contour.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/ContourArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/ContourArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Face.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FaceArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FaceArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FaceRecognitionTrain.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Flow.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FlowArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FlowArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/FlowStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Line.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/LineArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/LineArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Moment.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/MomentArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/MomentArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Point2D.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Point2DArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Point2DArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Point2DStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Rect.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RectArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RectArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RotatedRect.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RotatedRectArray.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RotatedRectArrayStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/RotatedRectStamped.h"
+  "/home/clbrobot/catkin_ws/devel/include/opencv_apps/Size.h"
+  "CMakeFiles/opencv_apps_generate_messages_cpp"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/opencv_apps_generate_messages_cpp.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()
