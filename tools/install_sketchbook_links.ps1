@@ -82,6 +82,11 @@ $libraries = @(
         Header = "Tyler_1.h"
     },
     @{
+        Name = "CsrBaseController"
+        Source = Join-Path $RepoRoot "libraries\CsrBaseController"
+        Header = "CsrBaseController.h"
+    },
+    @{
         Name = "Adafruit-Motor-Shield-library-master"
         Source = Join-Path $RepoRoot "Adafruit-Motor-Shield-library-master"
         Header = "AFMotor.h"
