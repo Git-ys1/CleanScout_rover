@@ -64,6 +64,18 @@ void Tyler_1::ensureHeadServoAttached() {
   headServoAttached = true;
 }
 
+void Tyler_1::applyMotorCommand(AF_DCMotor* motor, int16_t signedPwm, byte forwardCmd, byte backwardCmd) {
+  int16_t constrainedPwm = constrain(signedPwm, -255, 255);
+
+  if (constrainedPwm == 0) {
+    motor->run(RELEASE);
+    return;
+  }
+
+  motor->setSpeed((uint8_t)abs(constrainedPwm));
+  motor->run(constrainedPwm > 0 ? forwardCmd : backwardCmd);
+}
+
 // 初始化舵机
 void Tyler_1::headServoIni() {
   ensureHeadServoAttached();
@@ -216,4 +228,32 @@ void Tyler_1::stop() {
   dcMotor2->run(RELEASE);
   dcMotor3->run(RELEASE);
   dcMotor4->run(RELEASE);
+}
+
+// 单轮原始控制
+void Tyler_1::setWheelCommand(uint8_t wheel, int16_t signedPwm) {
+  switch (wheel) {
+    case 1:
+      applyMotorCommand(dcMotor1, signedPwm, dcMotor1Forward, dcMotor1Backward);
+      break;
+    case 2:
+      applyMotorCommand(dcMotor2, signedPwm, dcMotor2Forward, dcMotor2Backward);
+      break;
+    case 3:
+      applyMotorCommand(dcMotor3, signedPwm, dcMotor3Forward, dcMotor3Backward);
+      break;
+    case 4:
+      applyMotorCommand(dcMotor4, signedPwm, dcMotor4Forward, dcMotor4Backward);
+      break;
+    default:
+      break;
+  }
+}
+
+// 四轮原始控制
+void Tyler_1::setWheelCommands(int16_t m1, int16_t m2, int16_t m3, int16_t m4) {
+  setWheelCommand(1, m1);
+  setWheelCommand(2, m2);
+  setWheelCommand(3, m3);
+  setWheelCommand(4, m4);
 }

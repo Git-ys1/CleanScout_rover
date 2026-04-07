@@ -49,6 +49,8 @@ class Tyler_1 {
     void backwardL();           // 左后
     void backwardR();           // 右后
     void stop();                // 停车
+    void setWheelCommand(uint8_t wheel, int16_t signedPwm);   // 单轮原始控制
+    void setWheelCommands(int16_t m1, int16_t m2, int16_t m3, int16_t m4); // 四轮原始控制
     int getDistance();          // 获取距离传感器读数
 
     void setHeadPos(int pos);   // 设定舵机角度
@@ -60,6 +62,7 @@ class Tyler_1 {
     void dcMotorIni(bool dir1, bool dir2, bool dir3, bool dir4);  // 车轮电机初始化设置
     bool isPinDisabled(int pin) const;
     void ensureHeadServoAttached();
+    void applyMotorCommand(AF_DCMotor* motor, int16_t signedPwm, byte forwardCmd, byte backwardCmd);
 
     AF_DCMotor* dcMotor1 = new AF_DCMotor(1);                      // 车轮电机1
     AF_DCMotor* dcMotor2 = new AF_DCMotor(2);                      // 车轮电机2
