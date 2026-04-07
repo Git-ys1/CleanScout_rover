@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/catkin_ws/install
+
+Name: lslidar_c16_driver
+Description: Description of lslidar_c16_driver
+Version: 1.2.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: roscpp diagnostic_updater nodelet lslidar_c16_msgs

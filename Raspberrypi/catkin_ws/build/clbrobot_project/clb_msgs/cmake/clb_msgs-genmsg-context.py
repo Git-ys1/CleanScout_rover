@@ -1,0 +1,11 @@
+# generated from genmsg/cmake/pkg-genmsg.context.in
+
+messages_str = "/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Velocities.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/PID.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Imu.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Battery.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/DHT22.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Servo.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Infrared.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Ultrasonic.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Led.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Buzzer.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Arm.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Sonar.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/RcMode.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Bluetooth.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/Blue_connect.msg;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg/ps2_value.msg"
+services_str = "/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/ServoAngle.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/RobotVoiceCtrl.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/FaceVoiceSet.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/Pose.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/Gripper.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/Trajectory.srv;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/srv/Shoot.srv"
+pkg_name = "clb_msgs"
+dependencies_str = "std_msgs;geometry_msgs"
+langs = "gencpp;geneus;genlisp;gennodejs;genpy"
+dep_include_paths_str = "clb_msgs;/home/clbrobot/catkin_ws/src/clbrobot_project/clb_msgs/msg;std_msgs;/opt/ros/noetic/share/std_msgs/cmake/../msg;geometry_msgs;/opt/ros/noetic/share/geometry_msgs/cmake/../msg"
+PYTHON_EXECUTABLE = "/usr/bin/python3"
+package_has_static_sources = '' == 'TRUE'
+genmsg_check_deps_script = "/opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py"
