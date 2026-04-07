@@ -94,7 +94,11 @@
 - `docs/SOFTWARE/C-2.2.5A_uno_encoder_architecture_freeze.md`
 - `docs/PLAN/C-2.2.6A.md`
 - `docs/SOFTWARE/C-2.2.6A_uno_encoder_pid_execution.md`
+- `docs/PLAN/C-2.2.7.md`
+- `docs/SOFTWARE/C-2.2.7A_uno_w_protocol_freeze.md`
+- `docs/SOFTWARE/C-2.2.7_serial_protocol_contract.md`
 - `Raspberrypi/releases/C-2.2.4_upper_lower_control_truth/README.md`
+- `Raspberrypi/releases/C-2.2.7/README.md`
 
 说明：
 
@@ -103,6 +107,7 @@
 - 长期正式方向已明确为“树莓派持续发送速度命令 + UNO 短超时急停 + 下一轮编码器闭环”。
 - `C-2.2.5A` 继续冻结 `UNO` 编码器接入架构、引脚映射与 `PCINT` 采样方向。
 - `C-2.2.6A` 开始在 `UNO` 本地侧落地四轮编码器 `x1` 采样、四路 `PI` 和新的 `W,w1,w2,w3,w4` 桥接协议。
+- `C-2.2.7` 明确冻结当前唯一联调真相为 `W,w1,w2,w3,w4`，并要求树莓派端先对齐 `W` 协议桥，再进入 `cmd_vel -> W` 下一阶段。
 
 ## 3. 当前阶段判断
 
