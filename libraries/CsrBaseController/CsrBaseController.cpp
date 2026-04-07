@@ -146,6 +146,7 @@ void CsrBaseController::runControlLoop(unsigned long nowMs) {
 
   drive_.setWheelCommands(pwm[0], pwm[1], pwm[2], pwm[3]);
   SerialProtocol::sendEncoderTelemetry(serial_, ticks, measuredTicksPerSecond_);
+  SerialProtocol::sendPidTelemetry(serial_, targetTicksPerSecond_, measuredTicksPerSecond_, pwm);
 }
 
 void CsrBaseController::handleTimeout(unsigned long nowMs) {

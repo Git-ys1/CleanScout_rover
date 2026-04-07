@@ -13,6 +13,8 @@ static const float CPR_X1_EST = 260.0f;
 
 static const uint16_t CONTROL_PERIOD_MS = 20U;
 static const uint16_t COMMAND_TIMEOUT_MS = 400U;
+static const uint16_t COMMAND_TIMEOUT_DEBUG_MS = 2000U;
+static const bool USE_DEBUG_TIMEOUT = true;
 static const float CONTROL_DT_SECONDS = 0.02f;
 
 static const float WHEEL_KP = 0.4f;
@@ -57,7 +59,7 @@ static CsrBaseControllerConfig makeControllerConfig() {
   }
 
   config.controlPeriodMs = CONTROL_PERIOD_MS;
-  config.commandTimeoutMs = COMMAND_TIMEOUT_MS;
+  config.commandTimeoutMs = USE_DEBUG_TIMEOUT ? COMMAND_TIMEOUT_DEBUG_MS : COMMAND_TIMEOUT_MS;
   config.controlDtSeconds = CONTROL_DT_SECONDS;
   config.dMechMm = D_MECH_MM;
   config.dEffMm = D_EFF_MM;

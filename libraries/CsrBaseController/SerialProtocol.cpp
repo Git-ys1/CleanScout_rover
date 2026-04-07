@@ -35,6 +35,33 @@ void SerialProtocol::sendEncoderTelemetry(Stream& serial, const long ticks[4], c
   serial.println(speeds[3], 1);
 }
 
+void SerialProtocol::sendPidTelemetry(Stream& serial, const float targets[4], const float measured[4], const int16_t outputs[4]) {
+  serial.print(F("PID,"));
+  serial.print(targets[0], 1);
+  serial.print(',');
+  serial.print(targets[1], 1);
+  serial.print(',');
+  serial.print(targets[2], 1);
+  serial.print(',');
+  serial.print(targets[3], 1);
+  serial.print(',');
+  serial.print(measured[0], 1);
+  serial.print(',');
+  serial.print(measured[1], 1);
+  serial.print(',');
+  serial.print(measured[2], 1);
+  serial.print(',');
+  serial.print(measured[3], 1);
+  serial.print(',');
+  serial.print(outputs[0]);
+  serial.print(',');
+  serial.print(outputs[1]);
+  serial.print(',');
+  serial.print(outputs[2]);
+  serial.print(',');
+  serial.println(outputs[3]);
+}
+
 SerialParseStatus SerialProtocol::parseWheelTargets(const char* line, int16_t targets[4]) {
   if (line == nullptr || line[0] == '\0') {
     return SERIAL_PARSE_EMPTY;
