@@ -23,8 +23,8 @@ static const uint16_t COMMAND_TIMEOUT_DEBUG_MS = 2000U;
 static const bool USE_DEBUG_TIMEOUT = true;
 static const float CONTROL_DT_SECONDS = 0.02f;
 
-static const float WHEEL_KP = 0.4f;
-static const float WHEEL_KI = 0.0f;
+static const float WHEEL_KP = 2.0f;
+static const float WHEEL_KI = 0.5f;
 static const float WHEEL_I_LIMIT = 150.0f;
 static const float WHEEL_OUTPUT_LIMIT = 255.0f;
 
