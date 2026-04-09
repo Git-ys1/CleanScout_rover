@@ -11,5 +11,9 @@ catkin_package()
 catkin_install_python(PROGRAMS
   scripts/fan_pwm_test.py
   scripts/fan_bridge.py
+  scripts/relay_toggle_test.py
+  scripts/fan_dual_test.py
+  scripts/fan_dual_bridge.py
+  scripts/fan_dual_fg_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

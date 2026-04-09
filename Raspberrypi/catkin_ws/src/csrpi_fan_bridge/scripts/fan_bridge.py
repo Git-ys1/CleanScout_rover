@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import pigpio
+import RPi.GPIO as GPIO
 import rospy
 from std_msgs.msg import Bool, Float32
 
@@ -14,33 +14,31 @@ class FanBridge:
         self.enabled = False
         self.last_percent = 0.0
 
-        self.pi = pigpio.pi()
-        if not self.pi.connected:
-            raise RuntimeError("pigpio daemon is not running")
-
-        self.pi.set_mode(self.relay_gpio, pigpio.OUTPUT)
-        self.pi.write(self.relay_gpio, 0)
-        self.pi.hardware_PWM(self.pwm_gpio, self.pwm_freq_hz, 0)
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.relay_gpio, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(self.pwm_gpio, GPIO.OUT, initial=GPIO.LOW)
+        self.pwm = GPIO.PWM(self.pwm_gpio, self.pwm_freq_hz)
+        self.pwm.start(0)
 
         rospy.Subscriber("/fan_enable", Bool, self.enable_callback, queue_size=10)
         rospy.Subscriber("/fan_pwm_percent", Float32, self.percent_callback, queue_size=10)
 
     def set_pwm_percent(self, percent):
         percent = max(0.0, min(100.0, percent))
-        duty = int(percent * 10000)
-        self.pi.hardware_PWM(self.pwm_gpio, self.pwm_freq_hz, duty)
+        self.pwm.ChangeDutyCycle(percent)
         self.last_percent = percent
 
     def enable_callback(self, msg):
         if msg.data and not self.enabled:
-            self.pi.write(self.relay_gpio, 1)
+            GPIO.output(self.relay_gpio, GPIO.HIGH)
             rospy.sleep(self.enable_delay)
             self.set_pwm_percent(self.last_percent)
             self.enabled = True
         elif not msg.data and self.enabled:
             self.set_pwm_percent(0.0)
             rospy.sleep(0.2)
-            self.pi.write(self.relay_gpio, 0)
+            GPIO.output(self.relay_gpio, GPIO.LOW)
             self.enabled = False
 
     def percent_callback(self, msg):
