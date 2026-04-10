@@ -1,0 +1,8 @@
+<launch>
+  <include file="$(find clbrobot)/launch/bench_full_stack.launch">
+    <arg name="use_lidar" value="false" />
+    <arg name="use_rviz" value="false" />
+  </include>
+
+  <include file="$(find clbrobot)/launch/slam/lidar_slam.launch" />
+</launch>
