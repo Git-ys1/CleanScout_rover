@@ -1,0 +1,44 @@
+现在按 C-2.3.5A 的新口径启动：只用一个前台入口，不再手工先起 roscore。
+
+一、树莓派：先清理旧会话
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./clean_ros_sessions.sh
+
+二、树莓派：前台启动唯一建图入口（不要后台）
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./start_slam_mapping.sh
+
+三、虚拟机：连接树莓派 ROS master
+
+source /opt/ros/noetic/setup.bash
+rostopic list
+rostopic hz /scan
+rostopic hz /imu/data
+rviz
+
+四、RViz 观察建议
+
+1. Fixed Frame = map
+2. Map
+3. LaserScan = /scan
+4. TF
+
+五、桌面建图动作
+
+1. 小范围
+2. 低速
+3. 先前进 / 后退 / 原地转
+4. 第一轮先不要横移
+5. 先做一个小闭环
+
+六、地图一旦成形，再开树莓派新的终端执行保存
+
+source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./save_map.sh desk_map_001
+
+地图保存位置：
+
+/home/clbrobot/Work/CleanScout_rover/Raspberrypi/maps/

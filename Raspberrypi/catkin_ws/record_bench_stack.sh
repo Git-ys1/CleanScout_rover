@@ -7,11 +7,6 @@ OUT_DIR="$ROOT/bags"
 
 mkdir -p "$OUT_DIR"
 
-export ROS_MASTER_URI="http://127.0.0.1:11311"
-export ROS_IP="127.0.0.1"
-export ROS_HOSTNAME="127.0.0.1"
-
-source /opt/ros/noetic/setup.bash
-source "$ROOT/devel/setup.bash"
+source "$ROOT/use_cleanscout_pi.sh"
 
 rosbag record -O "$OUT_DIR/bench_stack_${STAMP}.bag" /scan /imu/data /tf /csr_base/raw_serial_line /csr_base/encoder_debug /csr_base/pid_debug /csr_base/bridge_status /cmd_vel
