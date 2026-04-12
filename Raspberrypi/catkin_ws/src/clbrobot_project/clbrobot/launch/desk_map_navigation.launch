@@ -1,0 +1,23 @@
+<launch>
+  <include file="$(find clbrobot)/launch/bench_full_stack.launch">
+    <arg name="use_lidar" value="true" />
+    <arg name="use_rviz" value="false" />
+  </include>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser" args="0.04 0 0.18 0 0 0 /base_link /laser 100" />
+
+  <node pkg="csrpi_base_bridge" type="cmdvel_to_wheels.py" name="csrpi_cmdvel_to_wheels" output="screen">
+    <param name="enabled" value="true" />
+    <param name="d_eff_m" value="0.078" />
+    <param name="wb_m" value="0.16535" />
+    <param name="tw_m" value="0.17850" />
+    <param name="k_m" value="0.171925" />
+    <param name="cpr_x1_est" value="260.0" />
+  </node>
+
+  <arg name="map_file" default="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/maps/desk_map_001.yaml"/>
+  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" />
+
+  <include file="$(find clbrobot)/launch/amcl.launch" />
+  <include file="$(find clbrobot)/param/navigation/move_base.xml" />
+</launch>
