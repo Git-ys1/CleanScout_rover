@@ -30,3 +30,13 @@ echo
 echo "[check] ROS topics"
 source /opt/ros/noetic/setup.bash
 rostopic list 2>/dev/null || true
+
+echo
+echo "[check] key topics"
+for topic in /scan /odom /csr_base/ack /amcl_pose /move_base/status /cmd_vel /csr_base/wheel_targets; do
+  if rostopic list 2>/dev/null | grep -q "^${topic}$"; then
+    echo "ok  ${topic}"
+  else
+    echo "miss ${topic}"
+  fi
+done

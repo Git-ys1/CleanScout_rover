@@ -14,6 +14,7 @@ class CmdvelToWheels:
         self.tw_m = float(rospy.get_param("~tw_m", 0.17850))
         self.k_m = float(rospy.get_param("~k_m", 0.171925))
         self.cpr_x1_est = float(rospy.get_param("~cpr_x1_est", 260.0))
+        self.min_abs_ticks = int(rospy.get_param("~min_abs_ticks", 300))
         self.enabled = bool(rospy.get_param("~enabled", False))
 
         self.pub = rospy.Publisher("/csr_base/wheel_targets", Int32MultiArray, queue_size=20)
@@ -45,7 +46,10 @@ class CmdvelToWheels:
         ticks_per_sec = []
         for value in wheel_rad_s:
             rev_per_sec = value / (2.0 * math.pi)
-            ticks_per_sec.append(int(round(rev_per_sec * self.cpr_x1_est)))
+            ticks = int(round(rev_per_sec * self.cpr_x1_est))
+            if ticks != 0 and abs(ticks) < self.min_abs_ticks:
+                ticks = self.min_abs_ticks if ticks > 0 else -self.min_abs_ticks
+            ticks_per_sec.append(ticks)
         return ticks_per_sec
 
 
