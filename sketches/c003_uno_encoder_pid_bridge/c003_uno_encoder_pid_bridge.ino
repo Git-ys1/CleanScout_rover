@@ -12,10 +12,10 @@ static const unsigned long RAW4_REPORT_MS = 100UL;
 
 static const float D_MECH_MM = 80.0f;
 static const float D_EFF_MM = 78.0f;
-static const float WB_M = 0.16535f;
-static const float TW_M = 0.17850f;
-static const float K_M = 0.171925f;
-static const float CPR_X1_EST = 260.0f;
+static const float WB_M = 0.1905f;
+static const float TW_M = 0.1800f;
+static const float K_M = 0.18525f;
+static const float CPR_X1_EST = 520.0f;
 
 static const uint16_t CONTROL_PERIOD_MS = 20U;
 static const uint16_t COMMAND_TIMEOUT_MS = 400U;

@@ -103,10 +103,10 @@ void WheelEncoder::serviceGroup(uint8_t pcintGroupBit) {
     uint8_t currentA = ((*encoder->inputRegA_ & encoder->bitMaskA_) != 0) ? 1 : 0;
     uint8_t previousA = encoder_state_[i];
 
-    if (previousA == 0 && currentA == 1) {
+    if (currentA != previousA) {
       uint8_t currentB = ((*encoder->inputRegB_ & encoder->bitMaskB_) != 0) ? 1 : 0;
-      long delta = currentB ? -1L : 1L;
-      encoder_ticks_[i] += delta * encoder->directionSign_;
+      int8_t delta = (currentA == currentB) ? -1 : 1;
+      encoder_ticks_[i] += (long)delta * encoder->directionSign_;
     }
 
     encoder_state_[i] = currentA;
