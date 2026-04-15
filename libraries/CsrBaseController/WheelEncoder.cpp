@@ -100,16 +100,17 @@ void WheelEncoder::serviceGroup(uint8_t pcintGroupBit) {
       continue;
     }
 
-    uint8_t currentA = ((*encoder->inputRegA_ & encoder->bitMaskA_) != 0) ? 1 : 0;
-    uint8_t previousA = encoder_state_[i];
+    const bool currentA = ((*encoder->inputRegA_ & encoder->bitMaskA_) != 0);
+    const bool previousA = (encoder_state_[i] != 0);
 
-    if (currentA != previousA) {
-      uint8_t currentB = ((*encoder->inputRegB_ & encoder->bitMaskB_) != 0) ? 1 : 0;
+    if (currentA && !previousA) {
+      const bool currentB = ((*encoder->inputRegB_ & encoder->bitMaskB_) != 0);
       int8_t delta = (currentA == currentB) ? -1 : 1;
-      encoder_ticks_[i] += (long)delta * encoder->directionSign_;
+      delta *= encoder->directionSign_;
+      encoder_ticks_[i] += delta;
     }
 
-    encoder_state_[i] = currentA;
+    encoder_state_[i] = currentA ? 1 : 0;
   }
 }
 

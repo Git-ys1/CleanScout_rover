@@ -27,6 +27,14 @@ struct CsrBaseControllerConfig {
   WheelPiConfig wheelPi[4];
   uint16_t controlPeriodMs;
   uint16_t commandTimeoutMs;
+  bool openLoopDirectDrive;
+  float speedFilterAlpha;
+  int16_t startupPwm;
+  int16_t startupPwmByWheel[4];
+  int16_t minDrivePwmByWheel[4];
+  float startupMeasuredThreshold;
+  float startupMeasuredThresholdByWheel[4];
+  int16_t maxPwmStepPerCycle;
   float controlDtSeconds;
   float dMechMm;
   float dEffMm;
@@ -57,6 +65,8 @@ class CsrBaseController {
     WheelPI controllers_[kWheelCount];
     float targetTicksPerSecond_[kWheelCount];
     float measuredTicksPerSecond_[kWheelCount];
+    float filteredTicksPerSecond_[kWheelCount];
+    int16_t lastPwmCommand_[kWheelCount];
     bool configLoaded_;
     bool ackPulsePending_;
     bool commandActive_;
@@ -70,6 +80,10 @@ class CsrBaseController {
     void runControlLoop(unsigned long nowMs);
     void handleTimeout(unsigned long nowMs);
     int16_t applyDeadbandCompensation(int16_t signedPwm) const;
+    int16_t applyPerWheelMinDrive(uint8_t index, float targetTicksPerSecond, int16_t signedPwm) const;
+    int16_t clampOutputDirection(float targetTicksPerSecond, int16_t signedPwm) const;
+    int16_t applyStartupCompensation(uint8_t index, float targetTicksPerSecond, float measuredTicksPerSecond, int16_t signedPwm) const;
+    int16_t applyOutputSlewLimit(uint8_t index, int16_t signedPwm);
     void zeroTargets();
     void resetControllers();
 };
