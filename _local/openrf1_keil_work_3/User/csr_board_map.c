@@ -17,11 +17,15 @@ static const char *g_channel_notes[CSR_CHANNEL_COUNT] =
 };
 
 /*
- * 初始方向按当前已知实测预填：CN1/CN3 需要翻转，CN2/CN4 保持。
- * 这只是 bringup 起点，最终以 C-3.0.5 真值表回填为准。
+ * C-3.0.6 闭环默认语义：
+ * - 原始 M 调试命令已经在 csr_motor_drv.c 内统一为 +pwm 正向
+ * - W 闭环层不再二次翻转电机方向
+ * - 编码器符号只按串口实测回填：CN2 的 +pwm 计数为负，因此这里反相
+ * - CN4 在 C-3.0.6 复测中确认当前表下仍反号，因此保持 +1
+ * - CN1/CN3 当前仍无编码器计数，本表不把无反馈问题伪装成符号修正
  */
-int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT] = { -1, 1, -1, 1 };
-int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT] = { 1, 1, 1, 1 };
+int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT] = { 1, 1, 1, 1 };
+int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT] = { 1, -1, 1, 1 };
 
 const char *csr_channel_name(csr_channel_t channel)
 {

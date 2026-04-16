@@ -1,18 +1,31 @@
 #include "main.h"
 
 #define CSR_PROTO_RX_BUFFER_SIZE 64
+#define CSR_PROTO_RX_RING_SIZE 128
 
 static char g_rx_buffer[CSR_PROTO_RX_BUFFER_SIZE];
 static uint8_t g_rx_length = 0;
+static volatile uint8_t g_rx_ring[CSR_PROTO_RX_RING_SIZE];
+static volatile uint16_t g_rx_head = 0;
+static volatile uint16_t g_rx_tail = 0;
 
 static int csr_proto_try_read_byte(uint8_t *value)
 {
-    if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == RESET)
+    uint16_t tail;
+
+    if (g_rx_head == g_rx_tail)
     {
         return 0;
     }
 
-    *value = (uint8_t)(USART_ReceiveData(USART2) & 0xFF);
+    tail = g_rx_tail;
+    *value = g_rx_ring[tail];
+    tail++;
+    if (tail >= CSR_PROTO_RX_RING_SIZE)
+    {
+        tail = 0;
+    }
+    g_rx_tail = tail;
     return 1;
 }
 
@@ -60,12 +73,80 @@ static int csr_proto_parse_channel(const char *token, csr_channel_t *channel)
     return 1;
 }
 
+static int csr_proto_parse_float(const char *token, float *value)
+{
+    double parsed_value;
+    char *endptr = 0;
+
+    parsed_value = strtod(token, &endptr);
+    if ((endptr == token) || (*endptr != '\0'))
+    {
+        return 0;
+    }
+
+    *value = (float)parsed_value;
+    return 1;
+}
+
+static void csr_proto_append_text(char *line, size_t line_size, const char *text)
+{
+    size_t current_length;
+    size_t available_length;
+
+    current_length = strlen(line);
+    if (current_length >= (line_size - 1U))
+    {
+        return;
+    }
+
+    available_length = line_size - current_length - 1U;
+    strncat(line, text, available_length);
+}
+
+static void csr_proto_append_float3(char *line, size_t line_size, float value)
+{
+    char fragment[24];
+    long scaled_value;
+    unsigned long abs_scaled;
+    unsigned long whole;
+    unsigned long fraction;
+
+    if (value >= 0.0f)
+    {
+        scaled_value = (long)(value * 1000.0f + 0.5f);
+    }
+    else
+    {
+        scaled_value = (long)(value * 1000.0f - 0.5f);
+    }
+
+    if (scaled_value < 0)
+    {
+        abs_scaled = (unsigned long)(-scaled_value);
+        whole = abs_scaled / 1000UL;
+        fraction = abs_scaled % 1000UL;
+        sprintf(fragment, "-%lu.%03lu", whole, fraction);
+    }
+    else
+    {
+        abs_scaled = (unsigned long)scaled_value;
+        whole = abs_scaled / 1000UL;
+        fraction = abs_scaled % 1000UL;
+        sprintf(fragment, "%lu.%03lu", whole, fraction);
+    }
+
+    csr_proto_append_text(line, line_size, fragment);
+}
+
 static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
 {
     char buffer[CSR_PROTO_RX_BUFFER_SIZE];
     char *token;
     char *endptr = 0;
     long pwm_value;
+    uint8_t index;
+
+    memset(command, 0, sizeof(*command));
 
     csr_proto_trim(line);
     if (line[0] == '\0')
@@ -96,6 +177,36 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
         return 1;
     }
 
+    if (strcmp(token, "W") == 0)
+    {
+        for (index = 0; index < CSR_CHANNEL_COUNT; index++)
+        {
+            token = strtok(0, ",");
+            if (token == 0)
+            {
+                csr_proto_send_error("arg_count");
+                return 0;
+            }
+
+            if (csr_proto_parse_float(token, &command->target_vel[index]) == 0)
+            {
+                csr_proto_send_error("parse_float");
+                return 0;
+            }
+        }
+
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        command->type = CSR_CMD_W;
+        command->channel = CSR_CHANNEL_CN1;
+        command->pwm = 0;
+        return 1;
+    }
+
     if (strcmp(token, "E") == 0)
     {
         token = strtok(0, ",");
@@ -110,6 +221,24 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
             return 0;
         }
         command->type = CSR_CMD_E;
+        command->pwm = 0;
+        return 1;
+    }
+
+    if (strcmp(token, "D") == 0)
+    {
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+        command->type = CSR_CMD_D;
         command->pwm = 0;
         return 1;
     }
@@ -160,6 +289,7 @@ void csr_proto_init(uint32_t baudrate)
 {
     GPIO_InitTypeDef gpio_init;
     USART_InitTypeDef usart_init;
+    NVIC_InitTypeDef nvic_init;
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
@@ -182,9 +312,18 @@ void csr_proto_init(uint32_t baudrate)
     usart_init.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     usart_init.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
     USART_Init(USART2, &usart_init);
+    USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
     USART_Cmd(USART2, ENABLE);
 
+    nvic_init.NVIC_IRQChannel = USART2_IRQn;
+    nvic_init.NVIC_IRQChannelPreemptionPriority = 1;
+    nvic_init.NVIC_IRQChannelSubPriority = 1;
+    nvic_init.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&nvic_init);
+
     g_rx_length = 0;
+    g_rx_head = 0;
+    g_rx_tail = 0;
 }
 
 int csr_proto_poll(csr_proto_command_t *command)
@@ -247,4 +386,77 @@ void csr_proto_send_enc(csr_channel_t channel, int32_t count, int32_t delta)
     char line[96];
     sprintf(line, "ENC,%u,%ld,%ld\r\n", (unsigned int)(channel + 1), (long)count, (long)delta);
     csr_proto_send_text(line);
+}
+
+void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b, uint16_t timer_count, int32_t count, int32_t delta)
+{
+    char line[128];
+    sprintf(
+        line,
+        "DBG,%u,%u,%u,%u,%ld,%ld\r\n",
+        (unsigned int)(channel + 1),
+        (unsigned int)phase_a,
+        (unsigned int)phase_b,
+        (unsigned int)timer_count,
+        (long)count,
+        (long)delta
+    );
+    csr_proto_send_text(line);
+}
+
+void csr_proto_send_vel(const float *rt, const float *tg)
+{
+    char line[192];
+    uint8_t index;
+
+    strcpy(line, "VEL");
+    for (index = 0; index < CSR_CHANNEL_COUNT; index++)
+    {
+        csr_proto_append_text(line, sizeof(line), ",");
+        csr_proto_append_float3(line, sizeof(line), rt[index]);
+    }
+    for (index = 0; index < CSR_CHANNEL_COUNT; index++)
+    {
+        csr_proto_append_text(line, sizeof(line), ",");
+        csr_proto_append_float3(line, sizeof(line), tg[index]);
+    }
+    csr_proto_append_text(line, sizeof(line), "\r\n");
+    csr_proto_send_text(line);
+}
+
+void csr_proto_send_pwm(const int16_t *pwm)
+{
+    char line[96];
+
+    sprintf(
+        line,
+        "PWM,%d,%d,%d,%d\r\n",
+        pwm[0],
+        pwm[1],
+        pwm[2],
+        pwm[3]
+    );
+    csr_proto_send_text(line);
+}
+
+void USART2_IRQHandler(void)
+{
+    uint16_t next_head;
+    uint8_t value;
+
+    if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
+    {
+        value = (uint8_t)(USART_ReceiveData(USART2) & 0xFF);
+        next_head = g_rx_head + 1U;
+        if (next_head >= CSR_PROTO_RX_RING_SIZE)
+        {
+            next_head = 0U;
+        }
+
+        if (next_head != g_rx_tail)
+        {
+            g_rx_ring[g_rx_head] = value;
+            g_rx_head = next_head;
+        }
+    }
 }

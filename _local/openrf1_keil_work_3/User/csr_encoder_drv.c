@@ -81,7 +81,6 @@ static void csr_encoder_init_cn3(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
 
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
     GPIO_PinRemapConfig(GPIO_FullRemap_TIM2, ENABLE);
 
     gpio_init.GPIO_Pin = GPIO_Pin_15;
@@ -177,4 +176,74 @@ void csr_encoder_zero(csr_channel_t channel)
     tim->CNT = 0;
     g_encoder_total[channel] = 0;
     g_encoder_last_delta[channel] = 0;
+}
+
+void csr_encoder_debug_snapshot(csr_channel_t channel, uint8_t *phase_a, uint8_t *phase_b, uint16_t *timer_count)
+{
+    TIM_TypeDef *tim;
+
+    if (phase_a != 0)
+    {
+        *phase_a = 0;
+    }
+    if (phase_b != 0)
+    {
+        *phase_b = 0;
+    }
+    if (timer_count != 0)
+    {
+        *timer_count = 0;
+    }
+
+    switch (channel)
+    {
+    case CSR_CHANNEL_CN1:
+        if (phase_a != 0)
+        {
+            *phase_a = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0);
+        }
+        if (phase_b != 0)
+        {
+            *phase_b = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_1);
+        }
+        break;
+    case CSR_CHANNEL_CN2:
+        if (phase_a != 0)
+        {
+            *phase_a = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6);
+        }
+        if (phase_b != 0)
+        {
+            *phase_b = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7);
+        }
+        break;
+    case CSR_CHANNEL_CN3:
+        if (phase_a != 0)
+        {
+            *phase_a = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_15);
+        }
+        if (phase_b != 0)
+        {
+            *phase_b = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_3);
+        }
+        break;
+    case CSR_CHANNEL_CN4:
+        if (phase_a != 0)
+        {
+            *phase_a = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6);
+        }
+        if (phase_b != 0)
+        {
+            *phase_b = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
+        }
+        break;
+    default:
+        break;
+    }
+
+    tim = csr_encoder_timer(channel);
+    if ((tim != 0) && (timer_count != 0))
+    {
+        *timer_count = (uint16_t)tim->CNT;
+    }
 }
