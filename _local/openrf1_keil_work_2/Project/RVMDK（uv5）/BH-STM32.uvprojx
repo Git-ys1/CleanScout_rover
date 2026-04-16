@@ -336,7 +336,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\User;..\..\Libraries\FWlib\inc;..\..\User\Components</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\Libraries\FWlib\inc;..\..\..\openrf1_keil_work_3\User</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -543,38 +543,33 @@
             <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\User\main.c</FilePath>
+              <FilePath>..\..\..\openrf1_keil_work_3\User\main.c</FilePath>
             </File>
             <File>
-              <FileName>app_motor.c</FileName>
+              <FileName>csr_board_map.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\User\app_motor.c</FilePath>
+              <FilePath>..\..\..\openrf1_keil_work_3\User\csr_board_map.c</FilePath>
+            </File>
+            <File>
+              <FileName>csr_motor_drv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\openrf1_keil_work_3\User\csr_motor_drv.c</FilePath>
+            </File>
+            <File>
+              <FileName>csr_encoder_drv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\openrf1_keil_work_3\User\csr_encoder_drv.c</FilePath>
+            </File>
+            <File>
+              <FileName>csr_proto.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\openrf1_keil_work_3\User\csr_proto.c</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
           <GroupName>Components</GroupName>
           <Files>
-            <File>
-              <FileName>y_delay.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\User\Components\y_delay\y_delay.c</FilePath>
-            </File>
-            <File>
-              <FileName>y_motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\User\Components\y_motor\y_motor.c</FilePath>
-            </File>
-            <File>
-              <FileName>y_timer.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\User\Components\y_timer\y_timer.c</FilePath>
-            </File>
-            <File>
-              <FileName>y_encoder.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\User\Components\y_encoder\y_encoder.c</FilePath>
-            </File>
           </Files>
         </Group>
       </Groups>
