@@ -90,8 +90,7 @@ static void csr_systick_init(void)
 
 static void csr_init_debug_ports(void)
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
+    csr_encoder_apply_debug_remap();
 }
 
 static void csr_clear_pi_state(void)

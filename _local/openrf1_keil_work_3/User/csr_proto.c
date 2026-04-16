@@ -445,9 +445,10 @@ void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapsh
 
     sprintf(
         line,
-        "REG,%u,%08lX,%04X,%04X,%04X,%04X\r\n",
+        "REG,%u,%08lX,%08lX,%04X,%04X,%04X,%04X\r\n",
         (unsigned int)target,
-        (unsigned long)snapshot->mapr,
+        (unsigned long)snapshot->mapr_raw,
+        (unsigned long)snapshot->mapr_effective,
         (unsigned int)snapshot->smcr,
         (unsigned int)snapshot->ccmr1,
         (unsigned int)snapshot->ccer,

@@ -4,6 +4,24 @@
 
 static int32_t g_encoder_total[CSR_CHANNEL_COUNT] = {0};
 static int32_t g_encoder_last_delta[CSR_CHANNEL_COUNT] = {0};
+static uint32_t g_afio_mapr_effective = 0;
+
+void csr_encoder_apply_debug_remap(void)
+{
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+
+    /*
+     * STM32F1 MAPR.SWJ_CFG is unsafe to preserve with read-modify-write:
+     * readback can report a different SWJ_CFG than the last value written.
+     * Keep an explicit shadow for the bits we own and always rewrite TIM2
+     * full remap + "JTAG disabled, SWD enabled" together.
+     */
+    g_afio_mapr_effective = AFIO->MAPR;
+    g_afio_mapr_effective &= ~(AFIO_MAPR_SWJ_CFG | AFIO_MAPR_TIM2_REMAP);
+    g_afio_mapr_effective |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
+    g_afio_mapr_effective |= AFIO_MAPR_TIM2_REMAP_FULLREMAP;
+    AFIO->MAPR = g_afio_mapr_effective;
+}
 
 static TIM_TypeDef *csr_encoder_timer(csr_channel_t channel)
 {
@@ -81,7 +99,7 @@ static void csr_encoder_init_cn3(void)
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
 
-    GPIO_PinRemapConfig(GPIO_FullRemap_TIM2, ENABLE);
+    csr_encoder_apply_debug_remap();
 
     gpio_init.GPIO_Pin = GPIO_Pin_15;
     gpio_init.GPIO_Mode = GPIO_Mode_IN_FLOATING;
@@ -257,7 +275,8 @@ void csr_encoder_reg_snapshot(uint8_t target, csr_encoder_reg_snapshot_t *snapsh
         return;
     }
 
-    snapshot->mapr = AFIO->MAPR;
+    snapshot->mapr_raw = AFIO->MAPR;
+    snapshot->mapr_effective = g_afio_mapr_effective;
     snapshot->smcr = 0;
     snapshot->ccmr1 = 0;
     snapshot->ccer = 0;

@@ -5,13 +5,15 @@
 
 typedef struct
 {
-    uint32_t mapr;
+    uint32_t mapr_raw;
+    uint32_t mapr_effective;
     uint16_t smcr;
     uint16_t ccmr1;
     uint16_t ccer;
     uint16_t cnt;
 } csr_encoder_reg_snapshot_t;
 
+void csr_encoder_apply_debug_remap(void);
 void csr_encoder_init(void);
 int32_t csr_encoder_read_and_reset(csr_channel_t channel);
 int32_t csr_encoder_peek(csr_channel_t channel);
