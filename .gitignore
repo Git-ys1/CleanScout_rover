@@ -1,3 +1,9 @@
 .build/
 __pycache__/
 *.pyc
+_local/openrf1_keil_work/
+_local/openrf1_keil_work_2/Output/
+_local/openrf1_keil_work_2/Listing/
+_local/openrf1_keil_work_2/.vscode/
+_local/openrf1_keil_work_2/Project/RVMDK（uv5）/BH-STM32.uvguix*
+_local/openrf1_keil_work_2/Project/RVMDK（uv5）/JLinkLog.txt
