@@ -435,7 +435,7 @@ void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b,
 
 void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapshot)
 {
-    char line[160];
+    char line[256];
 
     if (snapshot == 0)
     {
@@ -445,14 +445,24 @@ void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapsh
 
     sprintf(
         line,
-        "REG,%u,%08lX,%08lX,%04X,%04X,%04X,%04X\r\n",
+        "REG,%u,%08lX,%08lX,%04X,%04X,%04X,%04X,%X,%X,%u,%u,%08lX,%08lX,%04lX,%08lX,%08lX,%04lX\r\n",
         (unsigned int)target,
         (unsigned long)snapshot->mapr_raw,
         (unsigned long)snapshot->mapr_effective,
         (unsigned int)snapshot->smcr,
         (unsigned int)snapshot->ccmr1,
         (unsigned int)snapshot->ccer,
-        (unsigned int)snapshot->cnt
+        (unsigned int)snapshot->cnt,
+        (unsigned int)snapshot->pin_a_cfg,
+        (unsigned int)snapshot->pin_b_cfg,
+        (unsigned int)snapshot->pin_a_level,
+        (unsigned int)snapshot->pin_b_level,
+        (unsigned long)snapshot->gpioa_crl,
+        (unsigned long)snapshot->gpioa_crh,
+        (unsigned long)snapshot->gpioa_idr,
+        (unsigned long)snapshot->gpiob_crl,
+        (unsigned long)snapshot->gpiob_crh,
+        (unsigned long)snapshot->gpiob_idr
     );
     csr_proto_send_text(line);
 }

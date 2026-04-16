@@ -40,6 +40,25 @@ static TIM_TypeDef *csr_encoder_timer(csr_channel_t channel)
     }
 }
 
+static uint8_t csr_gpio_pin_cfg(GPIO_TypeDef *gpio, uint8_t pin)
+{
+    uint32_t reg_value;
+    uint8_t shift;
+
+    if (pin < 8U)
+    {
+        reg_value = gpio->CRL;
+        shift = (uint8_t)(pin * 4U);
+    }
+    else
+    {
+        reg_value = gpio->CRH;
+        shift = (uint8_t)((pin - 8U) * 4U);
+    }
+
+    return (uint8_t)((reg_value >> shift) & 0x0FU);
+}
+
 static void csr_encoder_init_common(TIM_TypeDef *tim, uint8_t ic_filter)
 {
     TIM_TimeBaseInitTypeDef tim_base_init;
@@ -281,10 +300,51 @@ void csr_encoder_reg_snapshot(uint8_t target, csr_encoder_reg_snapshot_t *snapsh
     snapshot->ccmr1 = 0;
     snapshot->ccer = 0;
     snapshot->cnt = 0;
+    snapshot->pin_a_cfg = 0;
+    snapshot->pin_b_cfg = 0;
+    snapshot->pin_a_level = 0;
+    snapshot->pin_b_level = 0;
+    snapshot->gpioa_crl = GPIOA->CRL;
+    snapshot->gpioa_crh = GPIOA->CRH;
+    snapshot->gpioa_idr = GPIOA->IDR;
+    snapshot->gpiob_crl = GPIOB->CRL;
+    snapshot->gpiob_crh = GPIOB->CRH;
+    snapshot->gpiob_idr = GPIOB->IDR;
 
     if ((target >= 1U) && (target <= CSR_CHANNEL_COUNT))
     {
-        tim = csr_encoder_timer((csr_channel_t)(target - 1U));
+        csr_channel_t channel = (csr_channel_t)(target - 1U);
+        tim = csr_encoder_timer(channel);
+
+        switch (channel)
+        {
+        case CSR_CHANNEL_CN1:
+            snapshot->pin_a_cfg = csr_gpio_pin_cfg(GPIOA, 0U);
+            snapshot->pin_b_cfg = csr_gpio_pin_cfg(GPIOA, 1U);
+            snapshot->pin_a_level = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0);
+            snapshot->pin_b_level = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_1);
+            break;
+        case CSR_CHANNEL_CN2:
+            snapshot->pin_a_cfg = csr_gpio_pin_cfg(GPIOA, 6U);
+            snapshot->pin_b_cfg = csr_gpio_pin_cfg(GPIOA, 7U);
+            snapshot->pin_a_level = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6);
+            snapshot->pin_b_level = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_7);
+            break;
+        case CSR_CHANNEL_CN3:
+            snapshot->pin_a_cfg = csr_gpio_pin_cfg(GPIOA, 15U);
+            snapshot->pin_b_cfg = csr_gpio_pin_cfg(GPIOB, 3U);
+            snapshot->pin_a_level = (uint8_t)GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_15);
+            snapshot->pin_b_level = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_3);
+            break;
+        case CSR_CHANNEL_CN4:
+            snapshot->pin_a_cfg = csr_gpio_pin_cfg(GPIOB, 6U);
+            snapshot->pin_b_cfg = csr_gpio_pin_cfg(GPIOB, 7U);
+            snapshot->pin_a_level = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6);
+            snapshot->pin_b_level = (uint8_t)GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
+            break;
+        default:
+            break;
+        }
     }
 
     if (tim != 0)
