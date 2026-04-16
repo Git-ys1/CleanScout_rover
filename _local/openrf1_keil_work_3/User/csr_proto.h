@@ -2,6 +2,7 @@
 #define CSR_PROTO_H
 
 #include "csr_board_map.h"
+#include "csr_encoder_drv.h"
 
 typedef enum
 {
@@ -10,6 +11,7 @@ typedef enum
     CSR_CMD_M,
     CSR_CMD_E,
     CSR_CMD_D,
+    CSR_CMD_R,
     CSR_CMD_STOP
 } csr_cmd_type_t;
 
@@ -17,6 +19,7 @@ typedef struct
 {
     csr_cmd_type_t type;
     csr_channel_t channel;
+    uint8_t reg_target;
     int16_t pwm;
     float target_vel[CSR_CHANNEL_COUNT];
 } csr_proto_command_t;
@@ -28,6 +31,7 @@ void csr_proto_send_ack(const char *name);
 void csr_proto_send_error(const char *reason);
 void csr_proto_send_enc(csr_channel_t channel, int32_t count, int32_t delta);
 void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b, uint16_t timer_count, int32_t count, int32_t delta);
+void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapshot);
 void csr_proto_send_vel(const float *rt, const float *tg);
 void csr_proto_send_pwm(const int16_t *pwm);
 

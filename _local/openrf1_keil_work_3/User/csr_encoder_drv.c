@@ -22,7 +22,7 @@ static TIM_TypeDef *csr_encoder_timer(csr_channel_t channel)
     }
 }
 
-static void csr_encoder_init_common(TIM_TypeDef *tim)
+static void csr_encoder_init_common(TIM_TypeDef *tim, uint8_t ic_filter)
 {
     TIM_TimeBaseInitTypeDef tim_base_init;
     TIM_ICInitTypeDef tim_ic_init;
@@ -37,7 +37,7 @@ static void csr_encoder_init_common(TIM_TypeDef *tim)
     TIM_EncoderInterfaceConfig(tim, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
 
     TIM_ICStructInit(&tim_ic_init);
-    tim_ic_init.TIM_ICFilter = 10;
+    tim_ic_init.TIM_ICFilter = ic_filter;
     TIM_ICInit(tim, &tim_ic_init);
 
     TIM_SetCounter(tim, 0);
@@ -56,7 +56,7 @@ static void csr_encoder_init_cn1(void)
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &gpio_init);
 
-    csr_encoder_init_common(TIM5);
+    csr_encoder_init_common(TIM5, CSR_ENCODER_FILTER_CN1);
 }
 
 static void csr_encoder_init_cn2(void)
@@ -71,7 +71,7 @@ static void csr_encoder_init_cn2(void)
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &gpio_init);
 
-    csr_encoder_init_common(TIM3);
+    csr_encoder_init_common(TIM3, CSR_ENCODER_FILTER_CN2);
 }
 
 static void csr_encoder_init_cn3(void)
@@ -91,7 +91,7 @@ static void csr_encoder_init_cn3(void)
     gpio_init.GPIO_Pin = GPIO_Pin_3;
     GPIO_Init(GPIOB, &gpio_init);
 
-    csr_encoder_init_common(TIM2);
+    csr_encoder_init_common(TIM2, CSR_ENCODER_FILTER_CN3);
 }
 
 static void csr_encoder_init_cn4(void)
@@ -106,7 +106,7 @@ static void csr_encoder_init_cn4(void)
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOB, &gpio_init);
 
-    csr_encoder_init_common(TIM4);
+    csr_encoder_init_common(TIM4, CSR_ENCODER_FILTER_CN4);
 }
 
 void csr_encoder_init(void)
@@ -245,5 +245,34 @@ void csr_encoder_debug_snapshot(csr_channel_t channel, uint8_t *phase_a, uint8_t
     if ((tim != 0) && (timer_count != 0))
     {
         *timer_count = (uint16_t)tim->CNT;
+    }
+}
+
+void csr_encoder_reg_snapshot(uint8_t target, csr_encoder_reg_snapshot_t *snapshot)
+{
+    TIM_TypeDef *tim = 0;
+
+    if (snapshot == 0)
+    {
+        return;
+    }
+
+    snapshot->mapr = AFIO->MAPR;
+    snapshot->smcr = 0;
+    snapshot->ccmr1 = 0;
+    snapshot->ccer = 0;
+    snapshot->cnt = 0;
+
+    if ((target >= 1U) && (target <= CSR_CHANNEL_COUNT))
+    {
+        tim = csr_encoder_timer((csr_channel_t)(target - 1U));
+    }
+
+    if (tim != 0)
+    {
+        snapshot->smcr = (uint16_t)tim->SMCR;
+        snapshot->ccmr1 = (uint16_t)tim->CCMR1;
+        snapshot->ccer = (uint16_t)tim->CCER;
+        snapshot->cnt = (uint16_t)tim->CNT;
     }
 }

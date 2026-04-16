@@ -225,6 +225,35 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
         return 1;
     }
 
+    if (strcmp(token, "R") == 0)
+    {
+        long reg_target;
+
+        token = strtok(0, ",");
+        if (token == 0)
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+
+        reg_target = strtol(token, &endptr, 10);
+        if ((endptr == token) || (*endptr != '\0') || (reg_target < 0) || (reg_target > CSR_CHANNEL_COUNT))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        command->type = CSR_CMD_R;
+        command->reg_target = (uint8_t)reg_target;
+        command->pwm = 0;
+        return 1;
+    }
+
     if (strcmp(token, "D") == 0)
     {
         token = strtok(0, ",");
@@ -400,6 +429,29 @@ void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b,
         (unsigned int)timer_count,
         (long)count,
         (long)delta
+    );
+    csr_proto_send_text(line);
+}
+
+void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapshot)
+{
+    char line[160];
+
+    if (snapshot == 0)
+    {
+        csr_proto_send_error("reg_snapshot");
+        return;
+    }
+
+    sprintf(
+        line,
+        "REG,%u,%08lX,%04X,%04X,%04X,%04X\r\n",
+        (unsigned int)target,
+        (unsigned long)snapshot->mapr,
+        (unsigned int)snapshot->smcr,
+        (unsigned int)snapshot->ccmr1,
+        (unsigned int)snapshot->ccer,
+        (unsigned int)snapshot->cnt
     );
     csr_proto_send_text(line);
 }

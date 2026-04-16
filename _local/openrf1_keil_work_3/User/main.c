@@ -279,6 +279,7 @@ static void csr_handle_command(const csr_proto_command_t *command)
     uint8_t phase_a;
     uint8_t phase_b;
     uint16_t timer_count;
+    csr_encoder_reg_snapshot_t reg_snapshot;
 
     g_last_command_ms = csr_millis();
 
@@ -327,6 +328,12 @@ static void csr_handle_command(const csr_proto_command_t *command)
         csr_encoder_debug_snapshot(command->channel, &phase_a, &phase_b, &timer_count);
         csr_proto_send_ack("D");
         csr_proto_send_dbg(command->channel, phase_a, phase_b, timer_count, count, delta);
+        break;
+
+    case CSR_CMD_R:
+        csr_encoder_reg_snapshot(command->reg_target, &reg_snapshot);
+        csr_proto_send_ack("R");
+        csr_proto_send_reg(command->reg_target, &reg_snapshot);
         break;
 
     case CSR_CMD_STOP:
