@@ -129,17 +129,17 @@ static void csr_motor_apply_cn3(int16_t signed_pwm)
         return;
     }
 
-    /* CN3 truth:
-     * +pwm -> IN1=RESET and IN2 high-dominant
-     * -pwm -> opposite pair
+    /* CN3 aligned truth:
+     * +pwm -> unified positive direction
+     * -pwm -> unified negative direction
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN3, Bit_RESET, drive);
+        csr_motor_apply_low_dominant(CSR_CHANNEL_CN3, Bit_SET, drive);
     }
     else
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN3, Bit_SET, drive);
+        csr_motor_apply_high_dominant(CSR_CHANNEL_CN3, Bit_RESET, drive);
     }
 }
 
@@ -153,17 +153,17 @@ static void csr_motor_apply_cn4(int16_t signed_pwm)
         return;
     }
 
-    /* CN4 truth:
-     * +pwm -> IN1=SET and IN2 low-dominant
-     * -pwm -> opposite pair
+    /* CN4 aligned truth:
+     * +pwm -> unified positive direction
+     * -pwm -> unified negative direction
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN4, Bit_SET, drive);
+        csr_motor_apply_high_dominant(CSR_CHANNEL_CN4, Bit_RESET, drive);
     }
     else
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN4, Bit_RESET, drive);
+        csr_motor_apply_low_dominant(CSR_CHANNEL_CN4, Bit_SET, drive);
     }
 }
 
