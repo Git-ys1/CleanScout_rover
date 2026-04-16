@@ -105,6 +105,7 @@ void csr_motor_set(csr_channel_t channel, int16_t signed_pwm)
     int32_t effective_pwm;
     uint16_t magnitude;
     uint16_t compare;
+    BitAction in1_level;
 
     if (channel >= CSR_CHANNEL_COUNT)
     {
@@ -139,14 +140,16 @@ void csr_motor_set(csr_channel_t channel, int16_t signed_pwm)
 
     if (effective_pwm > 0)
     {
-        compare = (uint16_t)(CSR_TIM8_PWM_TOP - magnitude);
-        csr_motor_write_raw(channel, Bit_SET, compare);
+        compare = magnitude;
+        in1_level = Bit_RESET;
     }
     else
     {
-        compare = magnitude;
-        csr_motor_write_raw(channel, Bit_RESET, compare);
+        compare = (uint16_t)(CSR_TIM8_PWM_TOP - magnitude);
+        in1_level = Bit_SET;
     }
+
+    csr_motor_write_raw(channel, in1_level, compare);
 
     g_last_pwm[channel] = (int16_t)effective_pwm;
 }
