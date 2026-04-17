@@ -10,7 +10,7 @@
 2. 后端端：承担多账户登录、账号与权限、设备绑定关系、openclaw 转发数据缓存、消息中转、状态持久化，以及对前端暴露统一 API/WS 接口。
 3. 设备网关端：由树莓派 + openclaw 转发链继续承担设备实时状态来源、指令转发和执行结果回传。
 
-当前版本 `V-1.0.1` 只做立项补充、制度冻结和文档冻结，不开发后端，不新增业务功能，不回写 V-1.0.0 的历史结论。
+`V-1.0.1` 负责立项补充、制度冻结和文档冻结；`V-1.1.0` 开始进入实际业务开发第一轮，正式落地前端壳子、后端鉴权壳子和 mock 联调链路。
 
 ## 系统架构
 
@@ -35,8 +35,8 @@
 系统边界结论：
 
 - V 线最终不是纯前端项目，而是前端 + 后端 + 设备接入协议协同的软件系统。
-- 当前本地仓 `vue3/` 仍然只承载前端工程和制度文档。
-- `backend/` 仅作为后续设计预留，不在本轮创建实体目录。
+- 当前本地仓 `vue3/` 已同时承载前端工程、`backend/` 后端工程与 release 文档。
+- `backend/` 从 `V-1.1.0` 起正式落地，用于账户、权限、缓存和 mock API 联调。
 
 ## 技术基线
 
@@ -61,6 +61,14 @@
 
 - 实时通信基线：`SocketTask`
 - 状态管理基线：`Pinia`
+
+后端技术栈冻结为：
+
+- Web 框架：`Express`
+- ORM：`Prisma`
+- 数据库：`SQLite`
+- 密码哈希：`bcrypt`
+- 鉴权令牌：`jsonwebtoken`
 
 ## 当前主分支追踪规则
 
@@ -159,9 +167,16 @@ V 线云端镜像发布从 `V-1.0.1` 起按以下制度执行：
 4. 对前端统一输出接口：REST API、WebSocket/SSE/转发接口。
 5. 对设备侧留接口：树莓派 / openclaw 消息上送、指令转发回设备。
 
-当前阶段仍不立即开发后端，原因是本轮只做认知冻结、边界冻结、目录冻结与仓库纪律冻结。后续阶段必须为以下内容预留设计空间：
+`V-1.1.0` 已完成 `backend/` 工程初始化，当前后端承担：
 
-- `backend/`
+- `/api/auth/register`、`/api/auth/login`、`/api/auth/me`、`/api/auth/logout`
+- `/api/device/summary`
+- `/api/chat/history`、`/api/chat/send`
+- `/api/admin/command`
+- `/api/system/health`
+
+当前阶段仍未接入真实树莓派 / openclaw，也未落地复杂 RBAC、多设备管理和真实 WebSocket 链路。后续阶段继续为以下内容扩展：
+
 - `api schema`
 - `user model`
 - `device model`
@@ -184,10 +199,16 @@ V 线云端镜像发布从 `V-1.0.1` 起按以下制度执行：
 
 ```text
 vue3/
+├─ backend/
+│  ├─ prisma/
+│  ├─ src/
+│  ├─ package.json
+│  └─ .env.example
 ├─ docs/
 │  └─ releases/
 │     ├─ V-1.0.0/
-│     └─ V-1.0.1/
+│     ├─ V-1.0.1/
+│     └─ V-1.1.0/
 ├─ src/
 │  ├─ pages/
 │  ├─ components/
@@ -210,8 +231,8 @@ vue3/
 
 说明：
 
-- `backend/` 当前只作为文档中的后续预留，不在本仓实际创建。
-- 不允许把示意目录直接误写为根级 `pages/`、`stores/`、`api/` 并覆盖现有 CLI 工程结构。
+- `src/*` 仍然是前端源码唯一有效层级，不允许把示意目录误写为根级 `pages/`、`stores/`、`api/` 并覆盖现有 CLI 工程结构。
+- `backend/` 为本仓后端目录，当前仅服务于本地 H5 联调与 mock 接口验证。
 
 ## 文档级冻结接口与规则
 
@@ -252,7 +273,7 @@ vue3/
 
 Windows PowerShell 环境下优先使用 `npm.cmd`，不要直接使用 `npm`，避免命中 `npm.ps1` 执行策略限制。
 
-推荐命令：
+前端推荐命令：
 
 ```powershell
 cmd /c npm.cmd install
@@ -261,7 +282,24 @@ cmd /c npm.cmd run dev:h5
 Get-Content -Encoding utf8 README.md
 ```
 
-本轮文档补充通过标准：
+后端推荐命令：
+
+```powershell
+cd backend
+cmd /c npm.cmd install
+cmd /c npm.cmd run prisma:generate
+cmd /c npm.cmd run prisma:migrate
+cmd /c npm.cmd run prisma:seed
+cmd /c npm.cmd run dev
+```
+
+`V-1.1.0` 当前本地联调口径：
+
+- 前端 H5 默认使用 `http://127.0.0.1:3000/api` 作为 API 基地址
+- 后端 CORS 放通 `localhost` / `127.0.0.1` 的本地开发端口，避免 `uni` 因端口占用切换到新端口时被拦截
+- 默认管理员账号通过 seed 初始化：`admin / 123456`
+
+`V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
 - 根 `README.md` 已升级为“软件交互系统线”口径

@@ -3,13 +3,43 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "V Line Control"
+        "navigationBarTitleText": "控制总览"
+      }
+    },
+    {
+      "path": "pages/auth/login",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/auth/register",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+    {
+      "path": "pages/chat/index",
+      "style": {
+        "navigationBarTitleText": "对话控制"
+      }
+    },
+    {
+      "path": "pages/admin/index",
+      "style": {
+        "navigationBarTitleText": "管理员控制"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "个人中心"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "V Line Control",
+    "navigationBarTitleText": "V线控制端",
     "navigationBarBackgroundColor": "#EEF3F9",
     "backgroundColor": "#EEF3F9"
   }
