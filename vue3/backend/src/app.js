@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js'
 import deviceRoutes from './routes/device.js'
 import chatRoutes from './routes/chat.js'
 import adminRoutes from './routes/admin.js'
+import integrationsRoutes from './routes/integrations.js'
 import systemRoutes from './routes/system.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -39,7 +40,7 @@ app.get('/', (_req, res) => {
     success: true,
     data: {
       service: 'vue3-backend',
-      version: '1.1.0',
+      version: '1.2.0',
       status: 'running',
     },
   })
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/device', deviceRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/integrations', integrationsRoutes)
 app.use('/api/system', systemRoutes)
 
 app.use((req, _res, next) => {
@@ -63,7 +65,7 @@ app.use(errorHandler)
 const port = Number(process.env.PORT || 3000)
 
 app.listen(port, () => {
-  console.log(`V-1.1.0 backend auth shell listening on http://127.0.0.1:${port}`)
+  console.log(`V-1.2.0 backend service listening on http://127.0.0.1:${port}`)
 })
 
 export default app

@@ -24,6 +24,14 @@
       </view>
     </view>
 
+    <view v-if="authStore.role === 'admin'" class="admin-card">
+      <text class="admin-card-title">管理员入口</text>
+      <text class="admin-card-desc">
+        当前账号具备管理员权限。管理台已从一级导航移出，请从这里进入用户管理、系统开关和接入状态工作台。
+      </text>
+      <button class="admin-entry-button" @tap="goToAdminConsole">进入管理台</button>
+    </view>
+
     <button class="logout-button" @tap="handleLogout">退出登录</button>
   </view>
 </template>
@@ -84,6 +92,10 @@ async function handleLogout() {
   setTimeout(() => {
     uni.reLaunch({ url: '/pages/auth/login' })
   }, 160)
+}
+
+function goToAdminConsole() {
+  uni.navigateTo({ url: '/pages/admin/index' })
 }
 </script>
 
@@ -148,6 +160,40 @@ async function handleLogout() {
 
 .detail-value.token {
   word-break: break-all;
+}
+
+.admin-card {
+  margin-top: 20rpx;
+  padding: 28rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #6f1d1b, #a53f2b 68%, #d17f54);
+  box-shadow: 0 14rpx 38rpx rgba(20, 32, 51, 0.08);
+}
+
+.admin-card-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.admin-card-desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.admin-entry-button {
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #8b2f20;
+}
+
+.admin-entry-button::after {
+  border: none;
 }
 
 .logout-button {

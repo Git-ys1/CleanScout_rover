@@ -66,3 +66,20 @@ export function post(url, data, options = {}) {
     ...options,
   })
 }
+
+export function patch(url, data, options = {}) {
+  return request({
+    url,
+    method: 'PATCH',
+    data,
+    ...options,
+  })
+}
+
+export function remove(url, options = {}) {
+  return request({
+    url,
+    method: 'DELETE',
+    ...options,
+  })
+}

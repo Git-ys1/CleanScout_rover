@@ -17,6 +17,7 @@ model User {
   username     String         @unique
   passwordHash String
   role         Role           @default(user)
+  isEnabled    Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   messages     MessageCache[]
@@ -38,4 +39,13 @@ model MessageCache {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model SystemConfig {
+  id                  String   @id
+  registrationEnabled Boolean  @default(true)
+  appEnabled          Boolean  @default(true)
+  maintenanceMessage  String   @default("")
+  openclawEnabled     Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
 }

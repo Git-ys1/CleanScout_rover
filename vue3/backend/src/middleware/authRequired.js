@@ -15,11 +15,15 @@ export async function authRequired(req, _res, next) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, username: true, role: true },
+      select: { id: true, username: true, role: true, isEnabled: true },
     })
 
     if (!user) {
       throw createHttpError(401, '用户不存在或 token 已失效', 'AUTH_USER_NOT_FOUND')
+    }
+
+    if (!user.isEnabled) {
+      throw createHttpError(403, '当前用户已停用', 'AUTH_USER_DISABLED')
     }
 
     req.user = user

@@ -1,9 +1,9 @@
 {
   "name": "vue3-backend",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
-  "description": "V线 V-1.1.0 backend auth shell",
+  "description": "V线 V-1.2.0 backend service shell",
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",

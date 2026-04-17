@@ -2,7 +2,14 @@
   <view class="chat-page">
     <view class="page-header">
       <text class="page-title">对话控制</text>
-      <text class="page-subtitle">当前为 mock transport，后续将切换到真实 SocketTask 链路。</text>
+      <text class="page-subtitle">
+        当前 transport：{{ transport.mode }} / 状态：{{ transport.status }} / API：{{ transport.apiMode }}
+      </text>
+      <view class="transport-banner" :class="[transport.mode, transport.status]">
+        <text class="transport-label">
+          {{ transport.fallback ? '当前不是实车链路，OpenClaw 已回退到 mock。' : transport.message }}
+        </text>
+      </view>
     </view>
 
     <scroll-view class="chat-list" scroll-y>
@@ -20,7 +27,7 @@
         maxlength="240"
         placeholder="输入任务描述或调试消息"
       />
-      <button class="composer-button" :loading="sending" @tap="handleSend">发送 mock 消息</button>
+      <button class="composer-button" :loading="sending" @tap="handleSend">发送消息</button>
     </view>
   </view>
 </template>
@@ -34,7 +41,7 @@ import { ensureLoggedIn } from '../../utils/auth-guard.js'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
-const { messages, draftText, sending } = storeToRefs(chatStore)
+const { messages, draftText, sending, transport } = storeToRefs(chatStore)
 
 onShow(async () => {
   const allowed = await ensureLoggedIn()
@@ -44,7 +51,10 @@ onShow(async () => {
   }
 
   appStore.setCurrentTab('chat')
-  await chatStore.loadHistory()
+  await Promise.allSettled([
+    chatStore.loadHistory(),
+    chatStore.syncTransportStatus(),
+  ])
 })
 
 async function handleSend() {
@@ -89,6 +99,27 @@ async function handleSend() {
   font-size: 24rpx;
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.84);
+}
+
+.transport-banner {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.transport-banner.mock {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.transport-banner.openclaw.healthy {
+  background: rgba(93, 173, 122, 0.18);
+}
+
+.transport-label {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #ffffff;
 }
 
 .chat-list {

@@ -7,8 +7,8 @@
 从 `V-1.0.1` 起，V 线按三层软件系统统一定义：
 
 1. 前端端：基于 uni-app + Vue3 + CLI，承担用户交互、对话控制、设备状态展示、管理员直接控制，以及后续 App/H5/小程序多端适配。
-2. 后端端：承担多账户登录、账号与权限、设备绑定关系、openclaw 转发数据缓存、消息中转、状态持久化，以及对前端暴露统一 API/WS 接口。
-3. 设备网关端：由树莓派 + openclaw 转发链继续承担设备实时状态来源、指令转发和执行结果回传。
+2. 后端端：承担多账户登录、账号与权限、设备绑定关系、OpenClaw 转发数据缓存、消息中转、状态持久化，以及对前端暴露统一 API/WS 接口。
+3. 设备网关端：由树莓派 + OpenClaw 转发链继续承担设备实时状态来源、指令转发和执行结果回传。
 
 `V-1.0.1` 负责立项补充、制度冻结和文档冻结；`V-1.1.0` 开始进入实际业务开发第一轮，正式落地前端壳子、后端鉴权壳子和 mock 联调链路。
 
@@ -26,7 +26,7 @@
 后端端（账户 / 缓存 / API / 权限 / 消息协调）
         |
         v
-设备网关端（树莓派 + openclaw 转发链）
+设备网关端（树莓派 + OpenClaw 转发链）
         |
         v
 巡检车 / 设备侧
@@ -96,7 +96,11 @@ V 线云端镜像发布从 `V-1.0.1` 起按以下制度执行：
 
 当前实例分支可写为 `feature/c-3.0.8-openrf1-cn1-cn3-encoder-recovery`，但它只是当轮实例，不是长期固定分支。制度始终以“发布前确认的最新施工分支”为准。
 
-## V线官方底层开发手册
+## 官方开发依据
+
+从 `V-1.2.0` 起，V 线后续持续依据 `uni-app` 官方文档与 `OpenClaw` 官方文档开发，不做无依据实现，不再靠记忆或临时写法施工。
+
+### uni-app 官方底层开发手册
 
 从 `V-1.0.1` 起，以下四份 uni-app 官方文档不再叫“参考链接”，统一提升为“V线官方底层开发手册”：
 
@@ -155,6 +159,24 @@ V 线云端镜像发布从 `V-1.0.1` 起按以下制度执行：
 
 - `manifest.json` 仍保留为工程配置资料，但从 `V-1.0.1` 起不再列为手册级入口。
 
+### OpenClaw 官方对接手册
+
+从 `V-1.2.0` 起，以下 OpenClaw 官方文档纳入 V 线长期对接依据：
+
+- OpenClaw 首页：https://docs.openclaw.ai/zh-CN
+- Gateway 运行手册：https://docs.openclaw.ai/zh-CN/gateway
+- Gateway 协议：https://docs.openclaw.ai/zh-CN/gateway/protocol
+- Web / Control UI / 远程访问：https://docs.openclaw.ai/zh-CN/web/index
+- Control UI / SSH 隧道说明：https://docs.openclaw.ai/zh-CN/web/dashboard
+- OpenResponses 计划：https://docs.openclaw.ai/zh-CN/experiments/plans/openresponses-gateway
+
+当前对接方向冻结为：
+
+- `uni-app 前端 -> backend -> OpenClaw Gateway -> 树莓派 / 设备侧`
+- 前端不直接暴露 Gateway token，不直接连 Gateway 控制面
+- 本轮先吃 OpenClaw 的 HTTP 兼容面：`/v1/models`、`/v1/chat/completions`、`/v1/responses`
+- 下一轮树莓派联调优先使用 `SSH` 隧道，默认不把 Gateway 暴露到热点局域网
+
 ## 后端已纳入系统边界
 
 后端从 `V-1.0.1` 起正式纳入 V 线系统边界，不再是“后面再说”的可选项。
@@ -163,19 +185,20 @@ V 线云端镜像发布从 `V-1.0.1` 起按以下制度执行：
 
 1. 账户体系：多账户登录、用户信息、登录态管理。
 2. 权限体系：普通用户、管理员、调试/开发权限预留。
-3. 设备数据缓存：缓存 openclaw 转发来的状态数据、最近消息和最近任务结果。
+3. 设备数据缓存：缓存 OpenClaw 转发来的状态数据、最近消息和最近任务结果。
 4. 对前端统一输出接口：REST API、WebSocket/SSE/转发接口。
-5. 对设备侧留接口：树莓派 / openclaw 消息上送、指令转发回设备。
+5. 对设备侧留接口：树莓派 / OpenClaw 消息上送、指令转发回设备。
 
 `V-1.1.0` 已完成 `backend/` 工程初始化，当前后端承担：
 
 - `/api/auth/register`、`/api/auth/login`、`/api/auth/me`、`/api/auth/logout`
 - `/api/device/summary`
 - `/api/chat/history`、`/api/chat/send`
-- `/api/admin/command`
+- `/api/admin/users`、`/api/admin/system-config`、`/api/admin/command`
+- `/api/integrations/openclaw/status`
 - `/api/system/health`
 
-当前阶段仍未接入真实树莓派 / openclaw，也未落地复杂 RBAC、多设备管理和真实 WebSocket 链路。后续阶段继续为以下内容扩展：
+当前阶段仍未接入真实树莓派 / OpenClaw，也未落地复杂 RBAC、多设备管理和真实 WebSocket 链路。后续阶段继续为以下内容扩展：
 
 - `api schema`
 - `user model`
@@ -202,13 +225,16 @@ vue3/
 ├─ backend/
 │  ├─ prisma/
 │  ├─ src/
+│  │  └─ integrations/
+│  │     └─ openclaw/
 │  ├─ package.json
 │  └─ .env.example
 ├─ docs/
 │  └─ releases/
 │     ├─ V-1.0.0/
 │     ├─ V-1.0.1/
-│     └─ V-1.1.0/
+│     ├─ V-1.1.0/
+│     └─ V-1.2.0/
 ├─ src/
 │  ├─ pages/
 │  ├─ components/
@@ -249,6 +275,7 @@ vue3/
 - 开工前必须先建 checkpoint，再开始本轮改动；没有 checkpoint 不得开工。
 - checkpoint 必须以 Git 留痕为准，至少保证当前冻结结果已有可回溯提交。
 - 开工后必须持续 Git 留痕，本地有效成果不得只停留在工作树。
+- 从 `V-1.2.0` 起，第三位编号代表同一大轮中的不同任务，统一使用 `V-1.2.1`、`V-1.2.2`、`V-1.2.3` 这类编号，不再使用 `A/B/C`。
 - 后续提交统一使用 `V-?.?.?: 做了……` 的结构，不使用口语化提交信息。
 - 从 `V-1.0.1` 起，提交标题统一使用中文；版本号、分支名、`Git`、`GitHub`、`Pinia`、`SocketTask` 等关键词保留英文。
 - 推荐提交标题示例：`V-1.0.1: 冻结系统补充文档与 Git 发布纪律`
@@ -298,6 +325,8 @@ cmd /c npm.cmd run dev
 - 前端 H5 默认使用 `http://127.0.0.1:3000/api` 作为 API 基地址
 - 后端 CORS 放通 `localhost` / `127.0.0.1` 的本地开发端口，避免 `uni` 因端口占用切换到新端口时被拦截
 - 默认管理员账号通过 seed 初始化：`admin / 123456`
+- `OpenClaw` 当前通过 backend 适配层接入，状态探测接口为 `/api/integrations/openclaw/status`
+- `OpenClaw` 硬开关来自 `.env` 的 `OPENCLAW_ENABLED`，软开关来自后台 `SystemConfig.openclawEnabled`
 
 `V-1.0.1` 文档补充通过标准：
 

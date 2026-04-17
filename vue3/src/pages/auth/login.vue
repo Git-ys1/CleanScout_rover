@@ -26,7 +26,7 @@
 import { reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useAuthStore } from '../../stores/auth.js'
-import { redirectIfLoggedIn } from '../../utils/auth-guard.js'
+import { redirectIfLoggedIn, switchToHomeTab } from '../../utils/auth-guard.js'
 
 const authStore = useAuthStore()
 const submitting = ref(false)
@@ -57,7 +57,7 @@ async function handleLogin() {
       icon: 'success',
     })
     setTimeout(() => {
-      uni.reLaunch({ url: '/pages/index/index' })
+      switchToHomeTab()
     }, 160)
   } catch (error) {
     uni.showToast({

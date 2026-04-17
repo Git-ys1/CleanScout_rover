@@ -1,10 +1,10 @@
 <template>
   <view class="page-shell">
     <view class="hero-card">
-      <text class="hero-eyebrow">V-1.1.0 / Dashboard Shell</text>
+      <text class="hero-eyebrow">V-1.2.0 / Mobile Dashboard</text>
       <text class="hero-title">V线前端控制总览</text>
       <text class="hero-desc">
-        当前轮只打通登录、角色、mock 摘要和占位控制链，不接真实树莓派或 openclaw。
+        当前首页只负责总览，不再堆一级跳转按钮；主导航统一交给底部 tabBar，管理员入口收敛到“我的”页。
       </text>
       <view class="identity-row">
         <view class="identity-chip">
@@ -50,21 +50,6 @@
       </view>
       <view class="empty-panel" v-else>
         <text class="empty-text">暂无消息，进入对话页后可发起 mock 对话。</text>
-      </view>
-    </view>
-
-    <view class="section">
-      <text class="section-title">快速入口</text>
-      <view class="action-grid">
-        <button class="action-button primary" @tap="goToPage('/pages/chat/index')">进入对话控制</button>
-        <button class="action-button" @tap="goToPage('/pages/profile/index')">进入个人中心</button>
-        <button
-          v-if="authStore.role === 'admin'"
-          class="action-button warning"
-          @tap="goToPage('/pages/admin/index')"
-        >
-          进入管理员页
-        </button>
       </view>
     </view>
   </view>
@@ -119,10 +104,6 @@ onShow(async () => {
     chatStore.loadHistory(),
   ])
 })
-
-function goToPage(url) {
-  uni.navigateTo({ url })
-}
 </script>
 
 <style>
@@ -204,8 +185,7 @@ function goToPage(url) {
   color: #17324d;
 }
 
-.summary-grid,
-.action-grid {
+.summary-grid {
   display: flex;
   flex-wrap: wrap;
   margin: 0 -8rpx;
@@ -271,31 +251,8 @@ function goToPage(url) {
   color: #2b3f51;
 }
 
-.action-button {
-  width: calc(50% - 16rpx);
-  margin: 0 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  color: #17324d;
-}
-
-.action-button::after {
-  border: none;
-}
-
-.action-button.primary {
-  background: #205375;
-  color: #ffffff;
-}
-
-.action-button.warning {
-  background: #b8402a;
-  color: #ffffff;
-}
-
 @media screen and (max-width: 720px) {
-  .summary-card,
-  .action-button {
+  .summary-card {
     width: calc(100% - 16rpx);
   }
 }

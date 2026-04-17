@@ -2,8 +2,16 @@ import { useAuthStore } from '../stores/auth.js'
 
 const LOGIN_PAGE_URL = '/pages/auth/login'
 const HOME_PAGE_URL = '/pages/index/index'
+const CHAT_PAGE_URL = '/pages/chat/index'
+const PROFILE_PAGE_URL = '/pages/profile/index'
+const TAB_BAR_PAGES = new Set([HOME_PAGE_URL, CHAT_PAGE_URL, PROFILE_PAGE_URL])
 
 function jump(url) {
+  if (TAB_BAR_PAGES.has(url)) {
+    uni.switchTab({ url })
+    return
+  }
+
   uni.reLaunch({ url })
 }
 
@@ -64,4 +72,8 @@ export async function redirectIfLoggedIn() {
   }
 
   return false
+}
+
+export function switchToHomeTab() {
+  jump(HOME_PAGE_URL)
 }

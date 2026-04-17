@@ -1,8 +1,11 @@
 import bcrypt from 'bcrypt'
-import { Role } from '@prisma/client'
+import prismaPackage from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { createHttpError } from '../utils/response.js'
 import { signToken } from '../utils/jwt.js'
+import { getSystemConfig } from './systemConfigService.js'
+
+const { Role } = prismaPackage
 
 const SALT_ROUNDS = 10
 
@@ -13,9 +16,14 @@ function normalizeUsername(username) {
 export async function registerUser({ username, password }) {
   const normalizedUsername = normalizeUsername(username)
   const normalizedPassword = String(password || '')
+  const systemConfig = await getSystemConfig()
 
   if (!normalizedUsername) {
     throw createHttpError(400, '用户名不能为空', 'AUTH_USERNAME_REQUIRED')
+  }
+
+  if (!systemConfig.registrationEnabled) {
+    throw createHttpError(403, '当前已关闭注册', 'AUTH_REGISTRATION_DISABLED')
   }
 
   if (normalizedPassword.length < 6) {
@@ -37,11 +45,13 @@ export async function registerUser({ username, password }) {
       username: normalizedUsername,
       passwordHash,
       role: Role.user,
+      isEnabled: true,
     },
     select: {
       id: true,
       username: true,
       role: true,
+      isEnabled: true,
       createdAt: true,
     },
   })
@@ -65,6 +75,10 @@ export async function loginUser({ username, password }) {
     throw createHttpError(401, '用户名或密码错误', 'AUTH_INVALID_CREDENTIALS')
   }
 
+  if (!user.isEnabled) {
+    throw createHttpError(403, '当前用户已停用', 'AUTH_USER_DISABLED')
+  }
+
   const isPasswordValid = await bcrypt.compare(normalizedPassword, user.passwordHash)
 
   if (!isPasswordValid) {
@@ -75,6 +89,7 @@ export async function loginUser({ username, password }) {
     id: user.id,
     username: user.username,
     role: user.role,
+    isEnabled: user.isEnabled,
   }
 
   return {
@@ -90,6 +105,7 @@ export async function getCurrentUser(userId) {
       id: true,
       username: true,
       role: true,
+      isEnabled: true,
       createdAt: true,
       updatedAt: true,
     },
