@@ -88,6 +88,46 @@ static int csr_proto_parse_float(const char *token, float *value)
     return 1;
 }
 
+static int csr_proto_parse_input_mode(const char *token, csr_encoder_input_mode_t *input_mode)
+{
+    if (strcmp(token, "F") == 0)
+    {
+        *input_mode = CSR_ENCODER_INPUT_FLOATING;
+        return 1;
+    }
+    if (strcmp(token, "IPU") == 0)
+    {
+        *input_mode = CSR_ENCODER_INPUT_IPU;
+        return 1;
+    }
+    if (strcmp(token, "IPD") == 0)
+    {
+        *input_mode = CSR_ENCODER_INPUT_IPD;
+        return 1;
+    }
+    return 0;
+}
+
+static int csr_proto_parse_count_mode(const char *token, csr_encoder_count_mode_t *count_mode)
+{
+    if (strcmp(token, "TI12") == 0)
+    {
+        *count_mode = CSR_ENCODER_COUNT_TI12;
+        return 1;
+    }
+    if (strcmp(token, "TI1") == 0)
+    {
+        *count_mode = CSR_ENCODER_COUNT_TI1;
+        return 1;
+    }
+    if (strcmp(token, "TI2") == 0)
+    {
+        *count_mode = CSR_ENCODER_COUNT_TI2;
+        return 1;
+    }
+    return 0;
+}
+
 static void csr_proto_append_text(char *line, size_t line_size, const char *text)
 {
     size_t current_length;
@@ -268,6 +308,118 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
             return 0;
         }
         command->type = CSR_CMD_D;
+        command->pwm = 0;
+        return 1;
+    }
+
+    if (strcmp(token, "X") == 0)
+    {
+        long filter_value;
+
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_input_mode(token, &command->input_mode) == 0))
+        {
+            csr_proto_send_error("bad_input");
+            return 0;
+        }
+
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_count_mode(token, &command->count_mode) == 0))
+        {
+            csr_proto_send_error("bad_mode");
+            return 0;
+        }
+
+        token = strtok(0, ",");
+        if (token == 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        filter_value = strtol(token, &endptr, 10);
+        if ((endptr == token) || (*endptr != '\0') || ((filter_value != 0) && (filter_value != 10)))
+        {
+            csr_proto_send_error("bad_filter");
+            return 0;
+        }
+
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        command->type = CSR_CMD_X;
+        command->ic_filter = (uint8_t)filter_value;
+        command->pwm = 0;
+        return 1;
+    }
+
+    if (strcmp(token, "Y") == 0)
+    {
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_input_mode(token, &command->input_mode) == 0))
+        {
+            csr_proto_send_error("bad_input");
+            return 0;
+        }
+
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        command->type = CSR_CMD_Y;
+        command->pwm = 0;
+        return 1;
+    }
+
+    if (strcmp(token, "Q") == 0)
+    {
+        token = strtok(0, ",");
+        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
+        {
+            csr_proto_send_error("bad_channel");
+            return 0;
+        }
+        if (strtok(0, ",") != 0)
+        {
+            csr_proto_send_error("arg_count");
+            return 0;
+        }
+
+        command->type = CSR_CMD_Q;
         command->pwm = 0;
         return 1;
     }
@@ -463,6 +615,23 @@ void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapsh
         (unsigned long)snapshot->gpiob_crl,
         (unsigned long)snapshot->gpiob_crh,
         (unsigned long)snapshot->gpiob_idr
+    );
+    csr_proto_send_text(line);
+}
+
+void csr_proto_send_exti(csr_channel_t channel, int32_t count_a, int32_t count_b, uint8_t phase_a, uint8_t phase_b, uint32_t pending)
+{
+    char line[128];
+
+    sprintf(
+        line,
+        "EXTI,%u,%ld,%ld,%u,%u,%08lX\r\n",
+        (unsigned int)(channel + 1),
+        (long)count_a,
+        (long)count_b,
+        (unsigned int)phase_a,
+        (unsigned int)phase_b,
+        (unsigned long)pending
     );
     csr_proto_send_text(line);
 }

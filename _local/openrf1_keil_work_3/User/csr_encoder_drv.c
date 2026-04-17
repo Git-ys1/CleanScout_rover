@@ -1,9 +1,12 @@
 #include "main.h"
+#include "stm32f10x_exti.h"
 
 #define CSR_ENCODER_TIM_PERIOD ((uint16_t)65535)
 
 static int32_t g_encoder_total[CSR_CHANNEL_COUNT] = {0};
 static int32_t g_encoder_last_delta[CSR_CHANNEL_COUNT] = {0};
+static volatile int32_t g_exti_count_a[CSR_CHANNEL_COUNT] = {0};
+static volatile int32_t g_exti_count_b[CSR_CHANNEL_COUNT] = {0};
 static uint32_t g_afio_mapr_effective = 0;
 
 void csr_encoder_apply_debug_remap(void)
@@ -59,10 +62,40 @@ static uint8_t csr_gpio_pin_cfg(GPIO_TypeDef *gpio, uint8_t pin)
     return (uint8_t)((reg_value >> shift) & 0x0FU);
 }
 
-static void csr_encoder_init_common(TIM_TypeDef *tim, uint8_t ic_filter)
+static GPIOMode_TypeDef csr_encoder_gpio_mode(csr_encoder_input_mode_t input_mode)
+{
+    switch (input_mode)
+    {
+    case CSR_ENCODER_INPUT_IPU:
+        return GPIO_Mode_IPU;
+    case CSR_ENCODER_INPUT_IPD:
+        return GPIO_Mode_IPD;
+    case CSR_ENCODER_INPUT_FLOATING:
+    default:
+        return GPIO_Mode_IN_FLOATING;
+    }
+}
+
+static uint16_t csr_encoder_tim_mode(csr_encoder_count_mode_t count_mode)
+{
+    switch (count_mode)
+    {
+    case CSR_ENCODER_COUNT_TI1:
+        return TIM_EncoderMode_TI1;
+    case CSR_ENCODER_COUNT_TI2:
+        return TIM_EncoderMode_TI2;
+    case CSR_ENCODER_COUNT_TI12:
+    default:
+        return TIM_EncoderMode_TI12;
+    }
+}
+
+static void csr_encoder_init_common(TIM_TypeDef *tim, csr_encoder_count_mode_t count_mode, uint8_t ic_filter)
 {
     TIM_TimeBaseInitTypeDef tim_base_init;
     TIM_ICInitTypeDef tim_ic_init;
+
+    TIM_DeInit(tim);
 
     TIM_TimeBaseStructInit(&tim_base_init);
     tim_base_init.TIM_Prescaler = 0;
@@ -71,7 +104,7 @@ static void csr_encoder_init_common(TIM_TypeDef *tim, uint8_t ic_filter)
     tim_base_init.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(tim, &tim_base_init);
 
-    TIM_EncoderInterfaceConfig(tim, TIM_EncoderMode_TI12, TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
+    TIM_EncoderInterfaceConfig(tim, csr_encoder_tim_mode(count_mode), TIM_ICPolarity_Rising, TIM_ICPolarity_Rising);
 
     TIM_ICStructInit(&tim_ic_init);
     tim_ic_init.TIM_ICFilter = ic_filter;
@@ -81,7 +114,7 @@ static void csr_encoder_init_common(TIM_TypeDef *tim, uint8_t ic_filter)
     TIM_Cmd(tim, ENABLE);
 }
 
-static void csr_encoder_init_cn1(void)
+static void csr_encoder_init_cn1_with(csr_encoder_input_mode_t input_mode, csr_encoder_count_mode_t count_mode, uint8_t ic_filter)
 {
     GPIO_InitTypeDef gpio_init;
 
@@ -89,11 +122,16 @@ static void csr_encoder_init_cn1(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
     gpio_init.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
-    gpio_init.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    gpio_init.GPIO_Mode = csr_encoder_gpio_mode(input_mode);
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &gpio_init);
 
-    csr_encoder_init_common(TIM5, CSR_ENCODER_FILTER_CN1);
+    csr_encoder_init_common(TIM5, count_mode, ic_filter);
+}
+
+static void csr_encoder_init_cn1(void)
+{
+    csr_encoder_init_cn1_with(CSR_ENCODER_INPUT_FLOATING, CSR_ENCODER_COUNT_TI12, CSR_ENCODER_FILTER_CN1);
 }
 
 static void csr_encoder_init_cn2(void)
@@ -108,10 +146,10 @@ static void csr_encoder_init_cn2(void)
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &gpio_init);
 
-    csr_encoder_init_common(TIM3, CSR_ENCODER_FILTER_CN2);
+    csr_encoder_init_common(TIM3, CSR_ENCODER_COUNT_TI12, CSR_ENCODER_FILTER_CN2);
 }
 
-static void csr_encoder_init_cn3(void)
+static void csr_encoder_init_cn3_with(csr_encoder_input_mode_t input_mode, csr_encoder_count_mode_t count_mode, uint8_t ic_filter)
 {
     GPIO_InitTypeDef gpio_init;
 
@@ -121,14 +159,19 @@ static void csr_encoder_init_cn3(void)
     csr_encoder_apply_debug_remap();
 
     gpio_init.GPIO_Pin = GPIO_Pin_15;
-    gpio_init.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    gpio_init.GPIO_Mode = csr_encoder_gpio_mode(input_mode);
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &gpio_init);
 
     gpio_init.GPIO_Pin = GPIO_Pin_3;
     GPIO_Init(GPIOB, &gpio_init);
 
-    csr_encoder_init_common(TIM2, CSR_ENCODER_FILTER_CN3);
+    csr_encoder_init_common(TIM2, count_mode, ic_filter);
+}
+
+static void csr_encoder_init_cn3(void)
+{
+    csr_encoder_init_cn3_with(CSR_ENCODER_INPUT_FLOATING, CSR_ENCODER_COUNT_TI12, CSR_ENCODER_FILTER_CN3);
 }
 
 static void csr_encoder_init_cn4(void)
@@ -143,7 +186,7 @@ static void csr_encoder_init_cn4(void)
     gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOB, &gpio_init);
 
-    csr_encoder_init_common(TIM4, CSR_ENCODER_FILTER_CN4);
+    csr_encoder_init_common(TIM4, CSR_ENCODER_COUNT_TI12, CSR_ENCODER_FILTER_CN4);
 }
 
 void csr_encoder_init(void)
@@ -160,6 +203,140 @@ void csr_encoder_init(void)
         g_encoder_total[index] = 0;
         g_encoder_last_delta[index] = 0;
     }
+}
+
+int csr_encoder_reconfigure(csr_channel_t channel, csr_encoder_input_mode_t input_mode, csr_encoder_count_mode_t count_mode, uint8_t ic_filter)
+{
+    if ((input_mode > CSR_ENCODER_INPUT_IPD) || (count_mode > CSR_ENCODER_COUNT_TI2))
+    {
+        return 0;
+    }
+
+    if (channel == CSR_CHANNEL_CN1)
+    {
+        csr_encoder_init_cn1_with(input_mode, count_mode, ic_filter);
+        csr_encoder_zero(channel);
+        return 1;
+    }
+
+    if (channel == CSR_CHANNEL_CN3)
+    {
+        csr_encoder_init_cn3_with(input_mode, count_mode, ic_filter);
+        csr_encoder_zero(channel);
+        return 1;
+    }
+
+    return 0;
+}
+
+static void csr_encoder_init_exti_line(uint32_t exti_line)
+{
+    EXTI_InitTypeDef exti_init;
+
+    EXTI_ClearITPendingBit(exti_line);
+    EXTI_StructInit(&exti_init);
+    exti_init.EXTI_Line = exti_line;
+    exti_init.EXTI_Mode = EXTI_Mode_Interrupt;
+    exti_init.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+    exti_init.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&exti_init);
+}
+
+static void csr_encoder_init_exti_irq(uint8_t irq_channel)
+{
+    NVIC_InitTypeDef nvic_init;
+
+    nvic_init.NVIC_IRQChannel = irq_channel;
+    nvic_init.NVIC_IRQChannelPreemptionPriority = 2;
+    nvic_init.NVIC_IRQChannelSubPriority = 0;
+    nvic_init.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&nvic_init);
+}
+
+int csr_encoder_exti_probe_start(csr_channel_t channel, csr_encoder_input_mode_t input_mode)
+{
+    GPIO_InitTypeDef gpio_init;
+
+    if (input_mode > CSR_ENCODER_INPUT_IPD)
+    {
+        return 0;
+    }
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
+
+    gpio_init.GPIO_Mode = csr_encoder_gpio_mode(input_mode);
+    gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
+
+    if (channel == CSR_CHANNEL_CN1)
+    {
+        gpio_init.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
+        GPIO_Init(GPIOA, &gpio_init);
+
+        GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0);
+        GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource1);
+        csr_encoder_init_exti_line(EXTI_Line0);
+        csr_encoder_init_exti_line(EXTI_Line1);
+        csr_encoder_init_exti_irq(EXTI0_IRQn);
+        csr_encoder_init_exti_irq(EXTI1_IRQn);
+    }
+    else if (channel == CSR_CHANNEL_CN3)
+    {
+        csr_encoder_apply_debug_remap();
+
+        gpio_init.GPIO_Pin = GPIO_Pin_15;
+        GPIO_Init(GPIOA, &gpio_init);
+        gpio_init.GPIO_Pin = GPIO_Pin_3;
+        GPIO_Init(GPIOB, &gpio_init);
+
+        GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource15);
+        GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource3);
+        csr_encoder_init_exti_line(EXTI_Line15);
+        csr_encoder_init_exti_line(EXTI_Line3);
+        csr_encoder_init_exti_irq(EXTI15_10_IRQn);
+        csr_encoder_init_exti_irq(EXTI3_IRQn);
+    }
+    else
+    {
+        return 0;
+    }
+
+    g_exti_count_a[channel] = 0;
+    g_exti_count_b[channel] = 0;
+    return 1;
+}
+
+void csr_encoder_exti_snapshot(csr_channel_t channel, int32_t *count_a, int32_t *count_b, uint8_t *phase_a, uint8_t *phase_b, uint32_t *pending)
+{
+    uint32_t pending_value = EXTI->PR;
+
+    if (count_a != 0)
+    {
+        *count_a = 0;
+    }
+    if (count_b != 0)
+    {
+        *count_b = 0;
+    }
+    if (pending != 0)
+    {
+        *pending = pending_value;
+    }
+
+    if (channel >= CSR_CHANNEL_COUNT)
+    {
+        return;
+    }
+
+    if (count_a != 0)
+    {
+        *count_a = g_exti_count_a[channel];
+    }
+    if (count_b != 0)
+    {
+        *count_b = g_exti_count_b[channel];
+    }
+
+    csr_encoder_debug_snapshot(channel, phase_a, phase_b, 0);
 }
 
 int32_t csr_encoder_read_and_reset(csr_channel_t channel)
@@ -353,5 +530,41 @@ void csr_encoder_reg_snapshot(uint8_t target, csr_encoder_reg_snapshot_t *snapsh
         snapshot->ccmr1 = (uint16_t)tim->CCMR1;
         snapshot->ccer = (uint16_t)tim->CCER;
         snapshot->cnt = (uint16_t)tim->CNT;
+    }
+}
+
+void EXTI0_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_Line0) != RESET)
+    {
+        g_exti_count_a[CSR_CHANNEL_CN1]++;
+        EXTI_ClearITPendingBit(EXTI_Line0);
+    }
+}
+
+void EXTI1_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_Line1) != RESET)
+    {
+        g_exti_count_b[CSR_CHANNEL_CN1]++;
+        EXTI_ClearITPendingBit(EXTI_Line1);
+    }
+}
+
+void EXTI3_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_Line3) != RESET)
+    {
+        g_exti_count_b[CSR_CHANNEL_CN3]++;
+        EXTI_ClearITPendingBit(EXTI_Line3);
+    }
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_Line15) != RESET)
+    {
+        g_exti_count_a[CSR_CHANNEL_CN3]++;
+        EXTI_ClearITPendingBit(EXTI_Line15);
     }
 }
