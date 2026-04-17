@@ -40,8 +40,6 @@ typedef enum
 void csr_encoder_apply_debug_remap(void);
 void csr_encoder_init(void);
 int csr_encoder_reconfigure(csr_channel_t channel, csr_encoder_input_mode_t input_mode, csr_encoder_count_mode_t count_mode, uint8_t ic_filter);
-int csr_encoder_exti_probe_start(csr_channel_t channel, csr_encoder_input_mode_t input_mode);
-void csr_encoder_exti_snapshot(csr_channel_t channel, int32_t *count_a, int32_t *count_b, uint8_t *phase_a, uint8_t *phase_b, uint32_t *pending);
 int32_t csr_encoder_read_and_reset(csr_channel_t channel);
 int32_t csr_encoder_peek(csr_channel_t channel);
 int32_t csr_encoder_last_delta(csr_channel_t channel);

@@ -278,9 +278,6 @@ static void csr_handle_command(const csr_proto_command_t *command)
     uint8_t phase_a;
     uint8_t phase_b;
     uint16_t timer_count;
-    int32_t exti_count_a;
-    int32_t exti_count_b;
-    uint32_t exti_pending;
     csr_encoder_reg_snapshot_t reg_snapshot;
 
     g_last_command_ms = csr_millis();
@@ -348,24 +345,6 @@ static void csr_handle_command(const csr_proto_command_t *command)
         {
             csr_proto_send_error("x_config");
         }
-        break;
-
-    case CSR_CMD_Y:
-        csr_stop_all();
-        if (csr_encoder_exti_probe_start(command->channel, command->input_mode) != 0)
-        {
-            csr_proto_send_ack("Y");
-        }
-        else
-        {
-            csr_proto_send_error("y_config");
-        }
-        break;
-
-    case CSR_CMD_Q:
-        csr_encoder_exti_snapshot(command->channel, &exti_count_a, &exti_count_b, &phase_a, &phase_b, &exti_pending);
-        csr_proto_send_ack("Q");
-        csr_proto_send_exti(command->channel, exti_count_a, exti_count_b, phase_a, phase_b, exti_pending);
         break;
 
     case CSR_CMD_STOP:

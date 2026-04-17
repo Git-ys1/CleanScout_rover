@@ -368,62 +368,6 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
         return 1;
     }
 
-    if (strcmp(token, "Y") == 0)
-    {
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_input_mode(token, &command->input_mode) == 0))
-        {
-            csr_proto_send_error("bad_input");
-            return 0;
-        }
-
-        if (strtok(0, ",") != 0)
-        {
-            csr_proto_send_error("arg_count");
-            return 0;
-        }
-
-        command->type = CSR_CMD_Y;
-        command->pwm = 0;
-        return 1;
-    }
-
-    if (strcmp(token, "Q") == 0)
-    {
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-        if (strtok(0, ",") != 0)
-        {
-            csr_proto_send_error("arg_count");
-            return 0;
-        }
-
-        command->type = CSR_CMD_Q;
-        command->pwm = 0;
-        return 1;
-    }
-
     if (strcmp(token, "M") == 0)
     {
         token = strtok(0, ",");
@@ -615,23 +559,6 @@ void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapsh
         (unsigned long)snapshot->gpiob_crl,
         (unsigned long)snapshot->gpiob_crh,
         (unsigned long)snapshot->gpiob_idr
-    );
-    csr_proto_send_text(line);
-}
-
-void csr_proto_send_exti(csr_channel_t channel, int32_t count_a, int32_t count_b, uint8_t phase_a, uint8_t phase_b, uint32_t pending)
-{
-    char line[128];
-
-    sprintf(
-        line,
-        "EXTI,%u,%ld,%ld,%u,%u,%08lX\r\n",
-        (unsigned int)(channel + 1),
-        (long)count_a,
-        (long)count_b,
-        (unsigned int)phase_a,
-        (unsigned int)phase_b,
-        (unsigned long)pending
     );
     csr_proto_send_text(line);
 }

@@ -13,8 +13,6 @@ typedef enum
     CSR_CMD_D,
     CSR_CMD_R,
     CSR_CMD_X,
-    CSR_CMD_Y,
-    CSR_CMD_Q,
     CSR_CMD_STOP
 } csr_cmd_type_t;
 
@@ -38,7 +36,6 @@ void csr_proto_send_error(const char *reason);
 void csr_proto_send_enc(csr_channel_t channel, int32_t count, int32_t delta);
 void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b, uint16_t timer_count, int32_t count, int32_t delta);
 void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapshot);
-void csr_proto_send_exti(csr_channel_t channel, int32_t count_a, int32_t count_b, uint8_t phase_a, uint8_t phase_b, uint32_t pending);
 void csr_proto_send_vel(const float *rt, const float *tg);
 void csr_proto_send_pwm(const int16_t *pwm);
 
