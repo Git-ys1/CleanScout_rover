@@ -299,7 +299,8 @@ vue3/
 │     ├─ V-1.1.0/
 │     ├─ V-1.2.0/
 │     ├─ V-1.2.6/
-│     └─ V-1.3.3/
+│     ├─ V-1.3.3/
+│     └─ V-1.4.0/
 ├─ src/
 │  ├─ pages/
 │  ├─ components/
@@ -396,6 +397,33 @@ cmd /c npm.cmd run dev
 - `ROS` 默认 transport 为 `mock`，真实树莓派接入优先规划为 `rosbridge`
 - 管理员固定控制接口为 `/api/ros/cmd-vel` 与 `/api/ros/manual-preset`
 - ROS 最小遥测摘要接口为 `/api/ros/telemetry/summary`
+
+## V-1.4.0 构建与部署入口
+
+从 `V-1.4.0` 起，仓库已补齐前端构建脚本、backend 部署脚本和 ROS 联调合同文档：
+
+- 微信小程序构建脚本：
+  - `scripts/release-mp-weixin.ps1`
+  - `scripts/release-mp-weixin.sh`
+- App Plus 打包位占位：
+  - `scripts/release-app-plus.ps1`
+- backend 部署脚本：
+  - `scripts/deploy-backend.sh`
+  - `scripts/update-backend.sh`
+- backend systemd 单机部署模板：
+  - `deploy/systemd/vline-backend.service`
+
+当前规则补充冻结为：
+
+- backend CORS 已切到 `CORS_ALLOWED_ORIGINS` 环境变量白名单
+- 若该变量为空，默认仅放行本地开发 `localhost / 127.0.0.1`
+- 公网部署前必须改成真实 H5 域名，不能继续沿用本地默认值
+- ROS 联调合同文档位于：
+  - `docs/releases/V-1.4.0/ros-integration-contract.md`
+- 微信小程序构建说明位于：
+  - `docs/releases/V-1.4.0/mini-program-build.md`
+- backend 部署说明位于：
+  - `docs/releases/V-1.4.0/backend-deploy.md`
 
 `V-1.0.1` 文档补充通过标准：
 
