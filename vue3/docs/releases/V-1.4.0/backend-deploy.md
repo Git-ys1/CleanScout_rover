@@ -36,6 +36,15 @@ CORS_ALLOWED_ORIGINS=https://vline.example.com,https://admin.example.com
 - 若该变量为空，则默认仅放行本地开发 `localhost / 127.0.0.1`
 - 公网部署前必须改成真实 H5 域名，不得继续沿用本地默认值
 
+补充冻结说明：
+
+- 小程序地址不填进 `CORS_ALLOWED_ORIGINS`
+- 小程序正式访问依赖微信小程序后台的 `request 合法域名`
+- `/etc/vline-backend.env` 必须分为“本地联调口径”和“公网部署口径”
+- 仓库内模板入口固定为：
+  - `deploy/env/vline-backend.local-lan.env.example`
+  - `deploy/env/vline-backend.public.env.example`
+
 ## SQLite 约束
 
 当前 `SQLite` 只适合单机 / 小流量阶段。

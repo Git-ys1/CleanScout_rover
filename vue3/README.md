@@ -386,15 +386,21 @@ cmd /c npm.cmd run prisma:seed
 cmd /c npm.cmd run dev
 ```
 
-`V-1.1.0` 当前本地联调口径：
+`V-1.5.0` 当前本地联调口径：
 
-- 前端 H5 默认使用 `http://127.0.0.1:3000/api` 作为 API 基地址
+- 前端 API 已切换为 `VITE_API_BASE_URL` / `VITE_WS_BASE_URL`
+- H5 本地联调读取 `.env.h5.local`：`http://127.0.0.1:3000/api`
+- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.117.77.190:3000/api`
+- `.env.production` 仅作为后续公网占位，当前 WS 仍显式留空
+- `build:h5` 与 `build:mp-weixin` 当前默认用于本地联调出包
+- 正式微信小程序构建改走 `build:mp-weixin:production` 与 `scripts/release-mp-weixin.*`
 - 后端 CORS 放通 `localhost` / `127.0.0.1` 的本地开发端口，避免 `uni` 因端口占用切换到新端口时被拦截
 - 默认管理员账号通过 seed 初始化：`admin / 123456`
 - `OpenClaw` 当前通过 backend 适配层接入，状态探测接口为 `/api/integrations/openclaw/status`
 - `OpenClaw` 硬开关来自 `.env` 的 `OPENCLAW_ENABLED`，软开关来自后台 `SystemConfig.openclawEnabled`
 - `ROS` 当前通过 backend 适配层接入，状态探测接口为 `/api/integrations/ros/status`
-- `ROS` 默认 transport 为 `mock`，真实树莓派接入优先规划为 `rosbridge`
+- `ROS` 的 local-lan 联调模板已切到 `rosbridge`
+- 本轮 ROS 真联调目标固定为 `ws://10.117.77.84:9090`
 - 管理员固定控制接口为 `/api/ros/cmd-vel` 与 `/api/ros/manual-preset`
 - ROS 最小遥测摘要接口为 `/api/ros/telemetry/summary`
 
@@ -418,10 +424,17 @@ cmd /c npm.cmd run dev
 - backend CORS 已切到 `CORS_ALLOWED_ORIGINS` 环境变量白名单
 - 若该变量为空，默认仅放行本地开发 `localhost / 127.0.0.1`
 - 公网部署前必须改成真实 H5 域名，不能继续沿用本地默认值
+- `V-1.5.0` 起，backend 模板拆为：
+  - `deploy/env/vline-backend.local-lan.env.example`
+  - `deploy/env/vline-backend.public.env.example`
 - ROS 联调合同文档位于：
   - `docs/releases/V-1.4.0/ros-integration-contract.md`
+- ROS 本地局域网联调记录位于：
+  - `docs/releases/V-1.5.0/ros-local-lan-test.md`
 - 微信小程序构建说明位于：
   - `docs/releases/V-1.4.0/mini-program-build.md`
+- 微信小程序网络规则位于：
+  - `docs/releases/V-1.5.0/wechat-mini-program-network.md`
 - backend 部署说明位于：
   - `docs/releases/V-1.4.0/backend-deploy.md`
 
