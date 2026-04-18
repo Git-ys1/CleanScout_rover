@@ -1,0 +1,20 @@
+=== SSH ===
+enabled
+active
+=== NETWORK ===
+DEVICE         TYPE      STATE         CONNECTION        
+wlan0          wifi      connected     please enter text 
+p2p-dev-wlan0  wifi-p2p  disconnected  --                
+eth0           ethernet  unavailable   --                
+lo             loopback  unmanaged     --                
+NAME               UUID                                  TYPE  DEVICE 
+please enter text  7680b9d9-186a-40a1-865c-156e106683c0  wifi  wlan0  
+10.11.191.84 240a:4280:3002:233:252d:dc01:dce2:45a 
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             DOWN           
+wlan0            UP             10.11.191.84/24 240a:4280:3002:233:252d:dc01:dce2:45a/64 fe80::86d:5c79:155b:279/64 
+=== SERIAL ===
+/dev/ttyAMA0
+/dev/ttyS0
+=== GROUPS ===
+clbrobot adm dialout cdrom sudo dip video plugdev input lxd lpadmin sambashare spi i2c gpio

@@ -1,0 +1,29 @@
+#######################################
+# Tyler-1库 关键字
+# Tyler-1 Library Keywords
+# 太极创客 / www.taichi-maker.com
+#######################################
+
+#######################################
+# 数据类型/Datatypes (KEYWORD1)
+#######################################
+
+Tyler_1			KEYWORD1
+
+#######################################
+# 函数/Functions (KEYWORD2)
+#######################################
+
+forward			KEYWORD2
+backward   		KEYWORD2
+turnL   		KEYWORD2
+turnR			KEYWORD2 
+forwardL		KEYWORD2
+forwardR		KEYWORD2
+backwardR		KEYWORD2
+backwardL		KEYWORD2
+stop			KEYWORD2
+getDistance		KEYWORD2
+setHeadPos		KEYWORD2
+getHeadPos		KEYWORD2
+headServoIni	KEYWORD2

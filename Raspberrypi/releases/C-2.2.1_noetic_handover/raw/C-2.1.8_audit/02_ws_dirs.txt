@@ -1,0 +1,2 @@
+/home/clbrobot/catkin_ws
+/home/clbrobot/goolge_ws

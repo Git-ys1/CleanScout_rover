@@ -1,0 +1,300 @@
+/home/clbrobot/catkin_ws/src/CMakeLists.txt:4:cmake_minimum_required(VERSION 2.8.3)
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:82:     * Sets the minimum and maximum range for the sensor_msgs::LaserScan.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:87:     * @param range_min Minimum range to assign points to the laserscan, also minimum range to use points in the output scan.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:88:     * @param range_max Maximum range to use points in the output scan.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:149:     * @param range_min The minimum acceptable range for the output LaserScan.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:150:     * @param range_max The maximum acceptable range for the output LaserScan.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:216:    float range_min_; ///< Stores the current minimum range to use.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/include/depthimage_to_laserscan/DepthImageToLaserScan.h:217:    float range_max_; ///< Stores the current maximum range to use.
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/test/DepthImageToLaserScanTest.cpp:152:    // Test for minimum
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/CMakeLists.txt:2:cmake_minimum_required(VERSION 2.8)
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/cfg/Depth.cfg:13:gen.add("range_min",            double_t, 0,                                "Minimum reported range (in meters).",                              0.45,   0.0, 10.0)
+/home/clbrobot/catkin_ws/src/depth_camera/depthimage_to_laserscan/cfg/Depth.cfg:14:gen.add("range_max",            double_t, 0,                                "Maximum reported range (in meters).",                              10.0,   0.0, 10.0)
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x64/libOpenNI2.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x64/OpenNI2/Drivers/liborbbec.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x64/OpenNI2/Drivers/libOniFile.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x64/OpenNI2/Drivers/libPSLink.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm64/libOpenNI2.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm64/OpenNI2/Drivers/liborbbec.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm64/OpenNI2/Drivers/libOniFile.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm64/OpenNI2/Drivers/libPSLink.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x86/libOpenNI2.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x86/OpenNI2/Drivers/liborbbec.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x86/OpenNI2/Drivers/libOniFile.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/x86/OpenNI2/Drivers/libPSLink.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm/libOpenNI2.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm/OpenNI2/Drivers/liborbbec.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm/OpenNI2/Drivers/libOniFile.so matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2_redist/arm/OpenNI2/Drivers/libPSLink.so matches
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_driver.h:55:#include "astra_camera/GetSerial.h"
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_driver.h:108:  bool getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_driver.h:143:  /** \brief get_serial server*/
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_driver.h:145:  ros::ServiceServer get_serial_server;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_device_manager.h:65:  std::string getSerial(const std::string& device_URI) const;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_device.h:132:  char* getSerialNumber();
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/astra_camera/astra_device.h:187:  char serial_number[12];
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/MacOSX/OniPlatformMacOSX.h:35:#if (TARGET_IPHONE_SIMULATOR == 1) || (TARGET_OS_IPHONE == 1)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/Linux-x86/OniPlatformLinux-x86.h:64:/** The maximum allowed file path size (in bytes). */ 
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/Win32/OniPlatformWin32.h:98:/** The maximum allowed file path size (in bytes). */ 
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/PS1080.h:26:/** The maximum permitted Xiron device name string length. */ 
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/PS1080.h:56:	XN_MODULE_PROPERTY_SERIAL_NUMBER = 0x1080F006, // "ID"
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OniProperties.h:33:	DEVICE_PROPERTY_SERIAL_NUMBER			= 3, // string
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OniProperties.h:43:    OBEXTENSION_ID_SERIALNUMBER,
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OniCAPI.h:224: * Set the Minimum severity for log produce 
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OniCProperties.h:30:	ONI_DEVICE_PROPERTY_SERIAL_NUMBER		= 3, // string
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OniCProperties.h:41:	OBEXTENSION_ID_SERIALNUMBER,
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:649:@ref VideoStream.  Field of view, available video modes, and minimum and maximum valid pixel values can all be obtained.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:995:	Provides the maximum possible value for pixels obtained by this stream.  This is most useful for
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:996:	getting the maximum possible value of depth streams.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:997:	@returns Maximum possible pixel value.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:1012:	for getting the minimum possible value that will be reported by a depth stream.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:1013:	@returns Minimum possible pixel value that can come from this stream.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:1561:	by some maximum value.  When disabled, the phase difference between depth and image frame
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/include/openni2/OpenNI.h:2343:	 * Set minimum severity for log produce
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/CMakeLists.txt:1:cmake_minimum_required(VERSION 2.8.3)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/CMakeLists.txt:42:  GetSerial.srv
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/README.md:56:`roslaunch astra_camera astra.launch`
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/README.md:60:`roslaunch astra_camera stereo_s.launch`
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/README.md:80:* `/camera/get_serial`: get serial number
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/README.md:124:To launch multiple cameras, you could modify `multi_astra.launch` to match your setting. The important settings are `device_x_id`(serial number of your devices), `3d_sensor`(name of launch file), and `has_uvc_serial`(does your camera's uvc have serial number).
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:219:std::string AstraDeviceManager::getSerial(const std::string& Uri) const
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:224:  // we need to open the device to query the serial number
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:227:    int serial_len = 100;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:228:    char serial[serial_len];
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:230:    openni::Status rc = openni_device.getProperty(openni::DEVICE_PROPERTY_SERIAL_NUMBER, serial, &serial_len);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:232:      ret = serial;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device_manager.cpp:235:      THROW_OPENNI_EXCEPTION("Serial number query failed: %s", openni::OpenNI::getExtendedError());
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/list_devices.cpp:35: * serial number.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/list_devices.cpp:56:      std::string serial = manager.getSerial(device_infos->at(i).uri_);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/list_devices.cpp:57:      std::cout << "Serial number: " << serial << std::endl;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/list_devices.cpp:61:      std::cerr << "Could not retrieve serial number: " << exception.what() << std::endl;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:215:  // The camera names are set to [rgb|depth]_[serial#], e.g. depth_B00367707227042B.
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:217:  std::string serial_number = device_->getStringID();
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:220:  color_name = "rgb_"   + serial_number;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:221:  ir_name  = "depth_" + serial_number;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:227:  get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb, this);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:245:bool AstraDriver::getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:247:  res.serial = device_manager_->getSerial(device_->getUri());
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1047:    // check if the device id given matches a serial number of a connected device
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1054:        	std::string serial = device_manager_->getSerial(*it);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1055:        	if (serial.size() > 0 && device_id == serial)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1065:        		std::string serial = device_manager_->getSerial(*it);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1066:        	 	if (serial.size() > 0 && device_id == serial)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_driver.cpp:1076:        	ROS_WARN("Could not query serial number of device \"%s\":", exception.what());
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device.cpp:93:  int serial_number_size = sizeof(serial_number);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device.cpp:94:  memset(serial_number, 0, serial_number_size);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device.cpp:95:  openni_device_->getProperty(openni::OBEXTENSION_ID_SERIALNUMBER, (uint8_t*)&serial_number, &serial_number_size);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device.cpp:187:char* AstraDevice::getSerialNumber()
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/astra_device.cpp:189:  return serial_number;
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/libuvc_camera/camera_driver.cpp:493:  ROS_INFO("Opening camera with vendor=0x%x, product=0x%x, serial=\"%s\", index=%d",
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/libuvc_camera/camera_driver.cpp:494:           vendor_id, product_id, new_config.serial.c_str(), new_config.index);
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/libuvc_camera/camera_driver.cpp:505:    new_config.serial.empty() ? NULL : new_config.serial.c_str());
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/src/libuvc_camera/camera_driver.cpp:535:    new_config.serial.empty() ? NULL : new_config.serial.c_str());
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astra_tf_prefix.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/multi_astra.launch:12:  <arg name="has_uvc_serial"    default="true"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/multi_astra.launch:33:    <arg name="uvc_serial"                      value="$(arg device_1_id)" if="$(eval has_uvc_serial == true)"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/multi_astra.launch:39:    <!-- add index if uvc does not have serial -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/multi_astra.launch:54:    <arg name="uvc_serial"                      value="$(arg device_2_id)" if="$(eval has_uvc_serial == true)"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/multi_astra.launch:60:    <!-- add index if uvc does not have serial -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astra.launch:14:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astra.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astraprosm.launch:7:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astra_rgb.launch:7:<param name="serial" value=""/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/processing.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/ir.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/color.launch:4:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/device.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/pointclouds.launch:4: <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/depth.launch:4:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/includes/manager.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s_u3.launch:10:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s_u3.launch:14:  <arg name="uvc_serial" default="0" />
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s_u3.launch:17:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s_u3.launch:63:      <param name="serial" value="$(arg uvc_serial)"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astrapro.launch:14:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astrapro.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/astrapro.launch:69:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/embedded_s.launch:10:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/embedded_s.launch:16:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/embedded_s.launch:64:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s.launch:10:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s.launch:16:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/launch/stereo_s.launch:64:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/srv/GetSerial.srv:2:string serial
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/.git/index matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/.git/objects/pack/pack-0377de28d05b519c4769c2b2190960716236ae6b.pack matches
+Binary file /home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/.git/objects/pack/pack-4dae6fe26affb8560acf03319e1665892ef2a2f9.pack matches
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/cfg/UVCCamera.cfg:22:gen.add("serial", str_t, RECONFIGURE_CLOSE,
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_camera/cfg/UVCCamera.cfg:23:        "Serial number, arbitrary string (use camera of any serial number if null).",
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/CMakeLists.txt:1:cmake_minimum_required(VERSION 2.8.3)
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astra_tf_prefix.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astra.launch:14:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astra.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astraprosm.launch:7:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astra_rgb.launch:7:<param name="serial" value=""/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/processing.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/ir.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/color.launch:4:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/device.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/pointclouds.launch:4: <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/depth.launch:4:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/includes/manager.launch:3:  <!-- have all the old parameters to prevent roslaunch errors -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astrapro.launch:14:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astrapro.launch:20:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/astrapro.launch:69:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/embedded_s.launch:10:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/embedded_s.launch:16:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/embedded_s.launch:62:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/stereo_s.launch:10:         "15120410023"   : serial number -->
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/stereo_s.launch:16:       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+/home/clbrobot/catkin_ws/src/depth_camera/ros_astra_launch/launch/stereo_s.launch:62:      <param name="serial" value="0"/>
+/home/clbrobot/catkin_ws/src/opencv_apps/package.xml:43:  <test_depend>roslaunch</test_depend>
+/home/clbrobot/catkin_ws/src/opencv_apps/test/CMakeLists.txt:80:if(roslaunch_VERSION VERSION_LESS "1.11.1")
+/home/clbrobot/catkin_ws/src/opencv_apps/test/CMakeLists.txt:81:  message(WARNING "roslaunch_add_file check fails with unsupported doc attributes ${roslaunch_VERSION}")
+/home/clbrobot/catkin_ws/src/opencv_apps/test/CMakeLists.txt:85:    roslaunch_add_file_check(${LAUNCH_FILE})
+/home/clbrobot/catkin_ws/src/opencv_apps/CMakeLists.txt:1:cmake_minimum_required(VERSION 2.8.3)
+/home/clbrobot/catkin_ws/src/opencv_apps/CMakeLists.txt:371:  find_package(roslaunch REQUIRED)
+/home/clbrobot/catkin_ws/src/opencv_apps/CMakeLists.txt:372:  if(roslaunch_VERSION VERSION_LESS "1.11.1")
+/home/clbrobot/catkin_ws/src/opencv_apps/CMakeLists.txt:373:    message(WARNING "roslaunch_add_file check fails with unsupported doc attributes ${roslaunch_VERSION}")
+/home/clbrobot/catkin_ws/src/opencv_apps/CMakeLists.txt:377:      roslaunch_add_file_check(${LAUNCH_FILE})
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hough_circles.launch:18:  <arg name="min_circle_radius" default="0" doc="The minimum size of the circle, If unknown, put zero as default" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hough_circles.launch:19:  <arg name="max_circle_radius" default="0" doc="The maximum size of the circle, If unknown, put zero as default." />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/goodfeature_track.launch:12:  <arg name="max_corners" default="23" doc="Maximum number of corners to return. If there are more corners than are found, the strongest  of them is returned." />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:12:  <arg name="h_limit_max" default="250" doc="The maximum allowed field value Hue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:13:  <arg name="h_limit_min" default="0" doc="The minimum allowed field value Hue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:14:  <arg name="s_limit_max" default="255" doc="The maximum allowed field value Saturation" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:15:  <arg name="s_limit_min" default="150" doc="The minimum allowed field value Saturation" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:16:  <arg name="v_limit_max" default="255" doc="The maximum allowed field value Value" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hsv_color_filter.launch:17:  <arg name="v_limit_min" default="50" doc="The minimum allowed field value Value" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:12:  <arg name="r_limit_max" default="250" doc="The maximum allowed field value Red" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:13:  <arg name="r_limit_min" default="50" doc="The minimum allowed field value Red" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:14:  <arg name="g_limit_max" default="200" doc="The maximum allowed field value Green" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:15:  <arg name="g_limit_min" default="100" doc="The minimum allowed field value Green" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:16:  <arg name="b_limit_max" default="150" doc="The maximum allowed field value Blue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/rgb_color_filter.launch:17:  <arg name="b_limit_min" default="20" doc="The minimum allowed field value Blue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/threshold.launch:14:  <arg name="max_binary" default="255" doc="maximum value to use with the 0: Binary thresholding and 1: Binary inverted thresholding types."/>
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:12:  <arg name="h_limit_max" default="250" doc="The maximum allowed field value Hue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:13:  <arg name="h_limit_min" default="0" doc="The minimum allowed field value Hue" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:14:  <arg name="s_limit_max" default="255" doc="The maximum allowed field value Saturation" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:15:  <arg name="s_limit_min" default="150" doc="The minimum allowed field value Saturation" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:16:  <arg name="l_limit_max" default="255" doc="The maximum allowed field value Luminance" />
+/home/clbrobot/catkin_ws/src/opencv_apps/launch/hls_color_filter.launch:17:  <arg name="l_limit_min" default="50" doc="The minimum allowed field value Luminance" />
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:11:gen.add ("h_limit_max", int_t, 0, "The maximum allowed field value Hue", 360, 0, 360)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:12:gen.add ("h_limit_min", int_t, 0, "The minimum allowed field value Hue", 0, 0, 360)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:13:gen.add ("s_limit_max", int_t, 0, "The maximum allowed field value Saturation", 256, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:14:gen.add ("s_limit_min", int_t, 0, "The minimum allowed field value Saturation", 0, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:15:gen.add ("v_limit_max", int_t, 0, "The maximum allowed field value Value", 256, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HSVColorFilter.cfg:16:gen.add ("v_limit_min", int_t, 0, "The minimum allowed field value Value", 0, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:11:gen.add ("h_limit_max", int_t, 0, "The maximum allowed field value Hue", 360, 0, 360)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:12:gen.add ("h_limit_min", int_t, 0, "The minimum allowed field value Hue", 0, 0, 360)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:13:gen.add ("s_limit_max", int_t, 0, "The maximum allowed field value Saturation", 256, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:14:gen.add ("s_limit_min", int_t, 0, "The minimum allowed field value Saturation", 0, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:15:gen.add ("l_limit_max", int_t, 0, "The maximum allowed field value Lightness", 256, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HLSColorFilter.cfg:16:gen.add ("l_limit_min", int_t, 0, "The minimum allowed field value Lightness", 0, 0, 256)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HoughLines.cfg:49:gen.add("minLineLength", double_t, 0, "The minimum number of points that can form a line. Lines with less than this number of points are disregarded.",  30, 0, 500)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HoughLines.cfg:50:gen.add("maxLineGap",    double_t, 0, "The maximum gap between two points to be considered in the same line.",  10, 0, 100)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/LKFlow.cfg:42:gen.add("min_distance", int_t, 0, "Minimum possible Euclidean distance between the returned corners.", 10, 1, 100)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HoughCircles.cfg:48:gen.add("min_distance_between_circles", double_t, 0, "mnimum distance between the centers of the detected circles", 0, 0, 1024)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HoughCircles.cfg:50:gen.add("min_circle_radius", int_t, 0, "the minimum size of the circle", 0, 0, 500)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/HoughCircles.cfg:51:gen.add("max_circle_radius", int_t, 0, "the maximum size of the circle", 0, 0, 2000)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:11:gen.add("r_limit_max", int_t, 0, "The maximum allowed field value Red", 255, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:12:gen.add("r_limit_min", int_t, 0, "The minimum allowed field value Red", 0, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:13:gen.add("g_limit_max", int_t, 0, "The maximum allowed field value Green", 255, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:14:gen.add("g_limit_min", int_t, 0, "The minimum allowed field value Green", 0, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:15:gen.add("b_limit_max", int_t, 0, "The maximum allowed field value Blue", 255, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/cfg/RGBColorFilter.cfg:16:gen.add("b_limit_min", int_t, 0, "The minimum allowed field value Blue", 0, 0, 255)
+/home/clbrobot/catkin_ws/src/opencv_apps/CHANGELOG.rst:51:  * sometimes simple_example_test fails with 'average rate (36.121Hz) exceeded maximum (35.000Hz)'
+/home/clbrobot/catkin_ws/src/opencv_apps/CHANGELOG.rst:191:  * CMakeLists.txt: on roslaunch 1.11.1, roslaunch_add_file check fails with unsupported doc attributes (`#20 <https://github.com/ros-perception/opencv_apps/issues/20>`_)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/package.xml:3:  <name>rplidar_ros</name>
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/package.xml:5:  <description>The rplidar ros package, support rplidar A2/A1 and A3/S1</description>
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/rviz/rplidar.rviz:9:        - /RPLidarLaserScan1
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/rviz/rplidar.rviz:69:      Name: RPLidarLaserScan
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:1:cmake_minimum_required(VERSION 2.8.3)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:2:project(rplidar_ros)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:4:set(RPLIDAR_SDK_PATH "./sdk/")
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:6:FILE(GLOB RPLIDAR_SDK_SRC 
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:7:  "${RPLIDAR_SDK_PATH}/src/arch/linux/*.cpp"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:8:  "${RPLIDAR_SDK_PATH}/src/hal/*.cpp"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:9:  "${RPLIDAR_SDK_PATH}/src/*.cpp"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:19:  ${RPLIDAR_SDK_PATH}/include
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:20:  ${RPLIDAR_SDK_PATH}/src
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:26:add_executable(rplidarNode src/node.cpp ${RPLIDAR_SDK_SRC})
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:27:target_link_libraries(rplidarNode ${catkin_LIBRARIES})
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:29:add_executable(rplidarNodeClient src/client.cpp)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:30:target_link_libraries(rplidarNodeClient ${catkin_LIBRARIES})
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/CMakeLists.txt:32:install(TARGETS rplidarNode rplidarNodeClient
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:1:RPLIDAR ROS package
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:4:ROS node and test application for RPLIDAR
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:6:Visit following Website for more details about RPLIDAR:
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:8:rplidar roswiki: http://wiki.ros.org/rplidar
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:10:rplidar HomePage:   http://www.slamtec.com/en/Lidar
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:12:rplidar SDK: https://github.com/Slamtec/rplidar_sdk
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:14:rplidar Tutorial:  https://github.com/robopeak/rplidar_ros/wiki
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:16:How to build rplidar ros package
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:19:    2) Running catkin_make to build rplidarNode and rplidarNodeClient
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:21:How to run rplidar ros package
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:23:There're two ways to run rplidar ros package
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:25:I. Run rplidar node and view in the rviz
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:27:roslaunch rplidar_ros view_rplidar.launch (for RPLIDAR A1/A2)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:29:roslaunch rplidar_ros view_rplidar_a3.launch (for RPLIDAR A3)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:31:roslaunch rplidar_ros view_rplidar_s1.launch (for RPLIDAR S1)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:33:You should see rplidar's scan result in the rviz.
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:35:II. Run rplidar node and view using test application
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:37:roslaunch rplidar_ros rplidar.launch (for RPLIDAR A1/A2)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:39:roslaunch rplidar_ros rplidar_a3.launch (for RPLIDAR A3)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:41:roslaunch rplidar_ros rplidar_s1.launch (for RPLIDAR S1)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:43:rosrun rplidar_ros rplidarNodeClient
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:45:You should see rplidar's scan result in the console
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:47:Notice: the different is serial_baudrate between A1/A2 and A3/S1
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:49:RPLidar frame
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/README.md:51:RPLidar frame must be broadcasted according to picture shown in rplidar-frame.png
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/client.cpp:30: *  RPlidar ROS Node client test app
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/client.cpp:57:    ros::init(argc, argv, "rplidar_node_client");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:2: *  RPLIDAR ROS NODE
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:38:#include "rplidar.h"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:46:using namespace rp::standalone::rplidar;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:48:RPlidarDriver * drv = NULL;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:51:                  rplidar_response_measurement_node_hq_t *nodes,
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:120:bool getRPLIDARDeviceInfo(RPlidarDriver * drv)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:123:    rplidar_response_device_info_t devinfo;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:135:    // print out the device serial number, firmware and hardware version number..
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:136:    printf("RPLIDAR S/N: ");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:138:        printf("%02X", devinfo.serialnum[pos]);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:146:bool checkRPLIDARHealth(RPlidarDriver * drv)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:149:    rplidar_response_device_health_t healthinfo;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:152:        ROS_INFO("RPLidar health status : %d", healthinfo.status);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:153:        if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:154:            ROS_ERROR("Error, rplidar internal error detected. Please reboot the device to retry.");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:161:        ROS_ERROR("Error, cannot retrieve rplidar health code: %x", op_result);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:193:static float getAngle(const rplidar_response_measurement_node_hq_t& node)
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:199:    ros::init(argc, argv, "rplidar_node");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:203:    std::string serial_port;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:205:    int serial_baudrate = 115200;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:217:    nh_private.param<std::string>("channel_type", channel_type, "serial");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:223:    nh_private.param<std::string>("serial_port", serial_port, "/dev/ttyUSB0"); 
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:224:    nh_private.param<int>("serial_baudrate", serial_baudrate, 115200/*256000*/);//ros run for A1 A2, change to 256000 if A3
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:230:    ROS_INFO("RPLIDAR running on ROS package rplidar_ros. SDK Version:"RPLIDAR_SDK_VERSION"");
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:236:        drv = RPlidarDriver::CreateDriver(rp::standalone::rplidar::DRIVER_TYPE_TCP);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:239:        drv = RPlidarDriver::CreateDriver(rp::standalone::rplidar::DRIVER_TYPE_SERIALPORT);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:251:            ROS_ERROR("Error, cannot bind to the specified serial port %s.",serial_port.c_str());
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:252:            RPlidarDriver::DisposeDriver(drv);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:259:        if (IS_FAIL(drv->connect(serial_port.c_str(), (_u32)serial_baudrate))) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:260:            ROS_ERROR("Error, cannot bind to the specified serial port %s.",serial_port.c_str());
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:261:            RPlidarDriver::DisposeDriver(drv);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:267:    // get rplidar device info
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:268:    if (!getRPLIDARDeviceInfo(drv)) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:273:    if (!checkRPLIDARHealth(drv)) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:274:        RPlidarDriver::DisposeDriver(drv);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:283:    RplidarScanMode current_scan_mode;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:287:        std::vector<RplidarScanMode> allSupportedScanModes;
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:292:            for (std::vector<RplidarScanMode>::iterator iter = allSupportedScanModes.begin(); iter != allSupportedScanModes.end(); iter++) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:301:                for (std::vector<RplidarScanMode>::iterator iter = allSupportedScanModes.begin(); iter != allSupportedScanModes.end(); iter++) {
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:331:        rplidar_response_measurement_node_hq_t nodes[360*8];
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:348:                    rplidar_response_measurement_node_hq_t angle_compensate_nodes[angle_compensate_nodes_count];
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:349:                    memset(angle_compensate_nodes, 0, angle_compensate_nodes_count*sizeof(rplidar_response_measurement_node_hq_t));
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/src/node.cpp:406:    RPlidarDriver::DisposeDriver(drv);
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/scripts/rplidar.rules:1:# set the udev rule , make the device_port be fixed by rplidar
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/scripts/rplidar.rules:3:KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0777", SYMLINK+="rplidar"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/scripts/delete_udev_rules.sh:3:echo "delete remap the device serial port(ttyUSBX) to  rplidar"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/scripts/delete_udev_rules.sh:4:echo "sudo rm   /etc/udev/rules.d/rplidar.rules"
+/home/clbrobot/catkin_ws/src/lidar/rplidar_ros/scripts/delete_udev_rules.sh:5:sudo rm   /etc/udev/rules.d/rplidar.rules
