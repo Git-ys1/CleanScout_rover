@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/catkin_ws/devel
+
+Name: clbrobot_object_detect
+Description: Description of clbrobot_object_detect
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
