@@ -12,12 +12,29 @@ import { errorHandler } from './middleware/errorHandler.js'
 
 const app = express()
 
+function parseAllowedOrigins(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const allowedOrigins = new Set(parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS))
+
+function isLocalDevOrigin(origin) {
+  return /^https?:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)
+}
+
 function isAllowedOrigin(origin) {
   if (!origin) {
     return true
   }
 
-  return /^https?:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)
+  if (allowedOrigins.size > 0) {
+    return allowedOrigins.has(origin)
+  }
+
+  return isLocalDevOrigin(origin)
 }
 
 app.use(
@@ -28,7 +45,10 @@ app.use(
         return
       }
 
-      callback(new Error(`Origin ${origin} is not allowed by CORS`))
+      const error = new Error(`Origin ${origin} is not allowed by CORS`)
+      error.status = 403
+      error.code = 'CORS_ORIGIN_FORBIDDEN'
+      callback(error)
     },
     credentials: false,
   })
@@ -39,12 +59,12 @@ app.use(express.json())
 app.get('/', (_req, res) => {
   res.json({
     success: true,
-      data: {
-        service: 'vue3-backend',
-        version: '1.3.3',
-        status: 'running',
-      },
-    })
+    data: {
+      service: 'vue3-backend',
+      version: '1.4.0',
+      status: 'running',
+    },
+  })
 })
 
 app.use('/api/auth', authRoutes)
@@ -67,7 +87,7 @@ app.use(errorHandler)
 const port = Number(process.env.PORT || 3000)
 
 app.listen(port, () => {
-  console.log(`V-1.3.3 backend service listening on http://127.0.0.1:${port}`)
+  console.log(`V-1.4.0 backend service listening on http://127.0.0.1:${port}`)
 })
 
 export default app

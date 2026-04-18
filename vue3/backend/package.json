@@ -1,15 +1,16 @@
 {
   "name": "vue3-backend",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
-  "description": "V线 V-1.3.3 backend service shell",
+  "description": "V线 V-1.4.0 backend service shell",
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed"
   },
   "prisma": {
