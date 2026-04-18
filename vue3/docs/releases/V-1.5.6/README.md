@@ -3,7 +3,7 @@ version: V-1.5.6
 based_on_branch: main
 branch_source: GitHub branches page + origin/main latest branch policy
 published_to_root: vue3/
-published_at_commit: pending-cloud-publish
+published_at_commit: 919cb3ff1fcba194ceae46acebef4f02e2b25f25
 ---
 
 # V-1.5.6 backend 本机 ROS 环境漂移热修
