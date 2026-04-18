@@ -3,7 +3,7 @@ version: V-1.7.0
 based_on_branch: main
 branch_source: GitHub branches page + origin/main latest branch policy
 published_to_root: vue3/
-published_at_commit: pending-cloud-publish
+published_at_commit: 40e061bb1fdc5a841071a9ba88354fc1395a80fe
 ---
 
 # V-1.7.0 /edge/ros 长连接入口 + edge-relay transport
