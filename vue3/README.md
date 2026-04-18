@@ -438,6 +438,33 @@ cmd /c npm.cmd run dev
 - backend 部署说明位于：
   - `docs/releases/V-1.4.0/backend-deploy.md`
 
+## V-1.6.0 runtime profile 与公网交付
+
+从 `V-1.6.0` 起，前后端 profile 进一步收口：
+
+- 前端生产 API 固定为 `https://api.hzhhds.top/api`
+- backend 支持 `APP_PROFILE=local-lan` 与 `APP_PROFILE=public-cloud`
+- backend 支持 `ENV_FILE=/etc/vline-backend.env`
+- `local-lan` 继续用于本地 ROS 真联调
+- `public-cloud` 用于公网部署交付包，默认不直连局域网树莓派
+
+新增文档入口：
+
+- `docs/releases/V-1.6.0/README.md`
+- `docs/releases/V-1.6.0/frontend-build-profiles.md`
+- `docs/releases/V-1.6.0/backend-runtime-profiles.md`
+- `docs/releases/V-1.6.0/ros-second-local-test.md`
+- `docs/releases/V-1.6.0/public-cloud-deploy.md`
+- `docs/releases/V-1.6.0/backend-centric-ros-relay-rfc.md`
+
+当前正式 ROS 控制链路仍为：
+
+```text
+frontend -> backend -> rosbridge -> ROS
+```
+
+`edge-relay` 只是联合 RFC 草案，不替换当前已跑通的 `rosbridge` 方案。
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在

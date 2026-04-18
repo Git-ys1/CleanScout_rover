@@ -7,10 +7,16 @@
 - `scripts/release-mp-weixin.ps1`
 - `scripts/release-mp-weixin.sh`
 
-两个脚本都固定调用：
+两个脚本从 `V-1.6.0` 起固定调用生产构建入口：
 
 ```powershell
-npm run build:mp-weixin
+npm run build:mp-weixin:production
+```
+
+本地微信小程序调试构建继续使用：
+
+```powershell
+npm run build:mp-weixin:local
 ```
 
 ## 本地命令

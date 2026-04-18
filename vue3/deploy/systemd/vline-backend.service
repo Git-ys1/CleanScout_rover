@@ -7,6 +7,7 @@ Type=simple
 User=vline
 WorkingDirectory=/opt/vline-backend/backend
 EnvironmentFile=/etc/vline-backend.env
+Environment=ENV_FILE=/etc/vline-backend.env
 ExecStart=/usr/bin/env node src/app.js
 Restart=always
 RestartSec=3
