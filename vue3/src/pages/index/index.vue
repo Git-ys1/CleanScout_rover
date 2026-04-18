@@ -52,6 +52,10 @@
         <text class="empty-text">暂无消息，进入对话页后可发起 mock 对话。</text>
       </view>
     </view>
+
+    <!-- #ifdef H5 -->
+    <H5TabBarFallback current="index" />
+    <!-- #endif -->
   </view>
 </template>
 
@@ -64,6 +68,7 @@ import { useAppStore } from '../../stores/app.js'
 import { useChatStore } from '../../stores/chat.js'
 import { useDeviceStore } from '../../stores/device.js'
 import { ensureLoggedIn } from '../../utils/auth-guard.js'
+import H5TabBarFallback from '../../components/H5TabBarFallback.vue'
 
 const authStore = useAuthStore()
 const appStore = useAppStore()

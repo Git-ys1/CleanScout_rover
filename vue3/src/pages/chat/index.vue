@@ -29,6 +29,10 @@
       />
       <button class="composer-button" :loading="sending" @tap="handleSend">发送消息</button>
     </view>
+
+    <!-- #ifdef H5 -->
+    <H5TabBarFallback current="chat" />
+    <!-- #endif -->
   </view>
 </template>
 
@@ -38,6 +42,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useAppStore } from '../../stores/app.js'
 import { useChatStore } from '../../stores/chat.js'
 import { ensureLoggedIn } from '../../utils/auth-guard.js'
+import H5TabBarFallback from '../../components/H5TabBarFallback.vue'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
