@@ -1,0 +1,60 @@
+<launch>
+  <arg name="rf1_port" default="/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0" />
+  <arg name="rf1_fallback_port" default="/dev/ttyUSB0" />
+  <arg name="rf1_baud" default="115200" />
+  <arg name="send_rate_hz" default="50.0" />
+  <arg name="cmd_vel_timeout" default="0.25" />
+  <arg name="rosbridge_port" default="9090" />
+  <arg name="lidar_port" default="/dev/ttyUSB0" />
+  <arg name="lidar_baud" default="256000" />
+
+  <node pkg="csrpi_base_bridge" type="cmdvel_to_rf1.py" name="cmdvel_to_rf1" output="screen">
+    <param name="wb_m" value="0.1905" />
+    <param name="tw_m" value="0.1800" />
+    <param name="k_m" value="0.18525" />
+    <param name="publish_rate_hz" value="$(arg send_rate_hz)" />
+    <param name="cmd_vel_timeout" value="$(arg cmd_vel_timeout)" />
+  </node>
+
+  <node pkg="csrpi_base_bridge" type="rf1_serial_bridge.py" name="rf1_serial_bridge" output="screen">
+    <param name="port" value="$(arg rf1_port)" />
+    <param name="fallback_port" value="$(arg rf1_fallback_port)" />
+    <param name="baudrate" value="$(arg rf1_baud)" />
+    <param name="send_rate_hz" value="$(arg send_rate_hz)" />
+    <param name="timeout" value="0.2" />
+    <param name="drain_seconds" value="0.6" />
+    <param name="reconnect_delay" value="1.0" />
+  </node>
+
+  <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
+    <param name="k_m" value="0.18525" />
+    <param name="odom_frame" value="odom" />
+    <param name="base_frame" value="base_link" />
+    <param name="publish_tf" value="false" />
+  </node>
+
+  <node pkg="mpu6050_i2c_bridge" type="mpu6050_node.py" name="mpu6050_i2c_node" output="screen">
+    <param name="bus" value="1" />
+    <param name="address" value="104" />
+    <param name="rate_hz" value="50.0" />
+    <param name="frame_id" value="imu_link" />
+  </node>
+
+  <node pkg="rplidar_ros" type="rplidarNode" name="rplidarNode" output="screen">
+    <param name="serial_port" value="$(arg lidar_port)" />
+    <param name="serial_baudrate" value="$(arg lidar_baud)" />
+    <param name="frame_id" value="laser" />
+    <param name="inverted" value="false" />
+    <param name="angle_compensate" value="true" />
+    <param name="symmetry" value="true" />
+    <param name="shield_start_angle" value="0" />
+    <param name="shield_end_angle" value="0" />
+  </node>
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_laser" args="0.04 0 0.18 0 0 0 base_link laser" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_imu_link" args="0 0 0 0 0 0 base_link imu_link" />
+
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+    <arg name="port" value="$(arg rosbridge_port)" />
+  </include>
+</launch>

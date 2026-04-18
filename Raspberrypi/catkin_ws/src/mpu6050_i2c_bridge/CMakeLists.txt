@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.0.2)
 project(mpu6050_i2c_bridge)
 
 find_package(catkin REQUIRED COMPONENTS
-  clb_msgs
   geometry_msgs
   rospy
+  sensor_msgs
 )
 
 catkin_package()

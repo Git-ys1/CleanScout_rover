@@ -4,8 +4,8 @@ import math
 
 import rospy
 import smbus
-from clb_msgs.msg import Imu
 from geometry_msgs.msg import Vector3
+from sensor_msgs.msg import Imu
 
 
 class Mpu6050Node:
@@ -18,7 +18,7 @@ class Mpu6050Node:
         self.gyro_scale = float(rospy.get_param("~gyro_scale", 131.0))
         self.bus_handle = smbus.SMBus(self.bus)
 
-        self.raw_pub = rospy.Publisher("raw_imu", Imu, queue_size=50)
+        self.raw_pub = rospy.Publisher("/imu/data", Imu, queue_size=50)
 
         self.write_register(0x6B, 0x00)
         self.write_register(0x1C, 0x00)
@@ -48,6 +48,8 @@ class Mpu6050Node:
         accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z = self.read_measurements()
 
         msg = Imu()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = self.frame_id
         msg.linear_acceleration = Vector3(
             x=(accel_x / self.accel_scale) * 9.80665,
             y=(accel_y / self.accel_scale) * 9.80665,
@@ -58,7 +60,13 @@ class Mpu6050Node:
             y=math.radians(gyro_y / self.gyro_scale),
             z=math.radians(gyro_z / self.gyro_scale),
         )
-        msg.magnetic_field = Vector3(x=0.0, y=0.0, z=0.0)
+        msg.orientation_covariance[0] = -1.0
+        msg.angular_velocity_covariance[0] = 0.02
+        msg.angular_velocity_covariance[4] = 0.02
+        msg.angular_velocity_covariance[8] = 0.02
+        msg.linear_acceleration_covariance[0] = 0.04
+        msg.linear_acceleration_covariance[4] = 0.04
+        msg.linear_acceleration_covariance[8] = 0.04
 
         self.raw_pub.publish(msg)
 
