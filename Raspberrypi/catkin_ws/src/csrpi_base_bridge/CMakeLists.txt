@@ -14,5 +14,7 @@ catkin_install_python(PROGRAMS
   scripts/wheel_bridge.py
   scripts/cmdvel_to_wheels.py
   scripts/enc_to_raw_vel.py
+  scripts/rf1_serial_bridge.py
+  scripts/cmdvel_to_rf1.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
