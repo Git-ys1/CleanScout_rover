@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import { printRuntimeProfile } from './bootstrap/loadRuntimeEnv.js'
 import cors from 'cors'
 import express from 'express'
 import authRoutes from './routes/auth.js'
@@ -61,8 +61,9 @@ app.get('/', (_req, res) => {
     success: true,
     data: {
       service: 'vue3-backend',
-      version: '1.4.0',
+      version: '1.6.0',
       status: 'running',
+      profile: process.env.APP_PROFILE || 'local-lan',
     },
   })
 })
@@ -87,7 +88,8 @@ app.use(errorHandler)
 const port = Number(process.env.PORT || 3000)
 
 app.listen(port, () => {
-  console.log(`V-1.4.0 backend service listening on http://127.0.0.1:${port}`)
+  console.log(`V-1.6.0 backend service listening on http://127.0.0.1:${port}`)
+  printRuntimeProfile()
 })
 
 export default app
