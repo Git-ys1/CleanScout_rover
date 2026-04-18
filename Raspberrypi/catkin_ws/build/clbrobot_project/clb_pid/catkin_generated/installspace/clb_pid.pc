@@ -1,8 +1,0 @@
-prefix=/home/clbrobot/catkin_ws/install
-
-Name: clb_pid
-Description: Description of clb_pid
-Version: 0.0.1
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib 
-Requires: dynamic_reconfigure message_runtime roscpp std_msgs

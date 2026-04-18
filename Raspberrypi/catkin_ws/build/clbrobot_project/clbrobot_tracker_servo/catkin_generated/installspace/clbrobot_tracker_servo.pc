@@ -1,8 +1,0 @@
-prefix=/home/clbrobot/catkin_ws/install
-
-Name: clbrobot_tracker_servo
-Description: Description of clbrobot_tracker_servo
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
