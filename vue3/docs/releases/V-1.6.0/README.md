@@ -3,7 +3,7 @@ version: V-1.6.0
 based_on_branch: main
 branch_source: GitHub branches page + origin/main latest branch policy
 published_to_root: vue3/
-published_at_commit: pending-cloud-publish
+published_at_commit: 35f2bb383ae8156510b5cc1e266cd2dd71b55c17
 ---
 
 # V-1.6.0 runtime profile 收口 + 第二次 ROS 真联调 + public-cloud 交付包 + edge-relay RFC
