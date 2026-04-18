@@ -1,0 +1,1 @@
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="bde26819d978564a98616dc8161b0fd6", SYMLINK+="clblidar"

@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/devel
+
+Name: csrpi_fan_bridge
+Description: Description of csrpi_fan_bridge
+Version: 0.0.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

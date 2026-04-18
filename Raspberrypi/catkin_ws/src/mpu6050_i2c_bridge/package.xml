@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mpu6050_i2c_bridge</name>
+  <version>0.0.1</version>
+  <description>Minimal Raspberry Pi I2C bridge for publishing MPU6050 raw IMU data.</description>
+
+  <maintainer email="3091964993@qq.com">Git-ys1</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>clb_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rospy</depend>
+
+  <export/>
+</package>

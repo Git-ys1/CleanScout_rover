@@ -1,0 +1,40 @@
+导航当前按下面的可诊断口径启动：
+
+一、先检查当前 ROS 状态
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./check_ros_master.sh
+
+二、树莓派前台启动唯一导航入口
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./start_desk_navigation.sh
+
+这个脚本会：
+
+1. 先清理旧会话
+2. 先起基础链 nav_base_stack.launch
+3. 等待 /scan /odom /csr_base/ack
+4. 再起 desk_map_navigation.launch
+
+三、虚拟机里查看
+
+source /opt/ros/noetic/setup.bash
+rostopic list
+rviz
+
+四、RViz 里建议查看
+
+1. Fixed Frame = map
+2. Map
+3. LaserScan = /scan
+4. TF
+5. ParticleCloud = /particlecloud
+
+五、先 2D Pose Estimate，再 2D Nav Goal
+
+六、如果异常，先不要重复启动，再回报以下三个状态：
+
+1. /scan 是否存在
+2. /odom 是否存在
+3. /csr_base/ack 是否存在
