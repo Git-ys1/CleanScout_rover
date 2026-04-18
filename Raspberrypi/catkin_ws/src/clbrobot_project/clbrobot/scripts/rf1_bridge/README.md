@@ -23,6 +23,15 @@ source /opt/ros/noetic/setup.bash
 python3 /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/scripts/rf1_bridge/openrf1_smoketest.py
 ```
 
+For the `C-3.2.0` minimal bridge baseline, use the continuous-send smoke test:
+
+```bash
+source /opt/ros/noetic/setup.bash
+python3 /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/scripts/rf1_bridge/openrf1_min_bridge_smoketest.py
+```
+
+This variant keeps sending `W,a,b,c,d` at `50 Hz` for a short window, which matches the OpenRF1 board timeout contract more closely than a single-shot command test.
+
 ## Current note
 
 This is intentionally a non-ROS test. The goal is to prove Raspberry Pi to OpenRF1 USB serial communication before replacing the old ROS serial base path.
