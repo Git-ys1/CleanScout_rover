@@ -465,6 +465,34 @@ frontend -> backend -> rosbridge -> ROS
 
 `edge-relay` 只是联合 RFC 草案，不替换当前已跑通的 `rosbridge` 方案。
 
+## V-1.7.0 edge-relay 云端 transport
+
+从 `V-1.7.0` 起，`edge-relay` 从 RFC 草案进入 backend 静态施工：
+
+- backend 入口已拆为 `src/app.js` 与 `src/server.js`
+- `src/server.js` 通过共享 HTTP server 同时承载 REST 与 `/edge/ros`
+- `ROS_TRANSPORT` 支持 `mock | rosbridge | edge-relay`
+- `local-lan` 继续使用 `rosbridge`
+- `public-cloud` 继续默认 `mock`
+- `public-edge` 用于云端接收 Pi 主动 WSS 长连接
+- 前端仍只调用 backend 的 `/api/ros/*`，不直连 `/edge/ros`
+
+新增文档入口：
+
+- `docs/releases/V-1.7.0/README.md`
+- `docs/releases/V-1.7.0/edge-relay-protocol.md`
+- `docs/releases/V-1.7.0/public-edge-deploy.md`
+- `docs/releases/V-1.7.0/static-local-simulation.md`
+
+当前两条 ROS 链路并存：
+
+```text
+local-lan:    frontend -> backend -> rosbridge -> ROS
+public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
+```
+
+本轮只完成静态施工与本地模拟验证，未宣称真实 Pi / ROS / OpenRF1 云端闭环通过。
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在

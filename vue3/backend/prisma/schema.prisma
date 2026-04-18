@@ -30,6 +30,21 @@ model DeviceCache {
   updatedAt   DateTime @updatedAt
 }
 
+model EdgeDevice {
+  id               String    @id @default(cuid())
+  deviceId         String    @unique
+  tokenHash        String
+  isEnabled        Boolean   @default(true)
+  transport        String    @default("edge-relay")
+  topicsJson       String    @default("{}")
+  capabilitiesJson String    @default("[]")
+  lastSeenAt       DateTime?
+  lastHelloAt      DateTime?
+  lastDisconnectAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
 model MessageCache {
   id        String   @id @default(cuid())
   userId    String

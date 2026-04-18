@@ -12,6 +12,21 @@ function getBaseTelemetryState() {
   }
 }
 
+function normalizeIsoTime(value) {
+  if (!value) {
+    return new Date().toISOString()
+  }
+
+  const numericValue = Number(value)
+  const date = Number.isFinite(numericValue) ? new Date(numericValue) : new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toISOString()
+  }
+
+  return date.toISOString()
+}
+
 export function createRosStateCache(config) {
   const state = {
     enabled: Boolean(config.enabled),
@@ -20,6 +35,10 @@ export function createRosStateCache(config) {
     rosbridgeUrl: config.rosbridgeUrl,
     lastHeartbeatAt: config.enabled && config.transport === 'mock' ? new Date().toISOString() : '',
     lastError: '',
+    edgeRelayConnected: false,
+    edgeDeviceId: '',
+    lastTelemetryAt: '',
+    lastRelayError: '',
     cmdVelTopic: config.cmdVelTopic,
     odomTopic: config.odomTopic,
     imuTopic: config.imuTopic,
@@ -35,6 +54,10 @@ export function createRosStateCache(config) {
       rosbridgeUrl: state.rosbridgeUrl,
       lastHeartbeatAt: state.lastHeartbeatAt,
       lastError: state.lastError,
+      edgeRelayConnected: state.edgeRelayConnected,
+      edgeDeviceId: state.edgeDeviceId,
+      lastTelemetryAt: state.lastTelemetryAt,
+      lastRelayError: state.lastRelayError,
       cmdVelTopic: state.cmdVelTopic,
       odomTopic: state.odomTopic,
       imuTopic: state.imuTopic,
@@ -73,6 +96,23 @@ export function createRosStateCache(config) {
     state.lastError = String(message || '').trim()
   }
 
+  function setRelayError(message) {
+    state.lastRelayError = String(message || '').trim()
+    state.lastError = state.lastRelayError
+  }
+
+  function setEdgeRelayConnected({ connected, deviceId = '', at = new Date().toISOString() } = {}) {
+    state.edgeRelayConnected = Boolean(connected)
+    state.edgeDeviceId = state.edgeRelayConnected ? String(deviceId || state.edgeDeviceId || '').trim() : ''
+    state.connected = state.transport === 'edge-relay' ? state.edgeRelayConnected : state.connected
+
+    if (state.edgeRelayConnected) {
+      markHeartbeat(at)
+      state.lastRelayError = ''
+      state.lastError = ''
+    }
+  }
+
   function updateOdom(message = {}) {
     const timestamp = new Date().toISOString()
     const twist = message?.twist?.twist || message?.twist || {}
@@ -106,6 +146,28 @@ export function createRosStateCache(config) {
     markHeartbeat(timestamp)
   }
 
+  function updateEdgeTelemetry(payload = {}) {
+    const timestamp = normalizeIsoTime(payload.ts)
+
+    if (payload.odom) {
+      updateOdom(payload.odom)
+      state.lastOdomAt = timestamp
+    }
+
+    if (payload.imu) {
+      updateImu(payload.imu)
+      state.lastImuAt = timestamp
+    }
+
+    if (payload.scanSummary) {
+      updateScan(payload.scanSummary)
+      state.lastScanAt = timestamp
+    }
+
+    state.lastTelemetryAt = timestamp
+    markHeartbeat(timestamp)
+  }
+
   function applyCommand(command) {
     const timestamp = new Date().toISOString()
     state.latestLinearSpeed = Number(command?.linear?.x || 0)
@@ -125,9 +187,12 @@ export function createRosStateCache(config) {
     markHeartbeat,
     setConnected,
     setLastError,
+    setRelayError,
+    setEdgeRelayConnected,
     updateOdom,
     updateImu,
     updateScan,
+    updateEdgeTelemetry,
     applyCommand,
   }
 }
