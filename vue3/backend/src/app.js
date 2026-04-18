@@ -1,4 +1,4 @@
-import { printRuntimeProfile } from './bootstrap/loadRuntimeEnv.js'
+import './bootstrap/loadRuntimeEnv.js'
 import cors from 'cors'
 import express from 'express'
 import authRoutes from './routes/auth.js'
@@ -84,12 +84,5 @@ app.use((req, _res, next) => {
 })
 
 app.use(errorHandler)
-
-const port = Number(process.env.PORT || 3000)
-
-app.listen(port, () => {
-  console.log(`V-1.6.0 backend service listening on http://127.0.0.1:${port}`)
-  printRuntimeProfile()
-})
 
 export default app

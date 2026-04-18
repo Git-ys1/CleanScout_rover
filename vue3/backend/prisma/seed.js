@@ -9,6 +9,8 @@ const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = '123456'
 const DEFAULT_DEVICE_ID = 'mock-rover-001'
 const SYSTEM_CONFIG_ID = 'system'
+const EDGE_DEVICE_BOOTSTRAP_ID = String(process.env.EDGE_DEVICE_BOOTSTRAP_ID || '').trim()
+const EDGE_DEVICE_BOOTSTRAP_TOKEN = String(process.env.EDGE_DEVICE_BOOTSTRAP_TOKEN || '').trim()
 const SALT_ROUNDS = 10
 
 async function ensureAdminSeed() {
@@ -78,14 +80,58 @@ async function ensureSystemConfigSeed() {
   })
 }
 
+async function ensureEdgeDeviceSeed() {
+  if (!EDGE_DEVICE_BOOTSTRAP_ID || !EDGE_DEVICE_BOOTSTRAP_TOKEN) {
+    console.log('Edge device seed skipped: EDGE_DEVICE_BOOTSTRAP_ID or EDGE_DEVICE_BOOTSTRAP_TOKEN is empty')
+    return null
+  }
+
+  if (EDGE_DEVICE_BOOTSTRAP_TOKEN.length < 32) {
+    console.log('Edge device seed skipped: EDGE_DEVICE_BOOTSTRAP_TOKEN must be at least 32 characters')
+    return null
+  }
+
+  const existingEdgeDevice = await prisma.edgeDevice.findUnique({
+    where: { deviceId: EDGE_DEVICE_BOOTSTRAP_ID },
+  })
+
+  if (existingEdgeDevice) {
+    console.log(`Edge device seed already exists: ${EDGE_DEVICE_BOOTSTRAP_ID}`)
+    return existingEdgeDevice
+  }
+
+  const tokenHash = await bcrypt.hash(EDGE_DEVICE_BOOTSTRAP_TOKEN, SALT_ROUNDS)
+
+  return prisma.edgeDevice.create({
+    data: {
+      deviceId: EDGE_DEVICE_BOOTSTRAP_ID,
+      tokenHash,
+      isEnabled: true,
+      transport: 'edge-relay',
+      topicsJson: JSON.stringify({
+        cmd_vel: '/cmd_vel',
+        odom: '/odom',
+        imu: '/imu/data',
+        scan: '/scan',
+      }),
+      capabilitiesJson: JSON.stringify(['manual_control', 'odom', 'imu', 'scan_summary']),
+    },
+  })
+}
+
 async function main() {
   const admin = await ensureAdminSeed()
   const device = await ensureDeviceSeed()
   const systemConfig = await ensureSystemConfigSeed()
+  const edgeDevice = await ensureEdgeDeviceSeed()
 
   console.log(
     `Seed complete for user ${admin.username}, device ${device.deviceId}, and system config ${systemConfig.id}`
   )
+
+  if (edgeDevice) {
+    console.log(`Edge device seed ready: ${edgeDevice.deviceId}`)
+  }
 }
 
 main()

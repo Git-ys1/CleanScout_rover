@@ -30,12 +30,20 @@
           <text class="summary-value">{{ rosStatus.connected ? 'connected' : 'disconnected' }}</text>
         </view>
         <view class="summary-card">
+          <text class="summary-label">edge-relay 在线</text>
+          <text class="summary-value">{{ rosStatus.edgeRelayConnected ? 'online' : 'offline' }}</text>
+        </view>
+        <view class="summary-card">
+          <text class="summary-label">edge deviceId</text>
+          <text class="summary-value compact">{{ rosStatus.edgeDeviceId || '--' }}</text>
+        </view>
+        <view class="summary-card">
           <text class="summary-label">最近心跳</text>
           <text class="summary-value compact">{{ formatDate(rosStatus.lastHeartbeatAt) }}</text>
         </view>
         <view class="summary-card">
-          <text class="summary-label">cmd_vel topic</text>
-          <text class="summary-value compact">{{ rosStatus.cmdVelTopic || '--' }}</text>
+          <text class="summary-label">最近遥测</text>
+          <text class="summary-value compact">{{ formatDate(rosStatus.lastTelemetryAt) }}</text>
         </view>
       </view>
     </view>

@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const validProfiles = new Set(['local-lan', 'public-cloud'])
+const validProfiles = new Set(['local-lan', 'public-cloud', 'public-edge'])
 const currentFile = fileURLToPath(import.meta.url)
 const backendRoot = path.resolve(path.dirname(currentFile), '../..')
 const repoRoot = path.resolve(backendRoot, '..')
@@ -37,17 +37,20 @@ function loadEnvFile(filePath, { override = false, required = false } = {}) {
   return resolvedPath
 }
 
+const explicitEnvFile = String(process.env.ENV_FILE || '').trim()
+const localEnvPath = path.join(backendRoot, '.env')
+
+const loadedExplicitEnv = explicitEnvFile
+  ? loadEnvFile(explicitEnvFile, { override: true, required: true })
+  : null
+
 const appProfile = normalizeProfile(process.env.APP_PROFILE)
 process.env.APP_PROFILE = appProfile
 
 const profileTemplatePath = path.join(repoRoot, 'deploy', 'env', `vline-backend.${appProfile}.env.example`)
 const loadedProfileTemplate = loadEnvFile(profileTemplatePath, { override: false })
 
-const explicitEnvFile = String(process.env.ENV_FILE || '').trim()
-const localEnvPath = path.join(backendRoot, '.env')
-const loadedRuntimeEnv = explicitEnvFile
-  ? loadEnvFile(explicitEnvFile, { override: true, required: true })
-  : loadEnvFile(localEnvPath, { override: true })
+const loadedRuntimeEnv = loadedExplicitEnv || loadEnvFile(localEnvPath, { override: true })
 
 export const runtimeEnv = {
   appProfile,
@@ -61,5 +64,7 @@ export function printRuntimeProfile() {
   console.log(`[runtime] ENV_FILE=${runtimeEnv.envFile || 'not-loaded'}`)
   console.log(`[runtime] ROS_TRANSPORT=${process.env.ROS_TRANSPORT || ''}`)
   console.log(`[runtime] ROSBRIDGE_URL=${process.env.ROSBRIDGE_URL || ''}`)
+  console.log(`[runtime] EDGE_RELAY_ENABLED=${process.env.EDGE_RELAY_ENABLED || ''}`)
+  console.log(`[runtime] EDGE_RELAY_PATH=${process.env.EDGE_RELAY_PATH || ''}`)
   console.log(`[runtime] OPENCLAW_ENABLED=${process.env.OPENCLAW_ENABLED || ''}`)
 }
