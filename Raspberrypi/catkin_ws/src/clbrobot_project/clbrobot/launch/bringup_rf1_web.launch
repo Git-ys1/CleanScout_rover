@@ -3,7 +3,7 @@
   <arg name="rf1_fallback_port" default="/dev/ttyUSB0" />
   <arg name="rf1_baud" default="115200" />
   <arg name="send_rate_hz" default="50.0" />
-  <arg name="cmd_vel_timeout" default="0.25" />
+  <arg name="cmd_vel_timeout" default="0.4" />
   <arg name="rosbridge_port" default="9090" />
   <arg name="lidar_port" default="/dev/ttyUSB0" />
   <arg name="lidar_baud" default="256000" />
@@ -14,6 +14,9 @@
     <param name="k_m" value="0.18525" />
     <param name="publish_rate_hz" value="$(arg send_rate_hz)" />
     <param name="cmd_vel_timeout" value="$(arg cmd_vel_timeout)" />
+    <param name="max_vx" value="0.20" />
+    <param name="max_vy" value="0.15" />
+    <param name="max_wz" value="0.35" />
   </node>
 
   <node pkg="csrpi_base_bridge" type="rf1_serial_bridge.py" name="rf1_serial_bridge" output="screen">

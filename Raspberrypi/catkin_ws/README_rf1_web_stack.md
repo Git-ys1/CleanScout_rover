@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document freezes the Raspberry Pi side startup chain for `C-3.2.1`.
+This document freezes the Raspberry Pi side startup chain for `C-3.2.2`.
 
 The stack is focused on local web integration, not full navigation recovery.
 
@@ -23,6 +23,11 @@ The stack provides:
   - preferred device: `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0`
   - fallback device: `/dev/ttyUSB0`
   - baudrate: `115200`
+- RF1 safety limit for V-line first real tests:
+  - `vx`: `[-0.20, 0.20] m/s`
+  - `vy`: `[-0.15, 0.15] m/s`
+  - `wz`: `[-0.35, 0.35] rad/s`
+  - hold timeout: `400 ms`
 - `use_cleanscout_pi.sh` now falls back to source-only mode if `devel/setup.bash` is missing
 - current machine still relies on `/home/clbrobot/catkin_ws/devel/setup.bash` for the already-built `rplidar_ros` runtime while the source package has been migrated into the current workspace
 
@@ -60,3 +65,18 @@ source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout
   - `/odom`
   - `/imu/data`
   - `/scan`
+
+## RF1 serial contract
+
+- physical link: OpenRF1 onboard USB to Raspberry Pi USB
+- baudrate: `115200`
+- command: `W,a,b,c,d`
+- unit: wheel target speed in `m/s`
+- control rate: `50 Hz`
+- telemetry: `ACK`, `VEL`, `PWM`, `ENC`, `DBG`
+
+## Current boundary
+
+- this stage is for local rosbridge debugging only
+- public network exposure is not handled in this stage
+- `/odom` is still a lightweight integrator, not the final EKF chain

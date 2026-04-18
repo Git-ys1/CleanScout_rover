@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
-LOG_FILE="/tmp/c321_rf1_web_stack.log"
+LOG_FILE="/tmp/c322_rf1_web_stack.log"
 
 source "$ROOT/use_cleanscout_pi.sh"
 

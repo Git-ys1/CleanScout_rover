@@ -11,7 +11,10 @@ class CmdvelToRf1:
         self.tw_m = float(rospy.get_param("~tw_m", 0.1800))
         self.k_m = float(rospy.get_param("~k_m", 0.18525))
         self.publish_rate_hz = float(rospy.get_param("~publish_rate_hz", 50.0))
-        self.cmd_vel_timeout = float(rospy.get_param("~cmd_vel_timeout", 0.25))
+        self.cmd_vel_timeout = float(rospy.get_param("~cmd_vel_timeout", 0.4))
+        self.max_vx = float(rospy.get_param("~max_vx", 0.20))
+        self.max_vy = float(rospy.get_param("~max_vy", 0.15))
+        self.max_wz = float(rospy.get_param("~max_wz", 0.35))
 
         self.last_cmd = Twist()
         self.last_cmd_time = None
@@ -34,7 +37,18 @@ class CmdvelToRf1:
         if age > self.cmd_vel_timeout:
             return 0.0, 0.0, 0.0
 
-        return self.last_cmd.linear.x, self.last_cmd.linear.y, self.last_cmd.angular.z
+        return (
+            self.clamp(self.last_cmd.linear.x, -self.max_vx, self.max_vx),
+            self.clamp(self.last_cmd.linear.y, -self.max_vy, self.max_vy),
+            self.clamp(self.last_cmd.angular.z, -self.max_wz, self.max_wz),
+        )
+
+    def clamp(self, value, lower, upper):
+        if value < lower:
+            return lower
+        if value > upper:
+            return upper
+        return value
 
     def convert_cmd_vel(self, vx, vy, wz):
         return [
