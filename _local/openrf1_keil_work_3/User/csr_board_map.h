@@ -39,11 +39,6 @@ typedef enum
 #define CSR_VEL_FILTER_ALPHA            0.65f
 #define CSR_PI_PWM_STEP_LIMIT           120
 
-#define CSR_ENCODER_FILTER_CN1          0
-#define CSR_ENCODER_FILTER_CN2          10
-#define CSR_ENCODER_FILTER_CN3          0
-#define CSR_ENCODER_FILTER_CN4          10
-
 extern int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT];
 extern int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT];
 

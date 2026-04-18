@@ -561,11 +561,6 @@
               <FilePath>..\..\..\openrf1_keil_work_3\User\csr_encoder_drv.c</FilePath>
             </File>
             <File>
-              <FileName>csr_soft_encoder.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\openrf1_keil_work_3\User\csr_soft_encoder.c</FilePath>
-            </File>
-            <File>
               <FileName>csr_proto.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\openrf1_keil_work_3\User\csr_proto.c</FilePath>

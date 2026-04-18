@@ -88,46 +88,6 @@ static int csr_proto_parse_float(const char *token, float *value)
     return 1;
 }
 
-static int csr_proto_parse_input_mode(const char *token, csr_encoder_input_mode_t *input_mode)
-{
-    if (strcmp(token, "F") == 0)
-    {
-        *input_mode = CSR_ENCODER_INPUT_FLOATING;
-        return 1;
-    }
-    if (strcmp(token, "IPU") == 0)
-    {
-        *input_mode = CSR_ENCODER_INPUT_IPU;
-        return 1;
-    }
-    if (strcmp(token, "IPD") == 0)
-    {
-        *input_mode = CSR_ENCODER_INPUT_IPD;
-        return 1;
-    }
-    return 0;
-}
-
-static int csr_proto_parse_count_mode(const char *token, csr_encoder_count_mode_t *count_mode)
-{
-    if (strcmp(token, "TI12") == 0)
-    {
-        *count_mode = CSR_ENCODER_COUNT_TI12;
-        return 1;
-    }
-    if (strcmp(token, "TI1") == 0)
-    {
-        *count_mode = CSR_ENCODER_COUNT_TI1;
-        return 1;
-    }
-    if (strcmp(token, "TI2") == 0)
-    {
-        *count_mode = CSR_ENCODER_COUNT_TI2;
-        return 1;
-    }
-    return 0;
-}
-
 static void csr_proto_append_text(char *line, size_t line_size, const char *text)
 {
     size_t current_length;
@@ -265,35 +225,6 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
         return 1;
     }
 
-    if (strcmp(token, "R") == 0)
-    {
-        long reg_target;
-
-        token = strtok(0, ",");
-        if (token == 0)
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-
-        reg_target = strtol(token, &endptr, 10);
-        if ((endptr == token) || (*endptr != '\0') || (reg_target < 0) || (reg_target > CSR_CHANNEL_COUNT))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-        if (strtok(0, ",") != 0)
-        {
-            csr_proto_send_error("arg_count");
-            return 0;
-        }
-
-        command->type = CSR_CMD_R;
-        command->reg_target = (uint8_t)reg_target;
-        command->pwm = 0;
-        return 1;
-    }
-
     if (strcmp(token, "D") == 0)
     {
         token = strtok(0, ",");
@@ -308,62 +239,6 @@ static int csr_proto_parse_line(char *line, csr_proto_command_t *command)
             return 0;
         }
         command->type = CSR_CMD_D;
-        command->pwm = 0;
-        return 1;
-    }
-
-    if (strcmp(token, "X") == 0)
-    {
-        long filter_value;
-
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_channel(token, &command->channel) == 0))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-        if ((command->channel != CSR_CHANNEL_CN1) && (command->channel != CSR_CHANNEL_CN3))
-        {
-            csr_proto_send_error("bad_channel");
-            return 0;
-        }
-
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_input_mode(token, &command->input_mode) == 0))
-        {
-            csr_proto_send_error("bad_input");
-            return 0;
-        }
-
-        token = strtok(0, ",");
-        if ((token == 0) || (csr_proto_parse_count_mode(token, &command->count_mode) == 0))
-        {
-            csr_proto_send_error("bad_mode");
-            return 0;
-        }
-
-        token = strtok(0, ",");
-        if (token == 0)
-        {
-            csr_proto_send_error("arg_count");
-            return 0;
-        }
-
-        filter_value = strtol(token, &endptr, 10);
-        if ((endptr == token) || (*endptr != '\0') || ((filter_value != 0) && (filter_value != 10)))
-        {
-            csr_proto_send_error("bad_filter");
-            return 0;
-        }
-
-        if (strtok(0, ",") != 0)
-        {
-            csr_proto_send_error("arg_count");
-            return 0;
-        }
-
-        command->type = CSR_CMD_X;
-        command->ic_filter = (uint8_t)filter_value;
         command->pwm = 0;
         return 1;
     }
@@ -525,40 +400,6 @@ void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b,
         (unsigned int)timer_count,
         (long)count,
         (long)delta
-    );
-    csr_proto_send_text(line);
-}
-
-void csr_proto_send_reg(uint8_t target, const csr_encoder_reg_snapshot_t *snapshot)
-{
-    char line[256];
-
-    if (snapshot == 0)
-    {
-        csr_proto_send_error("reg_snapshot");
-        return;
-    }
-
-    sprintf(
-        line,
-        "REG,%u,%08lX,%08lX,%04X,%04X,%04X,%04X,%X,%X,%u,%u,%08lX,%08lX,%04lX,%08lX,%08lX,%04lX\r\n",
-        (unsigned int)target,
-        (unsigned long)snapshot->mapr_raw,
-        (unsigned long)snapshot->mapr_effective,
-        (unsigned int)snapshot->smcr,
-        (unsigned int)snapshot->ccmr1,
-        (unsigned int)snapshot->ccer,
-        (unsigned int)snapshot->cnt,
-        (unsigned int)snapshot->pin_a_cfg,
-        (unsigned int)snapshot->pin_b_cfg,
-        (unsigned int)snapshot->pin_a_level,
-        (unsigned int)snapshot->pin_b_level,
-        (unsigned long)snapshot->gpioa_crl,
-        (unsigned long)snapshot->gpioa_crh,
-        (unsigned long)snapshot->gpioa_idr,
-        (unsigned long)snapshot->gpiob_crl,
-        (unsigned long)snapshot->gpiob_crh,
-        (unsigned long)snapshot->gpiob_idr
     );
     csr_proto_send_text(line);
 }

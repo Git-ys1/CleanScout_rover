@@ -90,7 +90,8 @@ static void csr_systick_init(void)
 
 static void csr_init_debug_ports(void)
 {
-    csr_encoder_apply_debug_remap();
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 }
 
 static void csr_clear_pi_state(void)
@@ -278,7 +279,6 @@ static void csr_handle_command(const csr_proto_command_t *command)
     uint8_t phase_a;
     uint8_t phase_b;
     uint16_t timer_count;
-    csr_encoder_reg_snapshot_t reg_snapshot;
 
     g_last_command_ms = csr_millis();
 
@@ -327,24 +327,6 @@ static void csr_handle_command(const csr_proto_command_t *command)
         csr_encoder_debug_snapshot(command->channel, &phase_a, &phase_b, &timer_count);
         csr_proto_send_ack("D");
         csr_proto_send_dbg(command->channel, phase_a, phase_b, timer_count, count, delta);
-        break;
-
-    case CSR_CMD_R:
-        csr_encoder_reg_snapshot(command->reg_target, &reg_snapshot);
-        csr_proto_send_ack("R");
-        csr_proto_send_reg(command->reg_target, &reg_snapshot);
-        break;
-
-    case CSR_CMD_X:
-        csr_stop_all();
-        if (csr_encoder_reconfigure(command->channel, command->input_mode, command->count_mode, command->ic_filter) != 0)
-        {
-            csr_proto_send_ack("X");
-        }
-        else
-        {
-            csr_proto_send_error("x_config");
-        }
         break;
 
     case CSR_CMD_STOP:
