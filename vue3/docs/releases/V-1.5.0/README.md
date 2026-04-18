@@ -3,7 +3,7 @@ version: V-1.5.0
 based_on_branch: main
 branch_source: GitHub branches page + origin/main latest branch policy
 published_to_root: vue3/
-published_at_commit: pending-cloud-publish
+published_at_commit: e38b6340403cc6632ccd824b853b566dfb431b1c
 ---
 
 # V-1.5.0 环境驱动配置 + 本地 ROS 真联调 + 微信网络规则冻结
