@@ -506,6 +506,21 @@ public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
 
 - `docs/releases/V-1.7.0/edge-relay-local-convergence.md`
 
+### V-1.7.10 公网 env 交付
+
+`V-1.7.10` 冻结公网 backend env 口径：
+
+- 云端 backend 使用 `APP_PROFILE=public-edge`
+- 云端 ROS 链路使用 `ROS_TRANSPORT=edge-relay`
+- Pi 侧连接 `wss://api.hzhhds.top/edge/ros`
+- `OPENCLAW_BASE_URL=127.0.0.1:18789` 当前因 `OPENCLAW_ENABLED=false` 不参与运行
+- `ROSBRIDGE_URL=127.0.0.1:9090` 当前因 `ROS_TRANSPORT=edge-relay` 不参与运行
+- 生产 `EDGE_DEVICE_BOOTSTRAP_TOKEN` 只通过部署 env 与 C 线交接，不写入仓库
+
+文档位置：
+
+- `docs/releases/V-1.7.0/public-edge-env-handoff.md`
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
