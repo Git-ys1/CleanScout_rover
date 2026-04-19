@@ -39,6 +39,7 @@ published_at_commit: 40e061bb1fdc5a841071a9ba88354fc1395a80fe
 - `docs/releases/V-1.7.0/edge-relay-local-convergence.md`
 - `docs/releases/V-1.7.0/public-edge-env-handoff.md`
 - `docs/releases/V-1.7.0/prisma-edge-device-migration-hotfix.md`
+- `docs/releases/V-1.7.0/mp-weixin-appid-hotfix.md`
 
 ## 未完成项
 

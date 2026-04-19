@@ -533,6 +533,18 @@ public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
 
 - `docs/releases/V-1.7.0/prisma-edge-device-migration-hotfix.md`
 
+### V-1.7.12 微信小程序 AppID 构建热修
+
+`V-1.7.12` 修复微信小程序构建产物仍为 `touristappid` 的问题：
+
+- `src/manifest.json` 已写入正式 `mp-weixin.appid=wxce1a2e91132f4c41`
+- `scripts/release-mp-weixin.ps1` 和 `scripts/release-mp-weixin.sh` 已增加构建后 appid 校验
+- 微信开发者工具应导入 `dist/build/mp-weixin`
+
+文档位置：
+
+- `docs/releases/V-1.7.0/mp-weixin-appid-hotfix.md`
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
