@@ -493,6 +493,19 @@ public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
 
 本轮只完成静态施工与本地模拟验证，未宣称真实 Pi / ROS / OpenRF1 云端闭环通过。
 
+### V-1.7.9 本地 edge-relay 联调收敛
+
+`V-1.7.9` 已补充本地联调结论：
+
+- 本地链路 `前端网页 -> backend public-edge -> /edge/ros -> edge-relay(Pi) -> ROS -> OpenRF1` 已收敛
+- 前端网页可通过现有 `/api/ros/*` 控制小车
+- backend 当前能看到 `edgeRelayConnected=true` 与 `edgeDeviceId=csrpi-001`
+- 该结论只代表本地局域网 edge-relay 联调通过，不代表公网 `wss://api.hzhhds.top/edge/ros` 已上线
+
+文档位置：
+
+- `docs/releases/V-1.7.0/edge-relay-local-convergence.md`
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
