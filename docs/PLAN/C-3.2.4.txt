@@ -1,0 +1,320 @@
+【给树莓派 / ROS 代码工程师的施工任务书｜C-3.2.4 edge-relay 云端联调基线】
+
+一、当前拍板
+
+本轮不推翻已经跑通的本地 rosbridge 联调链。
+本轮新增一个**第二 transport：edge-relay**，作为面向云端 backend 的主动上行链。
+
+正式架构冻结为：
+
+* 本地联调链：`前端 -> backend -> rosbridge -> ROS -> OpenRF1`
+* 云端联调链：`前端 -> backend <-WSS-> edge-relay(Pi) -> ROS -> OpenRF1`
+
+注意：
+
+* **前端永远只找 backend**
+* **backend 不轮询 ROS**
+* **ROS 也不做 HTTP 轮询 backend**
+* 正确实现方式是：**Pi 侧 edge-relay 主动建立一条长期 WSS 连接，双方在同一条连接上双向收发**
+
+二、本轮目标
+
+本轮唯一目标：
+
+**在树莓派侧新增一个默认关闭的 edge-relay 节点/服务，使其能够主动连接 `api.hzhhds.top` 对应 backend，并完成“上送状态摘要、下收手动控制命令、本地转 `/cmd_vel`”的最小闭环。**
+
+本轮不做：
+
+* 不替换现有 rosbridge
+* 不删除当前本地联调链
+* 不改前端直接连接方式
+* 不碰 OpenClaw 真实接入
+* 不碰公网穿透以外的第三条链路
+
+三、配置与命名冻结
+
+### 1. backend 端点冻结
+
+云端 backend 统一按域名：
+
+* `https://api.hzhhds.top`
+* `wss://api.hzhhds.top/edge/ros`
+
+### 2. transport 冻结
+
+树莓派侧新增 transport：
+
+* `edge-relay`
+
+默认值：
+
+* `EDGE_RELAY_ENABLED=false`
+
+### 3. topic 冻结
+
+本轮 relay 只接这四个 ROS topic：
+
+* `/cmd_vel`
+* `/odom`
+* `/imu/data`
+* `/scan`
+
+### 4. 安全阈值冻结
+
+仍沿用 V 线合同默认值：
+
+* 前后：`±0.20 m/s`
+* 平移：`±0.15 m/s`
+* 转向：`±0.35 rad/s`
+* `holdMs=400`
+
+四、实现原则
+
+### 原则 A：relay 优先直接连原生 ROS
+
+本轮 relay 运行在树莓派本机，优先直接使用：
+
+* `rospy.Publisher(/cmd_vel, Twist, ...)`
+* `rospy.Subscriber(/odom, ...)`
+* `rospy.Subscriber(/imu/data, ...)`
+* `rospy.Subscriber(/scan, ...)`
+
+不要让 relay 再去依赖本机 rosbridge 转一层。
+
+### 原则 B：rosbridge 本地链继续保留
+
+当前本地/LAN 已跑通的：
+
+`backend -> rosbridge -> ROS`
+
+继续保留，不动。
+edge-relay 只是新增，不替代。
+
+### 原则 C：scan 先做摘要，不上传全量原始帧
+
+本轮默认上传：
+
+* 前向最小距离
+* 左向最小距离
+* 右向最小距离
+* 危险阈值内是否存在障碍
+* 可选 12 桶降采样数组
+
+禁止第一版直接把全量 LaserScan 高频原样往云端灌。
+
+五、本轮需新增文件
+
+建议新增：
+
+1. `Raspberrypi/catkin_ws/src/csrpi_edge_relay/scripts/edge_relay.py`
+2. `Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch`
+3. `Raspberrypi/catkin_ws/run_edge_relay.sh`
+4. `Raspberrypi/catkin_ws/clean_edge_relay_sessions.sh`
+5. `Raspberrypi/catkin_ws/src/csrpi_edge_relay/README_edge_relay.md`
+
+六、edge-relay 协议冻结（第一版）
+
+### 1. Pi -> backend 首帧注册
+
+连接建立后，第一帧发：
+
+```json
+{
+  "op": "hello",
+  "deviceId": "csrpi-001",
+  "token": "<DEVICE_TOKEN>",
+  "transport": "edge-relay",
+  "topics": {
+    "cmd_vel": "/cmd_vel",
+    "odom": "/odom",
+    "imu": "/imu/data",
+    "scan": "/scan"
+  },
+  "capabilities": ["manual_control", "odom", "imu", "scan_summary"]
+}
+```
+
+### 2. 心跳帧
+
+每 5 秒发送：
+
+```json
+{
+  "op": "heartbeat",
+  "deviceId": "csrpi-001",
+  "ts": 1710000000000
+}
+```
+
+### 3. 遥测摘要帧
+
+按节流频率上送：
+
+```json
+{
+  "op": "telemetry",
+  "deviceId": "csrpi-001",
+  "odom": {...},
+  "imu": {...},
+  "scanSummary": {...},
+  "ts": 1710000000000
+}
+```
+
+### 4. backend -> Pi 控制帧
+
+backend 下发：
+
+```json
+{
+  "op": "manual_control",
+  "seq": 123,
+  "vx": 0.10,
+  "vy": 0.00,
+  "wz": 0.00,
+  "holdMs": 400
+}
+```
+
+### 5. backend -> Pi 急停帧
+
+```json
+{
+  "op": "stop",
+  "seq": 124
+}
+```
+
+七、本轮 relay 逻辑要求
+
+### 任务 A：连接与重连
+
+1. 连接地址：
+   `wss://api.hzhhds.top/edge/ros`
+2. 启动后自动连接
+3. 断线自动重连
+4. 重连退避建议：
+
+   * 1s
+   * 2s
+   * 4s
+   * 8s
+   * 上限 30s
+5. 每次重连成功后重新发送 `hello`
+
+### 任务 B：认证
+
+认证至少做到：
+
+* device token
+* device id
+
+优先方案：
+
+* 连接握手用 `Authorization: Bearer <token>`
+* 若后端实现不便，则保留在 `hello` 帧里再做二次校验
+
+### 任务 C：本地 ROS 数据订阅
+
+relay 必须本地订阅：
+
+* `/odom`
+* `/imu/data`
+* `/scan`
+
+并在本地缓存最新值，按节流周期发 telemetry。
+
+### 任务 D：本地 `/cmd_vel` 发布
+
+收到 `manual_control` 后：
+
+1. 先做本地限幅
+2. 生成 `geometry_msgs/Twist`
+3. 发布到 `/cmd_vel`
+4. 在 `holdMs` 窗口内按固定频率重复发布
+5. 超时或收到 `stop` 后立刻发零速度
+
+### 任务 E：本地安全兜底
+
+即使 backend 发错，也必须在 Pi 侧再做一层兜底：
+
+* `vx` 限幅到 `±0.20`
+* `vy` 限幅到 `±0.15`
+* `wz` 限幅到 `±0.35`
+
+八、建议频率冻结
+
+第一版建议：
+
+* 心跳：`5s`
+* `/odom` 摘要：`5Hz`
+* `/imu/data` 摘要：`5Hz`
+* `/scan` 摘要：`1Hz`
+* `/cmd_vel` 重发：`10Hz`
+* `holdMs` 默认：`400`
+
+九、启动链要求
+
+新增：
+
+### `run_edge_relay.sh`
+
+负责：
+
+1. source ROS 环境
+2. 读取 relay 环境变量
+3. 启动 `edge_relay.launch`
+
+### `clean_edge_relay_sessions.sh`
+
+负责清理：
+
+* `edge_relay.py`
+* 旧的 relay 测试残留进程
+
+本轮不要求它并入当前 `run_rf1_web_stack.sh`，
+先单独跑通，再考虑合栈。
+
+十、本轮环境变量建议
+
+树莓派侧新增：
+
+```text
+EDGE_RELAY_ENABLED=true
+EDGE_RELAY_URL=wss://api.hzhhds.top/edge/ros
+EDGE_DEVICE_ID=csrpi-001
+EDGE_DEVICE_TOKEN=<随机长 token>
+EDGE_HEARTBEAT_MS=5000
+EDGE_ODOM_HZ=5
+EDGE_IMU_HZ=5
+EDGE_SCAN_HZ=1
+EDGE_CMD_REPEAT_HZ=10
+EDGE_CMD_DEFAULT_HOLD_MS=400
+EDGE_RECONNECT_DELAY_MS=1000
+```
+
+十一、本轮验收标准
+
+本轮通过必须满足：
+
+1. edge-relay 能从树莓派主动连上 backend
+2. backend 能看到设备在线/心跳
+3. backend 能收到 odom / imu / scan summary
+4. backend 下发一条 `manual_control` 后，树莓派能本地转成 `/cmd_vel`
+5. 本地 rosbridge 联调链不被破坏
+6. 文档写清楚：这是**新增 transport**，不是替换现链路
+
+十二、Git 纪律
+
+本轮必须遵守项目既有纪律：
+
+* 施工前 checkpoint
+* 一轮只解决一个主目标
+* 自测分支施工
+* 结果提交留痕
+* 验证通过后再考虑合并
+
+提交建议：
+
+* `checkpoint: before C-3.2.4 edge-relay`
+* `C-3.2.4: add backend-centric edge-relay transport on Pi`

@@ -7,6 +7,17 @@
   <arg name="rosbridge_port" default="9090" />
   <arg name="lidar_port" default="/dev/ttyUSB0" />
   <arg name="lidar_baud" default="256000" />
+  <arg name="edge_relay_enabled" default="false" />
+  <arg name="edge_relay_url" default="wss://api.hzhhds.top/edge/ros" />
+  <arg name="edge_device_id" default="csrpi-001" />
+  <arg name="edge_device_token" default="" />
+  <arg name="edge_heartbeat_ms" default="5000" />
+  <arg name="edge_odom_hz" default="5" />
+  <arg name="edge_imu_hz" default="5" />
+  <arg name="edge_scan_hz" default="1" />
+  <arg name="edge_cmd_repeat_hz" default="10" />
+  <arg name="edge_default_hold_ms" default="400" />
+  <arg name="edge_reconnect_delay_ms" default="1000" />
 
   <node pkg="csrpi_base_bridge" type="cmdvel_to_rf1.py" name="cmdvel_to_rf1" output="screen">
     <param name="wb_m" value="0.1905" />
@@ -59,5 +70,19 @@
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
     <arg name="port" value="$(arg rosbridge_port)" />
+  </include>
+
+  <include file="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch">
+    <arg name="enabled" value="$(arg edge_relay_enabled)" />
+    <arg name="url" value="$(arg edge_relay_url)" />
+    <arg name="device_id" value="$(arg edge_device_id)" />
+    <arg name="device_token" value="$(arg edge_device_token)" />
+    <arg name="heartbeat_ms" value="$(arg edge_heartbeat_ms)" />
+    <arg name="odom_hz" value="$(arg edge_odom_hz)" />
+    <arg name="imu_hz" value="$(arg edge_imu_hz)" />
+    <arg name="scan_hz" value="$(arg edge_scan_hz)" />
+    <arg name="cmd_repeat_hz" value="$(arg edge_cmd_repeat_hz)" />
+    <arg name="default_hold_ms" value="$(arg edge_default_hold_ms)" />
+    <arg name="reconnect_delay_ms" value="$(arg edge_reconnect_delay_ms)" />
   </include>
 </launch>
