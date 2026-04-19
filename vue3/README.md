@@ -521,6 +521,18 @@ public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
 
 - `docs/releases/V-1.7.0/public-edge-env-handoff.md`
 
+### V-1.7.11 Prisma EdgeDevice migration 热修
+
+`V-1.7.11` 修复云端 seed 阶段 `main.EdgeDevice does not exist`：
+
+- 新增 `backend/prisma/migrations/20260419073000_add_edge_device/migration.sql`
+- 云端继续使用 `npx prisma migrate deploy`
+- `npx prisma db push` 仅作为无法拉取最新代码时的临时应急方案，不作为正式发布纪律
+
+文档位置：
+
+- `docs/releases/V-1.7.0/prisma-edge-device-migration-hotfix.md`
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
