@@ -2,7 +2,7 @@
 
 static int16_t g_last_pwm[CSR_CHANNEL_COUNT] = {0};
 
-#define CSR_DRIVE_DOMINANT_MIN 1200U
+#define CSR_DRIVE_DOMINANT_MIN 950U
 #define CSR_DRIVE_DOMINANT_MAX 2000U
 
 static void csr_motor_write_raw(csr_channel_t channel, BitAction in1_level, uint16_t compare)

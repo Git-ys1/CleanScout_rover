@@ -24,16 +24,16 @@ static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 
 static float g_kp[CSR_CHANNEL_COUNT] = {
-    CSR_PI_KP_DEFAULT,
-    CSR_PI_KP_DEFAULT,
-    CSR_PI_KP_DEFAULT,
-    CSR_PI_KP_DEFAULT
+    1200.0f,
+    1200.0f,
+    2600.0f,
+    2600.0f
 };
 static float g_ki[CSR_CHANNEL_COUNT] = {
-    CSR_PI_KI_DEFAULT,
-    CSR_PI_KI_DEFAULT,
-    CSR_PI_KI_DEFAULT,
-    CSR_PI_KI_DEFAULT
+    100.0f,
+    100.0f,
+    260.0f,
+    260.0f
 };
 static float g_kd[CSR_CHANNEL_COUNT] = {
     CSR_PI_KD_DEFAULT,
