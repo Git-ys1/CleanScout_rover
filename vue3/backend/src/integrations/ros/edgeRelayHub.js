@@ -32,6 +32,15 @@ function writeHttpError(socket, status, message) {
   socket.destroy()
 }
 
+function logEdge(event, details = {}) {
+  console.log(
+    `[edge-relay] ${event} ${JSON.stringify({
+      ...details,
+      at: new Date().toISOString(),
+    })}`
+  )
+}
+
 function toIsoTime(value) {
   if (!value) {
     return new Date().toISOString()
@@ -91,6 +100,13 @@ export function createEdgeRelayHub(config, cache) {
   }
 
   function reject(socket, code, message) {
+    logEdge('reject', {
+      code,
+      message,
+      deviceId: socket.edgeRelaySession?.deviceId || '',
+      remoteAddress: socket.edgeRelayRemoteAddress || '',
+    })
+    cache.setRelayError(`${code}: ${message}`)
     sendJson(socket, {
       op: 'error',
       code,
@@ -131,6 +147,9 @@ export function createEdgeRelayHub(config, cache) {
     }
 
     if (isOpen(existing.socket)) {
+      logEdge('replace-session', {
+        deviceId,
+      })
       existing.socket.close(4000, 'EDGE_DEVICE_REPLACED')
     }
 
@@ -198,6 +217,11 @@ export function createEdgeRelayHub(config, cache) {
     socket.edgeRelaySession = session
     sessions.set(deviceId, session)
     cache.setEdgeRelayConnected({ connected: true, deviceId, at: now.toISOString() })
+    logEdge('hello-accepted', {
+      deviceId,
+      capabilities,
+      topics,
+    })
 
     sendJson(socket, {
       op: 'hello_ack',
@@ -296,6 +320,11 @@ export function createEdgeRelayHub(config, cache) {
   }
 
   function handleConnection(socket) {
+    socket.edgeRelayRemoteAddress = socket._socket?.remoteAddress || ''
+    logEdge('connection-open', {
+      remoteAddress: socket.edgeRelayRemoteAddress,
+    })
+
     const helloTimer = setTimeout(() => {
       if (!socket.edgeRelaySession) {
         reject(socket, 'EDGE_HELLO_TIMEOUT', 'hello timeout')
@@ -308,9 +337,20 @@ export function createEdgeRelayHub(config, cache) {
       })
     })
 
-    socket.on('close', () => {
+    socket.on('close', (code, reason) => {
       clearTimeout(helloTimer)
       const session = socket.edgeRelaySession
+      const reasonText = String(reason || '')
+      logEdge('connection-close', {
+        code,
+        reason: reasonText,
+        deviceId: session?.deviceId || '',
+        remoteAddress: socket.edgeRelayRemoteAddress || '',
+      })
+
+      if (code !== 1000 && code !== 1005) {
+        cache.setRelayError(`${code}: ${reasonText || 'edge-relay closed'}`)
+      }
 
       if (!session) {
         return
@@ -362,9 +402,18 @@ export function createEdgeRelayHub(config, cache) {
       }
 
       if (!isEnabled()) {
+        logEdge('upgrade-rejected', {
+          reason: 'disabled',
+          path: pathname,
+        })
         writeHttpError(socket, 503, 'Service Unavailable')
         return
       }
+
+      logEdge('upgrade-accepted', {
+        path: pathname,
+        remoteAddress: request.socket?.remoteAddress || '',
+      })
 
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request)
