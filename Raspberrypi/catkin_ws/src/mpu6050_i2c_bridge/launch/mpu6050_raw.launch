@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="mpu6050_i2c_bridge" type="mpu6050_node.py" name="mpu6050_i2c_node" output="screen" respawn="false">
+    <param name="bus" value="1" />
+    <param name="address" value="104" />
+    <param name="rate_hz" value="50.0" />
+    <param name="frame_id" value="imu_link" />
+  </node>
+</launch>

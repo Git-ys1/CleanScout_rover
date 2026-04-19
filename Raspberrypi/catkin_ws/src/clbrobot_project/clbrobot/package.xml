@@ -1,40 +1,23 @@
-<?xml version="1.0.0"?>
-<package>
+<?xml version="1.0"?>
+<package format="2">
   <name>clbrobot</name>
-  <version>1.0.0</version>
-  <description>clbrobot differential drive ROS platform</description>
-  <maintainer email="364711106@qq.com">zhuning239</maintainer>
+  <version>0.0.1</version>
+  <description>CleanScout Raspberry Pi launch entry package.</description>
+
+  <maintainer email="3091964993@qq.com">Git-ys1</maintainer>
   <license>BSD</license>
 
-   <author email="364711106@qq.com">zhuning239</author>
-
   <buildtool_depend>catkin</buildtool_depend>
-    <build_depend>roscpp</build_depend>
-    <build_depend>rospy</build_depend>
-    <build_depend>tf</build_depend>
-    <build_depend>nav_msgs</build_depend>
-    <build_depend>clb_msgs</build_depend>
-    <build_depend>sensor_msgs</build_depend>
-    <build_depend>geometry_msgs</build_depend>
-    <build_depend>std_msgs</build_depend>
-    
-    <run_depend>roscpp</run_depend>
-    <run_depend>rospy</run_depend>
-    <run_depend>rosserial_python</run_depend>
-    <run_depend>tf</run_depend>
-    <run_depend>nav_msgs</run_depend>
-    <run_depend>clb_msgs</run_depend>
-    <run_depend>sensor_msgs</run_depend>
-    <run_depend>geometry_msgs</run_depend>
-    <run_depend>std_msgs</run_depend>
-    <run_depend>gmapping</run_depend>
-    <run_depend>map_server</run_depend>  
-    <run_depend>move_base</run_depend>
-    <run_depend>amcl</run_depend>
-    <run_depend>xv-11-laser-driver</run_depend>
-    <run_depend>imu-filter-madgwick</run_depend>
-    <run_depend>imu_calib</run_depend>
-    <run_depend>clb_pid</run_depend>
-  <export>
-  </export>
+
+  <depend>csrpi_base_bridge</depend>
+  <depend>geometry_msgs</depend>
+  <depend>mpu6050_i2c_bridge</depend>
+  <depend>nav_msgs</depend>
+  <depend>rosbridge_server</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+
+  <export/>
 </package>

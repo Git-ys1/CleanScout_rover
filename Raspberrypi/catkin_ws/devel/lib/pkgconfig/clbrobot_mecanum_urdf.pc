@@ -1,8 +1,0 @@
-prefix=/home/clbrobot/catkin_ws/devel
-
-Name: clbrobot_mecanum_urdf
-Description: Description of clbrobot_mecanum_urdf
-Version: 1.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

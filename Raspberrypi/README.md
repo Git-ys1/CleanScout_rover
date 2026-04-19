@@ -52,11 +52,9 @@ Raspberrypi/
 
 - `Raspberrypi/releases/C-2.2.1_noetic_handover/README.md`
 - `Raspberrypi/releases/C-2.2.4_upper_lower_control_truth/README.md`
-- `Raspberrypi/releases/C-2.2.7/README.md`
 
 说明：
 
 - `C-2.2.1` 是当前第一批正式树莓派环境接管归档。
 - `C-2.2.4` 是当前第一批“树莓派上位控制 UNO”真相文档冻结入口。
-- `C-2.2.7` 是当前第一批“树莓派 W 协议桥”联调发布入口。
 - 后续树莓派端每轮发布，继续按该轮次目录结构追加。

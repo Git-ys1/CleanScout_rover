@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/devel
+
+Name: mpu6050_i2c_bridge
+Description: Description of mpu6050_i2c_bridge
+Version: 0.0.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

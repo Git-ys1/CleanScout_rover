@@ -1,8 +1,0 @@
-prefix=/home/clbrobot/catkin_ws/devel
-
-Name: clbrobot
-Description: Description of clbrobot
-Version: 1.0.0
-Cflags: -I/home/clbrobot/catkin_ws/src/clbrobot_project/clbrobot/include
-Libs: -L${prefix}/lib -lclbrobot
-Requires: roscpp rospy tf nav_msgs clb_msgs geometry_msgs sensor_msgs std_msgs

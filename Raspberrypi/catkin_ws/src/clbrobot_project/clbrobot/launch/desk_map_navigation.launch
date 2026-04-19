@@ -1,0 +1,17 @@
+<launch>
+  <node pkg="csrpi_base_bridge" type="cmdvel_to_wheels.py" name="csrpi_cmdvel_to_wheels" output="screen">
+    <param name="enabled" value="true" />
+    <param name="d_eff_m" value="0.078" />
+    <param name="wb_m" value="0.16535" />
+    <param name="tw_m" value="0.17850" />
+    <param name="k_m" value="0.171925" />
+    <param name="cpr_x1_est" value="260.0" />
+    <param name="min_abs_ticks" value="300" />
+  </node>
+
+  <arg name="map_file" default="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/maps/desk_map_001.yaml"/>
+  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" />
+
+  <include file="$(find clbrobot)/launch/amcl.launch" />
+  <include file="$(find clbrobot)/param/navigation/move_base.xml" />
+</launch>

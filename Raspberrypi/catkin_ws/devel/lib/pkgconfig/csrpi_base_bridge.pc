@@ -1,0 +1,8 @@
+prefix=/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/devel
+
+Name: csrpi_base_bridge
+Description: Description of csrpi_base_bridge
+Version: 0.0.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

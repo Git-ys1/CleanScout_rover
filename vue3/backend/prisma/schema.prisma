@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id           String         @id @default(cuid())
+  username     String         @unique
+  passwordHash String
+  role         Role           @default(user)
+  isEnabled    Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  messages     MessageCache[]
+}
+
+model DeviceCache {
+  id          String   @id @default(cuid())
+  deviceId    String   @unique
+  summaryJson String
+  updatedAt   DateTime @updatedAt
+}
+
+model EdgeDevice {
+  id               String    @id @default(cuid())
+  deviceId         String    @unique
+  tokenHash        String
+  isEnabled        Boolean   @default(true)
+  transport        String    @default("edge-relay")
+  topicsJson       String    @default("{}")
+  capabilitiesJson String    @default("[]")
+  lastSeenAt       DateTime?
+  lastHelloAt      DateTime?
+  lastDisconnectAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model MessageCache {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SystemConfig {
+  id                  String   @id
+  registrationEnabled Boolean  @default(true)
+  appEnabled          Boolean  @default(true)
+  maintenanceMessage  String   @default("")
+  openclawEnabled     Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+}

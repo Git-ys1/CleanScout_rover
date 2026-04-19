@@ -1,0 +1,133 @@
+C-2.3.0A 雷达 bench bringup 当前状态
+
+这轮已经按任务书完成了树莓派端的 A3 雷达独立 bringup 排查与首测，当前结论如下。
+
+一、已确认的事实
+
+1. 当前只插了一个 USB 串口设备，系统识别为：
+   Silicon Labs CP2102 USB to UART Bridge
+
+2. 当前设备信息：
+   - VID:PID = 10c4:ea60
+   - Serial = bde26819d978564a98616dc8161b0fd6
+   - 当前串口节点 = /dev/ttyUSB0
+
+3. 当前树莓派工作区内 rplidar_ros 包存在，路径为：
+   /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/lidar/rplidar_ros
+
+4. 官方 A3 launch 已按任务书执行：
+   roslaunch rplidar_ros rplidar_a3.launch serial_port:=/dev/ttyUSB0
+
+二、已发现并已处理的问题
+
+1. 最初失败并不是雷达本体问题，而是当前工作区里 rplidarNode 还没有编译出来。
+
+2. 原始报错是：
+   Cannot locate node of type [rplidarNode] in package [rplidar_ros]
+
+3. 这一点已处理：
+   已执行 catkin_make --pkg rplidar_ros
+
+4. 现在以下可执行文件已经生成：
+   - devel/lib/rplidar_ros/rplidarNode
+   - devel/lib/rplidar_ros/rplidarNodeClient
+
+三、当前最新测试结果
+
+1. rplidarNode 现在已经可以真正启动，不再是“找不到节点”的阶段。
+
+2. 但节点启动后约几秒退出，当前抓到的核心错误是：
+   Error, operation time out. RESULT_OPERATION_TIMEOUT!
+
+3. 当前 ROS 观察结果：
+   - roslaunch 能起
+   - rosmaster 能起
+   - rplidarNode 能启动
+   - /scan 没有出现稳定发布
+   - 节点随后退出，exit code 255
+
+四、udev 固定别名状态
+
+1. 已经生成规则文件：
+   /home/clbrobot/Work/CleanScout_rover/Raspberrypi/releases/C-2.3.0/99-clblidar.rules
+
+2. 规则内容为：
+   SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="bde26819d978564a98616dc8161b0fd6", SYMLINK+="clblidar"
+
+3. 目前该规则已安装进系统：
+   /etc/udev/rules.d/99-clblidar.rules
+
+4. 当前固定别名已经生效：
+   /dev/clblidar -> /dev/ttyUSB0
+
+五、别名安装后的复测结果
+
+1. 已重新使用固定别名执行官方 bringup：
+   roslaunch rplidar_ros rplidar_a3.launch serial_port:=/dev/clblidar
+
+2. 在转接板拨到 115200 时复测结果仍未通过：
+   - roslaunch 能起
+   - rosmaster 能起
+   - rplidarNode 能启动
+   - /scan 仍未出现
+   - rplidarNode 约 5 秒后退出
+
+3. 之后已将转接板切到 256000，并执行热插拔，再次复测。
+
+六、256000 复测结果
+
+使用命令：
+
+roslaunch rplidar_ros rplidar_a3.launch serial_port:=/dev/clblidar serial_baudrate:=256000
+
+当前结果：
+
+1. /scan 已成功出现
+2. rostopic hz /scan 稳定在约 12Hz
+3. rostopic echo -n 1 /scan 已成功读到完整 LaserScan
+4. 节点保持运行，rosout 未再出现 RESULT_OPERATION_TIMEOUT
+
+抓到的实际结果包括：
+
+- /scan 存在
+- 平均频率约 11.99 ~ 12.01 Hz
+- LaserScan 含有：
+  - angle_min
+  - angle_max
+  - ranges
+  - intensities
+
+因此，官方 A3 bringup 在 256000 下已经通过。
+
+七、当前阶段结论
+
+1. 当前问题已经不是：
+   - 工作区缺包
+   - 官方 launch 路径错误
+   - rplidarNode 不存在
+
+2. 当前关键结论已经明确：
+   转接板波特率挡位会直接影响 A3 bringup。
+
+3. 在 115200 挡位下，官方 A3 bringup 不通过。
+
+4. 在 256000 挡位下，官方 A3 bringup 通过。
+
+5. 因此当前 C-2.3.0A 已可判定通过。
+
+八、当前建议的下一步
+
+下一步已经进入任务书定义的 C-2.3.0B 前提：
+
+1. /dev/clblidar 固定别名成功
+2. 官方 rplidar_ros rplidar_a3.launch 已通过
+3. /scan 已存在且有稳定频率
+4. 整个过程未依赖 clbrobot 自定义 launch
+
+因此可以开始下一阶段：
+把官方 A3 bringup 回写为项目内可维护入口，但暂不接导航层。
+
+九、一句话总结
+
+这轮已经完成官方 A3 独立 bringup：
+/dev/clblidar 固定别名成功，且在转接板切到 256000 后，官方 rplidar_ros 已稳定发布 /scan，频率约 12Hz。

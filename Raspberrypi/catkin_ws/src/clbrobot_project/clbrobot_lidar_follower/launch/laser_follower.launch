@@ -1,5 +1,0 @@
-<launch>
-  <include file="$(find clbrobot)/launch/lidar/$(env CLBLIDAR).launch" />
-  <include file='$(find clbrobot_lidar_follower)/launch/nodes/laserTracker.launch' />
-  <include file='$(find clbrobot_lidar_follower)/launch/nodes/follower.launch' />
-</launch>
