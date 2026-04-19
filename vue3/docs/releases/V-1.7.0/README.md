@@ -35,6 +35,7 @@ published_at_commit: 40e061bb1fdc5a841071a9ba88354fc1395a80fe
 - `docs/releases/V-1.7.0/edge-relay-protocol.md`
 - `docs/releases/V-1.7.0/public-edge-deploy.md`
 - `docs/releases/V-1.7.0/static-local-simulation.md`
+- `docs/releases/V-1.7.0/edge-relay-joint-debug.md`
 
 ## 未完成项
 
