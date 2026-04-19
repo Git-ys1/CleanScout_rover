@@ -1,0 +1,17 @@
+<launch>
+  <arg name="map_file" default="$(find clbrobot)/maps/406.yaml" />
+
+  <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)" output="screen" />
+
+  <node pkg="amcl" type="amcl" name="amcl" output="screen">
+    <param name="odom_frame_id" value="odom" />
+    <param name="base_frame_id" value="base_link" />
+    <param name="global_frame_id" value="map" />
+    <param name="use_map_topic" value="false" />
+    <remap from="scan" to="/scan" />
+  </node>
+
+  <node pkg="move_base" type="move_base" name="move_base" output="screen">
+    <remap from="cmd_vel" to="/cmd_vel" />
+  </node>
+</launch>

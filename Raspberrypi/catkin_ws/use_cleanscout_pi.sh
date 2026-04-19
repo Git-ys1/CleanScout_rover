@@ -9,7 +9,10 @@ source /opt/ros/noetic/setup.bash
 if [ -f "$ROOT/devel/setup.bash" ]; then
   source "$ROOT/devel/setup.bash"
 else
-  export ROS_PACKAGE_PATH="$ROOT/src${ROS_PACKAGE_PATH:+:$ROS_PACKAGE_PATH}"
+  if [ -f "/home/clbrobot/catkin_ws/devel/setup.bash" ]; then
+    source "/home/clbrobot/catkin_ws/devel/setup.bash"
+  fi
+  export ROS_PACKAGE_PATH="$ROOT/src:/home/clbrobot/catkin_ws/src:/opt/ros/noetic/share"
 fi
 
 export ROS_IP="$IP"

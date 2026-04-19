@@ -1,0 +1,35 @@
+<launch>
+  <arg name="rf1_port" default="/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0" />
+  <arg name="rf1_fallback_port" default="/dev/ttyUSB1" />
+  <arg name="rf1_baud" default="115200" />
+  <arg name="send_rate_hz" default="50.0" />
+  <arg name="cmd_vel_timeout" default="0.4" />
+
+  <node pkg="csrpi_base_bridge" type="cmdvel_to_rf1.py" name="cmdvel_to_rf1" output="screen">
+    <param name="wb_m" value="0.1905" />
+    <param name="tw_m" value="0.1800" />
+    <param name="k_m" value="0.18525" />
+    <param name="publish_rate_hz" value="$(arg send_rate_hz)" />
+    <param name="cmd_vel_timeout" value="$(arg cmd_vel_timeout)" />
+    <param name="max_vx" value="0.20" />
+    <param name="max_vy" value="0.15" />
+    <param name="max_wz" value="0.35" />
+  </node>
+
+  <node pkg="csrpi_base_bridge" type="rf1_serial_bridge.py" name="rf1_serial_bridge" output="screen">
+    <param name="port" value="$(arg rf1_port)" />
+    <param name="fallback_port" value="$(arg rf1_fallback_port)" />
+    <param name="baudrate" value="$(arg rf1_baud)" />
+    <param name="send_rate_hz" value="$(arg send_rate_hz)" />
+    <param name="timeout" value="0.2" />
+    <param name="drain_seconds" value="0.6" />
+    <param name="reconnect_delay" value="1.0" />
+  </node>
+
+  <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
+    <param name="k_m" value="0.18525" />
+    <param name="odom_frame" value="odom" />
+    <param name="base_frame" value="base_link" />
+    <param name="publish_tf" value="false" />
+  </node>
+</launch>
