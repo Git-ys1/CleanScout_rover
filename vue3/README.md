@@ -386,15 +386,21 @@ cmd /c npm.cmd run prisma:seed
 cmd /c npm.cmd run dev
 ```
 
-`V-1.1.0` 当前本地联调口径：
+`V-1.5.0` 当前本地联调口径：
 
-- 前端 H5 默认使用 `http://127.0.0.1:3000/api` 作为 API 基地址
+- 前端 API 已切换为 `VITE_API_BASE_URL` / `VITE_WS_BASE_URL`
+- H5 本地联调读取 `.env.h5.local`：`http://127.0.0.1:3000/api`
+- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.117.77.190:3000/api`
+- `.env.production` 仅作为后续公网占位，当前 WS 仍显式留空
+- `build:h5` 与 `build:mp-weixin` 当前默认用于本地联调出包
+- 正式微信小程序构建改走 `build:mp-weixin:production` 与 `scripts/release-mp-weixin.*`
 - 后端 CORS 放通 `localhost` / `127.0.0.1` 的本地开发端口，避免 `uni` 因端口占用切换到新端口时被拦截
 - 默认管理员账号通过 seed 初始化：`admin / 123456`
 - `OpenClaw` 当前通过 backend 适配层接入，状态探测接口为 `/api/integrations/openclaw/status`
 - `OpenClaw` 硬开关来自 `.env` 的 `OPENCLAW_ENABLED`，软开关来自后台 `SystemConfig.openclawEnabled`
 - `ROS` 当前通过 backend 适配层接入，状态探测接口为 `/api/integrations/ros/status`
-- `ROS` 默认 transport 为 `mock`，真实树莓派接入优先规划为 `rosbridge`
+- `ROS` 的 local-lan 联调模板已切到 `rosbridge`
+- 本轮 ROS 真联调目标固定为 `ws://10.117.77.84:9090`
 - 管理员固定控制接口为 `/api/ros/cmd-vel` 与 `/api/ros/manual-preset`
 - ROS 最小遥测摘要接口为 `/api/ros/telemetry/summary`
 
@@ -418,12 +424,87 @@ cmd /c npm.cmd run dev
 - backend CORS 已切到 `CORS_ALLOWED_ORIGINS` 环境变量白名单
 - 若该变量为空，默认仅放行本地开发 `localhost / 127.0.0.1`
 - 公网部署前必须改成真实 H5 域名，不能继续沿用本地默认值
+- `V-1.5.0` 起，backend 模板拆为：
+  - `deploy/env/vline-backend.local-lan.env.example`
+  - `deploy/env/vline-backend.public.env.example`
 - ROS 联调合同文档位于：
   - `docs/releases/V-1.4.0/ros-integration-contract.md`
+- ROS 本地局域网联调记录位于：
+  - `docs/releases/V-1.5.0/ros-local-lan-test.md`
 - 微信小程序构建说明位于：
   - `docs/releases/V-1.4.0/mini-program-build.md`
+- 微信小程序网络规则位于：
+  - `docs/releases/V-1.5.0/wechat-mini-program-network.md`
 - backend 部署说明位于：
   - `docs/releases/V-1.4.0/backend-deploy.md`
+
+## V-1.6.0 runtime profile 与公网交付
+
+从 `V-1.6.0` 起，前后端 profile 进一步收口：
+
+- 前端生产 API 固定为 `https://api.hzhhds.top/api`
+- backend 支持 `APP_PROFILE=local-lan` 与 `APP_PROFILE=public-cloud`
+- backend 支持 `ENV_FILE=/etc/vline-backend.env`
+- `local-lan` 继续用于本地 ROS 真联调
+- `public-cloud` 用于公网部署交付包，默认不直连局域网树莓派
+
+新增文档入口：
+
+- `docs/releases/V-1.6.0/README.md`
+- `docs/releases/V-1.6.0/frontend-build-profiles.md`
+- `docs/releases/V-1.6.0/backend-runtime-profiles.md`
+- `docs/releases/V-1.6.0/ros-second-local-test.md`
+- `docs/releases/V-1.6.0/public-cloud-deploy.md`
+- `docs/releases/V-1.6.0/backend-centric-ros-relay-rfc.md`
+
+当前正式 ROS 控制链路仍为：
+
+```text
+frontend -> backend -> rosbridge -> ROS
+```
+
+`edge-relay` 只是联合 RFC 草案，不替换当前已跑通的 `rosbridge` 方案。
+
+## V-1.7.0 edge-relay 云端 transport
+
+从 `V-1.7.0` 起，`edge-relay` 从 RFC 草案进入 backend 静态施工：
+
+- backend 入口已拆为 `src/app.js` 与 `src/server.js`
+- `src/server.js` 通过共享 HTTP server 同时承载 REST 与 `/edge/ros`
+- `ROS_TRANSPORT` 支持 `mock | rosbridge | edge-relay`
+- `local-lan` 继续使用 `rosbridge`
+- `public-cloud` 继续默认 `mock`
+- `public-edge` 用于云端接收 Pi 主动 WSS 长连接
+- 前端仍只调用 backend 的 `/api/ros/*`，不直连 `/edge/ros`
+
+新增文档入口：
+
+- `docs/releases/V-1.7.0/README.md`
+- `docs/releases/V-1.7.0/edge-relay-protocol.md`
+- `docs/releases/V-1.7.0/public-edge-deploy.md`
+- `docs/releases/V-1.7.0/static-local-simulation.md`
+
+当前两条 ROS 链路并存：
+
+```text
+local-lan:    frontend -> backend -> rosbridge -> ROS
+public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
+```
+
+本轮只完成静态施工与本地模拟验证，未宣称真实 Pi / ROS / OpenRF1 云端闭环通过。
+
+### V-1.7.9 本地 edge-relay 联调收敛
+
+`V-1.7.9` 已补充本地联调结论：
+
+- 本地链路 `前端网页 -> backend public-edge -> /edge/ros -> edge-relay(Pi) -> ROS -> OpenRF1` 已收敛
+- 前端网页可通过现有 `/api/ros/*` 控制小车
+- backend 当前能看到 `edgeRelayConnected=true` 与 `edgeDeviceId=csrpi-001`
+- 该结论只代表本地局域网 edge-relay 联调通过，不代表公网 `wss://api.hzhhds.top/edge/ros` 已上线
+
+文档位置：
+
+- `docs/releases/V-1.7.0/edge-relay-local-convergence.md`
 
 `V-1.0.1` 文档补充通过标准：
 

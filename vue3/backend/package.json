@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "description": "V线 V-1.4.0 backend service shell",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",

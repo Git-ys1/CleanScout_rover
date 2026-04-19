@@ -42,6 +42,7 @@ render_systemd_unit() {
     -e "s|^User=.*$|User=${SERVICE_USER}|" \
     -e "s|^WorkingDirectory=.*$|WorkingDirectory=${BACKEND_ROOT}|" \
     -e "s|^EnvironmentFile=.*$|EnvironmentFile=${ENV_FILE}|" \
+    -e "s|^Environment=ENV_FILE=.*$|Environment=ENV_FILE=${ENV_FILE}|" \
     "${source_unit}" > "${temp_unit}"
 
   ${SUDO} install -m 644 "${temp_unit}" "${SYSTEMD_UNIT_PATH}"

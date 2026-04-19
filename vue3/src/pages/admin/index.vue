@@ -126,8 +126,20 @@
             <text class="status-value">{{ rosStatus.connected ? 'connected' : 'disconnected' }}</text>
           </view>
           <view class="status-item">
+            <text class="status-label">edge-relay 在线</text>
+            <text class="status-value">{{ rosStatus.edgeRelayConnected ? 'online' : 'offline' }}</text>
+          </view>
+          <view class="status-item">
+            <text class="status-label">edge deviceId</text>
+            <text class="status-value compact">{{ rosStatus.edgeDeviceId || '--' }}</text>
+          </view>
+          <view class="status-item">
             <text class="status-label">最近心跳</text>
             <text class="status-value compact">{{ formatDate(rosStatus.lastHeartbeatAt) }}</text>
+          </view>
+          <view class="status-item">
+            <text class="status-label">最近 edge 遥测</text>
+            <text class="status-value compact">{{ formatDate(rosStatus.lastTelemetryAt) }}</text>
           </view>
           <view class="status-item">
             <text class="status-label">rosbridge</text>
@@ -139,7 +151,7 @@
           </view>
           <view class="status-item">
             <text class="status-label">最近错误</text>
-            <text class="status-value compact">{{ rosStatus.lastError || '--' }}</text>
+            <text class="status-value compact">{{ rosStatus.lastRelayError || rosStatus.lastError || '--' }}</text>
           </view>
         </view>
       </view>

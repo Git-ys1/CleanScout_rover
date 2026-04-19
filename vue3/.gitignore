@@ -11,6 +11,8 @@ node_modules
 .DS_Store
 dist
 *.local
+!.env.h5.local
+!.env.mp-weixin.local
 
 # Editor directories and files
 .idea

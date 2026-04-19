@@ -116,3 +116,34 @@ export function createRosbridgeTransport(config, cache, client) {
     },
   }
 }
+
+export function createEdgeRelayTransport(config, cache, hub) {
+  const timers = {
+    intervalId: null,
+    stopTimeoutId: null,
+  }
+
+  async function publishCommand(command) {
+    await hub.sendCommand(command)
+  }
+
+  return {
+    async getStatus() {
+      return hub.getStatus()
+    },
+    async getTelemetrySummary() {
+      return cache.getTelemetrySummary()
+    },
+    async sendCommand(command) {
+      await publishCommand(command)
+      const scheduledStopAt = scheduleRepeatedCommand({
+        command,
+        repeatHz: config.repeatHz,
+        publishCommand,
+        timers,
+      })
+
+      return createBaseResult(command, 'edge-relay', scheduledStopAt)
+    },
+  }
+}

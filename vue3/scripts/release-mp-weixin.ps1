@@ -17,13 +17,13 @@ if (-not (Test-Path $packageJsonPath)) {
 
 $packageJson = Get-Content -Encoding utf8 $packageJsonPath -Raw
 
-if ($packageJson -notmatch '"build:mp-weixin"\s*:') {
-  Write-Error 'build:mp-weixin is not defined in package.json.'
+if ($packageJson -notmatch '"build:mp-weixin:production"\s*:') {
+  Write-Error 'build:mp-weixin:production is not defined in package.json.'
   exit 1
 }
 
-Write-Host 'Running mini program build: npm run build:mp-weixin'
-cmd /c npm.cmd run build:mp-weixin
+Write-Host 'Running mini program build: npm run build:mp-weixin:production'
+cmd /c npm.cmd run build:mp-weixin:production
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error 'Mini program build failed.'

@@ -15,13 +15,13 @@ if [[ ! -f "${repo_root}/package.json" ]]; then
   exit 1
 fi
 
-if ! grep -q '"build:mp-weixin"' "${repo_root}/package.json"; then
-  echo "build:mp-weixin is not defined in package.json." >&2
+if ! grep -q '"build:mp-weixin:production"' "${repo_root}/package.json"; then
+  echo "build:mp-weixin:production is not defined in package.json." >&2
   exit 1
 fi
 
-echo "Running mini program build: npm run build:mp-weixin"
-npm run build:mp-weixin
+echo "Running mini program build: npm run build:mp-weixin:production"
+npm run build:mp-weixin:production
 
 artifact_dir="${repo_root}/dist/build/mp-weixin"
 
