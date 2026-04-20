@@ -17,7 +17,8 @@ static const char *g_channel_notes[CSR_CHANNEL_COUNT] =
 };
 
 /*
- * C-3.1.4C closed-loop vehicle-forward semantics:
+ * C-3.3.1A closed-loop channel semantics:
+ * - Channel order is CN1/LR, CN2/LF, CN3/RR, CN4/RF.
  * - M,<ch>,<pwm> remains a raw per-channel diagnostic command.
  * - W,a,b,c,d is the chassis-facing command and applies motor_dir_sign.
  * - CN1/CN3 are mounted opposite to CN2/CN4 in the current chassis, so W+

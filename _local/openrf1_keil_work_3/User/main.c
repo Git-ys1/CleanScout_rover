@@ -23,17 +23,23 @@ static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 
+/*
+ * C-3.3.1A channel order is fixed as:
+ * CN1/LR, CN2/LF, CN3/RR, CN4/RF.
+ * Start from one uniform PI baseline; only add left/right or front/rear
+ * differential gains after the six-direction sign matrix is proven.
+ */
 static float g_kp[CSR_CHANNEL_COUNT] = {
-    1200.0f,
-    1200.0f,
-    2600.0f,
-    2600.0f
+    CSR_PI_KP_DEFAULT,
+    CSR_PI_KP_DEFAULT,
+    CSR_PI_KP_DEFAULT,
+    CSR_PI_KP_DEFAULT
 };
 static float g_ki[CSR_CHANNEL_COUNT] = {
-    100.0f,
-    100.0f,
-    260.0f,
-    260.0f
+    CSR_PI_KI_DEFAULT,
+    CSR_PI_KI_DEFAULT,
+    CSR_PI_KI_DEFAULT,
+    CSR_PI_KI_DEFAULT
 };
 static float g_kd[CSR_CHANNEL_COUNT] = {
     CSR_PI_KD_DEFAULT,
