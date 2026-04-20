@@ -25,14 +25,14 @@ static const uint16_t g_drive_dominant_min_pos[CSR_CHANNEL_COUNT] = {
     1000U,
     550U,
     1000U,
-    1000U
+    1200U
 };
 
 static const uint16_t g_drive_dominant_min_neg[CSR_CHANNEL_COUNT] = {
     /* LR, LF, RR, RF raw negative drive floors. */
     550U,
     1000U,
-    1000U,
+    1100U,
     1000U
 };
 

@@ -47,7 +47,7 @@ typedef enum
 #define CSR_PI_KD_DEFAULT               0.0f
 #define CSR_PI_INTEGRAL_LIMIT           0.30f
 #define CSR_PI_OUTPUT_LIMIT             1000.0f
-#define CSR_VEL_FILTER_ALPHA            0.65f
+#define CSR_VEL_FILTER_ALPHA            0.50f
 #define CSR_PI_PWM_STEP_LIMIT           40
 
 extern int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT];
