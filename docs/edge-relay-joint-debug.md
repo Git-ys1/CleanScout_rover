@@ -14,7 +14,7 @@ EDGE_RELAY_PATH=/edge/ros
 本地联调入口：
 
 ```text
-ws://10.117.77.190:3000/edge/ros
+ws://10.22.7.190:3000/edge/ros
 ```
 
 当前本地 `csrpi-001` token 已由现场单独传递给 C 线，不写入仓库文档。

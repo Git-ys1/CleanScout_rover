@@ -1,0 +1,6 @@
+<launch>
+  <arg name="start_lsm" default="true" />
+  <include file="$(find clbrobot)/launch/slam/slam_406_lsm.launch">
+    <arg name="start_lsm" value="$(arg start_lsm)" />
+  </include>
+</launch>

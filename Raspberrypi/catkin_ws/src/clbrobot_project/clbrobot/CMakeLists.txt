@@ -4,6 +4,7 @@ project(clbrobot)
 find_package(catkin REQUIRED COMPONENTS
   csrpi_base_bridge
   geometry_msgs
+  laser_scan_matcher
   mpu6050_i2c_bridge
   nav_msgs
   rosbridge_server

@@ -14,11 +14,11 @@ The architecture is:
 ## Current endpoint
 
 - https api: `https://api.hzhhds.top`
-- websocket relay: `wss://api.hzhhds.top/edge/ros`
+- websocket relay: `ws://10.22.7.190:3000/edge/ros`
 
 For current local V-line backend testing, use:
 
-- `ws://10.117.77.190:3000/edge/ros`
+- `ws://10.22.7.190:3000/edge/ros`
 
 ## Current behavior
 

@@ -30,6 +30,6 @@
     <param name="k_m" value="0.18525" />
     <param name="odom_frame" value="odom" />
     <param name="base_frame" value="base_link" />
-    <param name="publish_tf" value="false" />
+    <param name="publish_tf" value="true" />
   </node>
 </launch>

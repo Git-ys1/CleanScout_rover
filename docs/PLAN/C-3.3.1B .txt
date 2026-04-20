@@ -1,0 +1,151 @@
+【给树莓派端代码工程师的任务书｜C-3.3.1B laser_scan_matcher 作为建图 odom 备线部署】
+
+一、当前结论
+
+1. 这轮不要把 `laser_scan_matcher` 理解成“替代 gmapping 的建图包”。
+2. 正确理解是：
+
+   * `laser_scan_matcher`：做连续激光帧之间的增量匹配，产出位姿/里程计类信息
+   * `gmapping/slam_gmapping`：继续负责真正的 2D 地图构建
+3. 也就是说，本轮目标不是“扔掉 gmapping”，而是：
+   **给 406 建图增加一条“激光匹配 odom 备线”，减轻当前轮速闭环不理想对建图的影响。**
+
+二、本轮目标
+
+本轮只做两件事：
+
+1. 在树莓派当前 Noetic 工作区中部署 `laser_scan_matcher`
+2. 做一条新的 406 建图备线：
+   **RPLIDAR -> laser_scan_matcher -> odom(或等价位姿) -> gmapping**
+
+三、本轮原则
+
+1. 不替换当前 RF1 底盘桥
+2. 不删除现有 `gmapping` 建图链
+3. 不破坏当前 `run_mapping_406.sh` 主脚本
+4. 新增一条**备线脚本**和**备线 launch**，并行验证
+
+四、安装与引入策略
+
+任务 A：优先尝试系统包安装
+
+先尝试：
+
+```bash id="fhhcft"
+sudo apt update
+sudo apt install -y ros-noetic-laser-scan-matcher
+```
+
+理由：
+
+* `laser_scan_matcher` 在 Noetic 生态里是已发布包
+* `scan_tools` 也有对应的 Noetic release 记录
+
+如果 apt 安装失败，再转到任务 B。
+
+任务 B：若 apt 不可用，则 vendoring `scan_tools`
+把 `scan_tools` 的 ROS1 分支引入到当前 `Raspberrypi/catkin_ws/src/`，然后统一 `catkin_make`。
+但只有在 apt 不通时才这么做，不要一上来就把树继续弄脏。
+
+五、本轮新增文件建议
+
+新增：
+
+1. `Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/slam/laser_scan_matcher_406.launch`
+2. `Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/slam/slam_406_lsm.launch`
+3. `Raspberrypi/catkin_ws/run_mapping_406_lsm.sh`
+4. `Raspberrypi/catkin_ws/README_lsm_406.md`
+
+六、节点职责冻结
+
+任务 C：`laser_scan_matcher_406.launch`
+职责：
+
+1. 订阅 `/scan`
+2. 输出激光匹配位姿/里程计结果
+3. 作为本轮“建图 odom 备线”
+
+注意：
+
+* 本轮先不要把它和 web 栈混起来
+* 本轮优先做本地建图用
+
+任务 D：如果 `laser_scan_matcher` 直接没有标准 `/odom`
+这点要提前准备。
+官方资料和社区资料都说明它核心输出是“估计位姿”，不是天然等价于你们当前整车 `/odom`。
+所以本轮若发现它只给 `Pose2D / PoseStamped / PoseWithCovariance` 一类输出，就新增一个轻量 wrapper：
+
+* `lsm_pose_to_odom.py`
+
+职责：
+
+1. 订阅 lsm 输出位姿
+2. 转成标准 `nav_msgs/Odometry`
+3. 发布到：
+
+   * `/odom_lsm`
+
+要求：
+
+* 这轮不要直接覆盖旧 `/odom`
+* 先单独发 `/odom_lsm`
+
+任务 E：`slam_406_lsm.launch`
+职责：
+
+1. 启动 `laser_scan_matcher_406.launch`
+2. 启动 `gmapping/slam_gmapping`
+3. 将 gmapping 需要的 odom 输入明确绑定到这条激光匹配 odom 备线
+
+说明：
+
+* 这轮是“lsm + gmapping”组合
+* 不是“lsm 单独建图”
+
+七、本轮运行链冻结
+
+新的 406 建图备线脚本 `run_mapping_406_lsm.sh` 建议流程：
+
+1. source 环境
+2. 调用 `clean_mapping_nav_sessions.sh`
+3. 显式启动 `roscore`
+4. 启动 `bringup_rf1_min.launch`
+5. 启动 `imu_only.launch`
+6. 启动 `rplidar.launch`
+7. 等待 `/scan`
+8. 启动 `laser_scan_matcher_406.launch`
+9. 等待 lsm 输出 topic
+10. 启动 `slam_406_lsm.launch`
+11. 等待 `/map`
+
+注意：
+
+* 这条链是**备线**
+* 当前 `run_mapping_406.sh` 主链不删
+
+八、本轮验收标准
+
+本轮通过必须满足：
+
+1. `laser_scan_matcher` 在 Noetic 下成功安装或编译通过
+2. `/scan` 存在时，lsm 有稳定输出
+3. 新增 `/odom_lsm` 或等价备线里程计话题
+4. `gmapping` 能在这条备线上进入建图
+5. 形成一份联调文档，写清：
+
+   * lsm 输入/输出 topic
+   * 是否需要 wrapper
+   * 与现有 `/odom` 的关系
+   * 建图效果是否优于当前轮速 odom 方案
+
+九、本轮禁止事项
+
+1. 不要直接把 lsm 说成“取代 gmapping”
+2. 不要直接覆盖当前正式 `/odom`
+3. 不要本轮同时引入 EKF 大改
+4. 不要把 web 栈、rosbridge、edge-relay 一起带进来
+
+十、本轮提交建议
+
+* `checkpoint: before C-3.3.1B laser-scan-matcher odom branch`
+* `C-3.3.1B: add laser_scan_matcher-based odom fallback for 406 mapping`

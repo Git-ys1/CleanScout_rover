@@ -1,6 +1,6 @@
 <launch>
   <arg name="enabled" default="false" />
-  <arg name="url" default="wss://api.hzhhds.top/edge/ros" />
+  <arg name="url" default="ws://10.22.7.190:3000/edge/ros" />
   <arg name="device_id" default="csrpi-001" />
   <arg name="device_token" default="" />
   <arg name="heartbeat_ms" default="5000" />

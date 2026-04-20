@@ -21,6 +21,7 @@ class CmdvelToRf1:
 
         self.pub = rospy.Publisher("/rf1/wheel_target_ms", Float32MultiArray, queue_size=20)
         self.status_pub = rospy.Publisher("/rf1/cmdvel_status", String, queue_size=20, latch=True)
+        self.debug_pub = rospy.Publisher("/rf1/cmdvel_debug", String, queue_size=20)
 
         rospy.Subscriber("/cmd_vel", Twist, self.cmd_vel_callback, queue_size=20)
         self.status_pub.publish(String(data="cmdvel_to_rf1 ready"))
@@ -58,12 +59,23 @@ class CmdvelToRf1:
             vx - vy + self.k_m * wz,
         ]
 
+    def publish_debug(self, vx, vy, wz, targets):
+        self.debug_pub.publish(
+            String(
+                data=(
+                    f"cmd_vel vx={vx:.3f} vy={vy:.3f} wz={wz:.3f} "
+                    f"targets={[round(value, 3) for value in targets]}"
+                )
+            )
+        )
+
     def spin(self):
         rate = rospy.Rate(self.publish_rate_hz)
         while not rospy.is_shutdown():
             vx, vy, wz = self.current_command()
             targets = self.convert_cmd_vel(vx, vy, wz)
             self.pub.publish(Float32MultiArray(data=targets))
+            self.publish_debug(vx, vy, wz, targets)
             rate.sleep()
 
 

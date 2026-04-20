@@ -390,7 +390,7 @@ cmd /c npm.cmd run dev
 
 - 前端 API 已切换为 `VITE_API_BASE_URL` / `VITE_WS_BASE_URL`
 - H5 本地联调读取 `.env.h5.local`：`http://127.0.0.1:3000/api`
-- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.117.77.190:3000/api`
+- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.22.7.190:3000/api`
 - `.env.production` 仅作为后续公网占位，当前 WS 仍显式留空
 - `build:h5` 与 `build:mp-weixin` 当前默认用于本地联调出包
 - 正式微信小程序构建改走 `build:mp-weixin:production` 与 `scripts/release-mp-weixin.*`

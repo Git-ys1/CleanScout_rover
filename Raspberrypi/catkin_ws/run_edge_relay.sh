@@ -7,7 +7,7 @@ LOG_FILE="/tmp/c324_edge_relay.log"
 source "$ROOT/use_cleanscout_pi.sh"
 
 export EDGE_RELAY_ENABLED="${EDGE_RELAY_ENABLED:-false}"
-export EDGE_RELAY_URL="${EDGE_RELAY_URL:-wss://api.hzhhds.top/edge/ros}"
+export EDGE_RELAY_URL="${EDGE_RELAY_URL:-ws://10.22.7.190:3000/edge/ros}"
 export EDGE_DEVICE_ID="${EDGE_DEVICE_ID:-csrpi-001}"
 export EDGE_DEVICE_TOKEN="${EDGE_DEVICE_TOKEN:-}"
 export EDGE_HEARTBEAT_MS="${EDGE_HEARTBEAT_MS:-5000}"

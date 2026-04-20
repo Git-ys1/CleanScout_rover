@@ -1,29 +1,147 @@
-导航当前按下面的可诊断口径启动：
+当前树莓派端新的建图 / 导航操作口径如下，旧的 `/csr_base/ack` 和旧 UNO wrapper 口径不要再用了：
 
-一、先检查当前 ROS 状态
+零、清理脚本
+bash /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/clean_mapping_nav_sessions.sh
+
+一、先做一次当前工作区编译刷新
+
+在树莓派本机执行：
 
 cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
-./check_ros_master.sh
+bash -lc 'cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws && catkin_make'
 
-二、树莓派前台启动唯一导航入口
+说明：
+
+1. 本轮目标是刷新当前工作区 overlay
+2. 不要反复重编
+3. 如果编译失败，把最后报错写回本文件
+
+二、406 建图正式入口
+
+在树莓派本机执行：
 
 cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
-./start_desk_navigation.sh
+export EDGE_DEVICE_ID=csrpi-001
+export EDGE_DEVICE_TOKEN=ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2
+export EDGE_RELAY_URL=ws://10.22.7.190:3000/edge/ros
+bash ./run_slam_mapping.sh
 
-这个脚本会：
+十、最小 RF1 主动控制自检
 
-1. 先清理旧会话
-2. 先起基础链 nav_base_stack.launch
-3. 等待 /scan /odom /csr_base/ack
-4. 再起 desk_map_navigation.launch
+如果已经确认：
 
-三、虚拟机里查看
+1. 手动拨动车轮时地图 / 坐标会变化
+2. 但导航点击后小车完全不动
+
+此时不要继续在大链里猜，先做最小 RF1 主动控制自检。
+
+在树莓派本机执行：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+bash ./test_rf1_cmd_vel.sh
+最新报错：
+[rf1-test] clean 旧会话
+[rf1-test] 启动 roscore
+[rf1-test] 启动最小 RF1 主动控制链
+[rf1-test] 等待 /rf1/vel
+[rf1-test] 等待 /rf1/wheel_target_ms
+[rf1-test] 当前 topic 检查
+/cmd_vel
+/rf1/cmdvel_debug
+/rf1/status
+/rf1/vel
+/rf1/wheel_target_ms
+[rf1-test] 发送脉冲 forward: vx=0.08 vy=0.0 wz=0.0
+publishing and latching message for 3.0 seconds
+[rf1-test] /rf1/wheel_target_ms 快照 (forward)
+layout:
+  dim: []
+  data_offset: 0
+data: [0.0, 0.0, 0.0, 0.0]
+---
+layout:
+  dim: []
+  data_offset: 0
+data: [0.0, 0.0, 0.0, 0.0]
+---
+layout:
+  dim: []
+  data_offset: 0
+data: [0.0, 0.0, 0.0, 0.0]
+---
+[rf1-test] /rf1/cmdvel_debug 快照 (forward)
+data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
+---
+data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
+---
+data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
+---
+[rf1-test] /rf1/status 快照 (forward)
+data: "RF1 serial connected"
+
+注意，实际上轮子转了，在执行发送脉冲时小车实际转了，但后续没有转，也没有任何数据，让你查底层啊！查个底层就这么困难？
+
+当前正式建图默认口径已经切到：
+
+`/scan -> laser_scan_matcher -> /odom_lsm -> gmapping`
+
+如果成功，之后到上位机 / 虚拟机 RViz 开始建图。
+
+三、406 地图保存
+
+在树莓派本机执行：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+bash ./save_map.sh
+
+默认保存位置已改为：
+
+1. `$(find clbrobot)/maps/406.yaml`
+2. `$(find clbrobot)/maps/406.pgm`
+
+不再默认保存成：
+
+1. `lab_map_001`
+2. `desk_map_001`
+
+四、406 导航正式入口
+
+在树莓派本机执行：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+bash ./start_desk_navigation.sh
+
+这个脚本当前按以下顺序分阶段启动：
+
+1. source `use_cleanscout_pi.sh`
+2. 清理旧会话 `clean_mapping_nav_sessions.sh`
+3. 显式启动 `roscore`
+4. 启动 `bringup_rf1_min.launch`
+5. 等待 `/rf1/vel`
+6. 启动 `core/imu_only.launch`
+7. 等待 `/imu/data`
+8. 启动 `lidar/rplidar.launch`
+9. 等待 `/scan`
+10. 启动 `nav/navigation_406_rf1.launch`
+11. 等待 `/odom`
+12. 等待 `/amcl_pose`
+13. 等待 `/move_base/status`
+
+默认导航地图已改为：
+
+`$(find clbrobot)/maps/406.yaml`
+
+不再继续默认：
+
+`/home/clbrobot/Work/CleanScout_rover/Raspberrypi/maps/desk_map_001.yaml`
+
+五、虚拟机 / 上位机查看建议
 
 source /opt/ros/noetic/setup.bash
 rostopic list
 rviz
 
-四、RViz 里建议查看
+RViz 里建议先看：
 
 1. Fixed Frame = map
 2. Map
@@ -31,88 +149,78 @@ rviz
 4. TF
 5. ParticleCloud = /particlecloud
 
-五、先 2D Pose Estimate，再 2D Nav Goal
+导航时先 2D Pose Estimate，再 2D Nav Goal。
 
-六、如果异常，先不要重复启动，再回报以下三个状态：
+六、当前必须知道的现实风险
 
-1. /scan 是否存在
-2. /odom 是否存在
-3. /csr_base/ack 是否存在
+1. 旧地图确实是通过 gmapping SLAM 链建出来的
+2. 当前雷达运行时仍可能依赖旧 `~/catkin_ws` 的已编译 `rplidarNode`
+3. 如果后续建图 / 导航仍被雷达挡住，就要考虑把 `rplidar_ros` 在当前工作区正式重新编译并切正
+
+七、如果异常，不要反复重启，先回报下面状态
+
+建图链重点回报：
+
+1. `/rf1/vel` 是否存在
+2. `/imu/data` 是否存在
+3. `/scan` 是否存在
+4. `/map` 是否存在
+
+导航链重点回报：
+
+1. `/odom` 是否存在
+2. `/scan` 是否存在
+3. `/amcl_pose` 是否存在
+4. `/move_base/status` 是否存在
+
+八、新版可前端控制建图版本
+
+当前 `run_slam_mapping.sh` 已改为默认启动 `edge-relay`。
+
+这意味着建图时不再需要人手拖动小车，而是可以直接走：
+
+前端按钮 -> 后端 -> edge-relay -> `/cmd_vel` -> RF1 -> 小车运动
+
+本轮目标不是再起旧 Web 总栈，也不是另写第二套遥控 ROS，而是把现有 `edge-relay` 直接并入当前正式建图主链。
+
+执行方式如下：
+
+在树莓派本机执行：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+export EDGE_DEVICE_ID=csrpi-001
+export EDGE_DEVICE_TOKEN=ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2
+export EDGE_RELAY_URL=ws://10.22.7.190:3000/edge/ros
+bash ./run_slam_mapping.sh
+
+说明：
+
+1. 当前脚本默认会启动 `edge-relay`
+2. 不再需要额外加 `--with-edge-relay`
+3. 只有明确想关闭时，才使用：`bash ./run_slam_mapping.sh --without-edge-relay`
+4. 建图主链仍然是当前正式主链：RF1 + odom + IMU + lidar + gmapping
+5. `edge-relay` 只是作为当前建图阶段的远程控制入口挂入主链，不另起第二套 ROS master
+
+当前预期链路：
+
+1. `run_slam_mapping.sh` 拉起当前正式建图链
+2. 同时启动 `edge-relay`
+3. 前端按钮经后端下发控制
+4. `edge-relay` 发布 `/cmd_vel`
+5. `cmdvel_to_rf1.py` 和 `rf1_serial_bridge.py` 驱动 OpenRF1
+6. 小车可被前端控制移动完成建图
+
+当前重要日志文件：
+
+1. 建图日志：`/tmp/c331_mapping_406.log`
+2. RF1 最小链日志：`/tmp/c331_rf1_min.log`
+3. edge-relay 日志：`/tmp/c331_edge_relay.log`
 
 
+如果以后改云端，只需要切换：
 
-上面也不知道对不对了，先看下面V线那边代码工程师的口径：
-目前本地后端已经具备这种模式，但默认本地模板还不是 edge-relay 模式。
+export EDGE_RELAY_URL=ws://10.22.7.190:3000/edge/ros
 
-现在有三套后端 profile：
+然后继续执行：
 
-local-lan：本地旧链路，backend -> rosbridge -> ROS
-
-模板：vline-backend.local-lan.env.example
-当前默认：ROS_TRANSPORT=rosbridge
-适合之前那套 ws://10.117.77.84:9090 联调
-public-cloud：公网普通部署，不直连 ROS
-
-当前默认：ROS_TRANSPORT=mock
-public-edge：新链路，ROS/edge-relay -> backend
-
-模板：vline-backend.public-edge.env.example
-当前默认：ROS_TRANSPORT=edge-relay
-暴露 /edge/ros
-适合你说的“ROS 找后端”
-也就是说：代码已经支持“ROS 主动找后端”，但本地测试时你要用 public-edge profile 启动本地 backend，而不是继续用 local-lan。
-
-本地 edge-relay 测试建议这样配：
-
-APP_PROFILE=public-edge
-PORT=3000
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="至少32位随机字符串"
-JWT_EXPIRES_IN=7d
-CORS_ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
-
-ROS_ENABLED=true
-ROS_TRANSPORT=edge-relay
-
-EDGE_RELAY_ENABLED=true
-EDGE_RELAY_PATH=/edge/ros
-EDGE_DEVICE_AUTH_REQUIRED=true
-EDGE_HELLO_TIMEOUT_MS=5000
-EDGE_HEARTBEAT_TIMEOUT_MS=15000
-EDGE_SERVER_PING_INTERVAL_MS=25000
-EDGE_ALLOWED_DEVICE_IDS=csrpi-001
-EDGE_DEVICE_BOOTSTRAP_ID=csrpi-001
-EDGE_DEVICE_BOOTSTRAP_TOKEN=这里填32位以上设备token
-然后本地启动 backend 后，树莓派 edge-relay 应该连：
-
-ws://10.117.77.190:3000/edge/ros
-以后云端则改成：
-
-wss://api.hzhhds.top/edge/ros
-注意两个关键点：
-
-EDGE_DEVICE_BOOTSTRAP_TOKEN 只用于 seed 初始化设备，Pi 侧实际连接时必须用同一个 token 发 hello。
-如果你已经 seed 过一次，后面只改 env token 不会自动改数据库里的 token hash；要么保持原 token，要么重置/更新 EdgeDevice 记录。
-
-目前先进行本地测试，我认为ros要同时做两者，后续好随时切换，或先本地请求、再云端请求，这些你想想，后面整理为需求，这轮先不做
-
-
-V线那边给了口径对齐，下面有我们这回填的token：
-已重新生成并写入本地 DB，当前本地 edge-relay token 是：
-
-ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2
-给 ROS / Pi 侧这三项：
-
-deviceId=csrpi-001
-token=ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2
-wsUrl=ws://10.117.77.190:3000/edge/ros
-我已确认本地 DB 里存的是 bcrypt hash，不是明文：
-
-tokenIsPlain=false
-tokenHashPrefix=$2b$
-当前本地后端已经是：
-
-profile=public-edge
-transport=edge-relay
-EDGE_RELAY_ENABLED=true
-Pi 侧首帧 hello 就用上面的 deviceId/token。
+bash ./run_slam_mapping.sh

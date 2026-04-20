@@ -8,7 +8,7 @@
   <arg name="lidar_port" default="/dev/ttyUSB0" />
   <arg name="lidar_baud" default="256000" />
   <arg name="edge_relay_enabled" default="false" />
-  <arg name="edge_relay_url" default="wss://api.hzhhds.top/edge/ros" />
+  <arg name="edge_relay_url" default="ws://10.22.7.190:3000/edge/ros" />
   <arg name="edge_device_id" default="csrpi-001" />
   <arg name="edge_device_token" default="" />
   <arg name="edge_heartbeat_ms" default="5000" />
