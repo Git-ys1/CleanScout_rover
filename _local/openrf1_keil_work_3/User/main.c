@@ -23,6 +23,13 @@ static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 
+/*
+ * C-3.3.1A channel order is fixed as:
+ * CN1/LR, CN2/LF, CN3/RR, CN4/RF.
+ * C-3.3.1B hotfix:
+ * keep PI uniform. Wheel-to-wheel mechanical differences are compensated in
+ * the motor drive layer, not by pretending [CN1,CN2] is a front group.
+ */
 static float g_kp[CSR_CHANNEL_COUNT] = {
     CSR_PI_KP_DEFAULT,
     CSR_PI_KP_DEFAULT,
@@ -179,6 +186,26 @@ static int16_t csr_slew_pwm(int16_t previous, int16_t desired)
     return desired;
 }
 
+static uint8_t csr_target_sign_changed(float previous, float next)
+{
+    if ((csr_absf(previous) < 0.0005f) && (csr_absf(next) < 0.0005f))
+    {
+        return 0U;
+    }
+    if ((csr_absf(previous) < 0.0005f) || (csr_absf(next) < 0.0005f))
+    {
+        return 1U;
+    }
+    return ((previous > 0.0f) != (next > 0.0f)) ? 1U : 0U;
+}
+
+static void csr_reset_channel_pi_state(csr_channel_t channel)
+{
+    g_integral_state[channel] = 0.0f;
+    g_prev_error[channel] = 0.0f;
+    g_output_pwm[channel] = 0;
+}
+
 static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, float measured)
 {
     float error;
@@ -293,6 +320,11 @@ static void csr_handle_command(const csr_proto_command_t *command)
 
         for (index = 0; index < CSR_CHANNEL_COUNT; index++)
         {
+            if (csr_target_sign_changed(g_target_vel[index], command->target_vel[index]) ||
+                (csr_absf(command->target_vel[index] - g_target_vel[index]) > 0.08f))
+            {
+                csr_reset_channel_pi_state((csr_channel_t)index);
+            }
             g_target_vel[index] = command->target_vel[index];
         }
 
