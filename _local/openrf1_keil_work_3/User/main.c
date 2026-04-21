@@ -162,6 +162,20 @@ static void csr_apply_raw_outputs(void)
     }
 }
 
+static int16_t csr_apply_effective_floor(int16_t pwm)
+{
+    if (pwm == 0) {
+        return 0;
+    }
+    if ((pwm > 0) && (pwm < CSR_EFFECTIVE_PWM_MIN)) {
+        return CSR_EFFECTIVE_PWM_MIN;
+    }
+    if ((pwm < 0) && (pwm > -CSR_EFFECTIVE_PWM_MIN)) {
+        return -CSR_EFFECTIVE_PWM_MIN;
+    }
+    return pwm;
+}
+
 static float csr_measure_speed_mps(csr_channel_t channel)
 {
     int32_t delta;
@@ -231,7 +245,7 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     /*
      * Bringup 阶段禁止低速闭环反向刹车。
      * 反向输出会在死区附近造成“前后抖动”，先让控制器靠降 PWM / 停止来减速。
-     */
+     *
     if ((target > 0.0f) && (output < 0.0f))
     {
         output = 0.0f;
@@ -248,6 +262,7 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
             g_integral_state[channel] *= 0.7f;
         }
     }
+    */
 
     g_prev_error[channel] = error;
 
@@ -280,14 +295,17 @@ static void csr_control_tick(void)
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
-        g_output_pwm[index] = csr_slew_pwm(
-            g_output_pwm[index],
-            csr_compute_closed_loop_pwm(
+        int16_t next_pwm;
+
+        next_pwm = csr_compute_closed_loop_pwm(
             (csr_channel_t)index,
             g_target_vel[index],
             g_measured_vel[index]
-            )
         );
+        next_pwm = csr_slew_pwm(g_output_pwm[index], next_pwm);
+        next_pwm = csr_apply_effective_floor(next_pwm);
+
+        g_output_pwm[index] = next_pwm;
         csr_motor_set((csr_channel_t)index, g_output_pwm[index]);
     }
 }
