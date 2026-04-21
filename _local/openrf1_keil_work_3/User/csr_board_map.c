@@ -17,15 +17,20 @@ static const char *g_channel_notes[CSR_CHANNEL_COUNT] =
 };
 
 /*
- * C-3.0.6 闭环默认语义：
- * - 原始 M 调试命令已经在 csr_motor_drv.c 内统一为 +pwm 正向
- * - W 闭环层不再二次翻转电机方向
- * - 编码器符号只按串口实测回填：CN2 的 +pwm 计数为负，因此这里反相
- * - CN4 在 C-3.0.6 复测中确认当前表下仍反号，因此保持 +1
- * - CN1/CN3 当前仍无编码器计数，本表不把无反馈问题伪装成符号修正
+ * C-3.3.1A closed-loop channel semantics:
+ * - Channel order is CN1/LR, CN2/LF, CN3/RR, CN4/RF.
+ * - M,<ch>,<pwm> remains a raw per-channel diagnostic command.
+ * - W,a,b,c,d is the chassis-facing command and applies motor_dir_sign.
+ * - CN1/CN3 are mounted opposite to CN2/CN4 in the current chassis, so W+
+ *   must drive them with raw negative PWM.
+ * - Encoder signs are defined after the W-layer motor sign correction.
+ *
+ * 2026-04-19 raw sign retest:
+ * - CN1 raw -500 -> ENC delta negative, so semantic W+ needs encoder -1.
+ * - CN3 raw -500 -> ENC delta positive, so semantic W+ keeps encoder +1.
  */
-int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT] = { 1, 1, 1, 1 };
-int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT] = { 1, -1, 1, 1 };
+int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT] = { -1, 1, -1, 1 };
+int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT] = { -1, -1, 1, 1 };
 
 const char *csr_channel_name(csr_channel_t channel)
 {
