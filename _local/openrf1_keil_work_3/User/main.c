@@ -162,42 +162,12 @@ static void csr_apply_raw_outputs(void)
     }
 }
 
-static int16_t csr_apply_effective_floor(int16_t pwm)
-{
-    if (pwm == 0) {
-        return 0;
-    }
-    if ((pwm > 0) && (pwm < CSR_EFFECTIVE_PWM_MIN)) {
-        return CSR_EFFECTIVE_PWM_MIN;
-    }
-    if ((pwm < 0) && (pwm > -CSR_EFFECTIVE_PWM_MIN)) {
-        return -CSR_EFFECTIVE_PWM_MIN;
-    }
-    return pwm;
-}
-
 static float csr_measure_speed_mps(csr_channel_t channel)
 {
     int32_t delta;
 
     delta = csr_encoder_read_and_reset(channel);
     return (float)delta * CSR_WHEEL_SPEED_SCALE;
-}
-
-static int16_t csr_slew_pwm(int16_t previous, int16_t desired)
-{
-    int16_t delta;
-
-    delta = (int16_t)(desired - previous);
-    if (delta > CSR_PI_PWM_STEP_LIMIT)
-    {
-        return (int16_t)(previous + CSR_PI_PWM_STEP_LIMIT);
-    }
-    if (delta < -CSR_PI_PWM_STEP_LIMIT)
-    {
-        return (int16_t)(previous - CSR_PI_PWM_STEP_LIMIT);
-    }
-    return desired;
 }
 
 static uint8_t csr_target_sign_changed(float previous, float next)
@@ -223,7 +193,9 @@ static void csr_reset_channel_pi_state(csr_channel_t channel)
 static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, float measured)
 {
     float error;
-    float output;
+    float correction;
+    float base_pwm;
+    float semantic_output;
     float effective_output;
 
     if (csr_absf(target) < 0.0005f)
@@ -237,35 +209,20 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     g_integral_state[channel] += error * (CSR_CONTROL_PERIOD_MS / 1000.0f);
     g_integral_state[channel] = csr_clampf(g_integral_state[channel], -CSR_PI_INTEGRAL_LIMIT, CSR_PI_INTEGRAL_LIMIT);
 
-    output = g_kp[channel] * error;
-    output += g_ki[channel] * g_integral_state[channel];
-    output += g_kd[channel] * ((error - g_prev_error[channel]) / (CSR_CONTROL_PERIOD_MS / 1000.0f));
-    output = csr_clampf(output, -CSR_PI_OUTPUT_LIMIT, CSR_PI_OUTPUT_LIMIT);
-
-    /*
-     * Bringup 阶段禁止目标方向内反向刹车。
-     * 低速时反向输出会制造前后抽动，先让控制器靠降 PWM / 停止减速。
-     */
-    if ((target > 0.0f) && (output < 0.0f))
-    {
-        output = 0.0f;
-        if (g_integral_state[channel] > 0.0f)
-        {
-            g_integral_state[channel] *= 0.7f;
-        }
-    }
-    else if ((target < 0.0f) && (output > 0.0f))
-    {
-        output = 0.0f;
-        if (g_integral_state[channel] < 0.0f)
-        {
-            g_integral_state[channel] *= 0.7f;
-        }
-    }
+    correction = g_kp[channel] * error;
+    correction += g_ki[channel] * g_integral_state[channel];
+    correction += g_kd[channel] * ((error - g_prev_error[channel]) / (CSR_CONTROL_PERIOD_MS / 1000.0f));
+    correction = csr_clampf(correction, -CSR_PI_CORRECTION_LIMIT, CSR_PI_CORRECTION_LIMIT);
 
     g_prev_error[channel] = error;
 
-    effective_output = output * (float)g_csr_motor_dir_sign[channel];
+    base_pwm = (csr_absf(target) / 0.10f) * CSR_FEEDFORWARD_PWM_AT_0_10_MPS;
+    base_pwm = csr_clampf(base_pwm, 0.0f, (float)CSR_EFFECTIVE_PWM_MAX);
+
+    semantic_output = ((target > 0.0f) ? base_pwm : -base_pwm) + correction;
+    semantic_output = csr_clampf(semantic_output, -(float)CSR_INPUT_PWM_MAX, (float)CSR_INPUT_PWM_MAX);
+
+    effective_output = semantic_output * (float)g_csr_motor_dir_sign[channel];
     return csr_float_to_pwm(effective_output);
 }
 
@@ -301,9 +258,6 @@ static void csr_control_tick(void)
             g_target_vel[index],
             g_measured_vel[index]
         );
-        next_pwm = csr_apply_effective_floor(next_pwm);
-        next_pwm = csr_slew_pwm(g_output_pwm[index], next_pwm);
-
         g_output_pwm[index] = next_pwm;
         csr_motor_set((csr_channel_t)index, g_output_pwm[index]);
     }

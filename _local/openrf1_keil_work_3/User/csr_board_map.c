@@ -21,13 +21,10 @@ static const char *g_channel_notes[CSR_CHANNEL_COUNT] =
  * - Channel order is CN1/LR, CN2/LF, CN3/RR, CN4/RF.
  * - M,<ch>,<pwm> remains a raw per-channel diagnostic command.
  * - W,a,b,c,d is the chassis-facing command and applies motor_dir_sign.
- * - CN1/CN3 are mounted opposite to CN2/CN4 in the current chassis, so W+
- *   must drive them with raw negative PWM.
+ * - Current W+ maps all four channels to the same low-level H-bridge phase
+ *   (IN1=SET).  csr_motor_drv normalizes compare values so the same signed
+ *   PWM magnitude means the same effective duty on every channel.
  * - Encoder signs are defined after the W-layer motor sign correction.
- *
- * 2026-04-19 raw sign retest:
- * - CN1 raw -500 -> ENC delta negative, so semantic W+ needs encoder -1.
- * - CN3 raw -500 -> ENC delta positive, so semantic W+ keeps encoder +1.
  */
 int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT] = { -1, 1, -1, 1 };
 int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT] = { -1, -1, 1, 1 };
