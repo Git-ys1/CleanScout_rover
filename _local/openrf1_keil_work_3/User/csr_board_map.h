@@ -38,18 +38,17 @@ typedef enum
 #define CSR_WHEEL_SPEED_SCALE           (CSR_PI_CONST * CSR_WHEEL_DIAMETER_M * CSR_CONTROL_HZ / CSR_WHEEL_RESOLUTION)
 
 #define CSR_INPUT_PWM_MAX               1000
+#define CSR_EFFECTIVE_PWM_MIN           160
 #define CSR_EFFECTIVE_PWM_MAX           700
 #define CSR_TIM8_PWM_TOP                2000U
 
-#define CSR_FEEDFORWARD_PWM_AT_0_10_MPS 260.0f
-#define CSR_PI_CORRECTION_LIMIT         120.0f
-
-#define CSR_PI_KP_DEFAULT               600.0f
-#define CSR_PI_KI_DEFAULT               60.0f
+#define CSR_PI_KP_DEFAULT               2000.0f
+#define CSR_PI_KI_DEFAULT               300.0f
 #define CSR_PI_KD_DEFAULT               0.0f
 #define CSR_PI_INTEGRAL_LIMIT           0.30f
-#define CSR_PI_OUTPUT_LIMIT             CSR_PI_CORRECTION_LIMIT
+#define CSR_PI_OUTPUT_LIMIT             1000.0f
 #define CSR_VEL_FILTER_ALPHA            0.35f
+#define CSR_PI_PWM_STEP_LIMIT           160
 
 extern int8_t g_csr_motor_dir_sign[CSR_CHANNEL_COUNT];
 extern int8_t g_csr_encoder_dir_sign[CSR_CHANNEL_COUNT];

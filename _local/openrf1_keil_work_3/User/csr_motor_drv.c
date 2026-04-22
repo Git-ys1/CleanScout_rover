@@ -2,6 +2,25 @@
 
 static int16_t g_last_pwm[CSR_CHANNEL_COUNT] = {0};
 
+#define CSR_DRIVE_DOMINANT_MAX 2000U
+#define CSR_UNIFIED_DRIVE_MIN 1000U
+
+static const uint16_t g_effective_pwm_min_pos[CSR_CHANNEL_COUNT] = {
+    /* Keep all four motors on the same bringup floor. */
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN
+};
+
+static const uint16_t g_effective_pwm_min_neg[CSR_CHANNEL_COUNT] = {
+    /* Keep reverse symmetric with forward. */
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN
+};
+
 static void csr_motor_write_raw(csr_channel_t channel, BitAction in1_level, uint16_t compare)
 {
     if (compare > CSR_TIM8_PWM_TOP)
@@ -32,8 +51,19 @@ static void csr_motor_write_raw(csr_channel_t channel, BitAction in1_level, uint
     }
 }
 
+static uint16_t csr_motor_effective_min(csr_channel_t channel, int16_t signed_pwm)
+{
+    if (channel >= CSR_CHANNEL_COUNT)
+    {
+        return CSR_EFFECTIVE_PWM_MIN;
+    }
+    return (signed_pwm >= 0) ? g_effective_pwm_min_pos[channel] : g_effective_pwm_min_neg[channel];
+}
+
 static uint16_t csr_motor_scale_drive(uint16_t magnitude)
 {
+    uint32_t scaled;
+
     if (magnitude == 0U)
     {
         return 0U;
@@ -44,57 +74,20 @@ static uint16_t csr_motor_scale_drive(uint16_t magnitude)
         magnitude = CSR_INPUT_PWM_MAX;
     }
 
-    if (magnitude > CSR_TIM8_PWM_TOP)
+    scaled = CSR_UNIFIED_DRIVE_MIN;
+    scaled += ((uint32_t)(magnitude - 1U) * (uint32_t)(CSR_DRIVE_DOMINANT_MAX - CSR_UNIFIED_DRIVE_MIN)) / (uint32_t)(CSR_INPUT_PWM_MAX - 1);
+
+    if (scaled > CSR_TIM8_PWM_TOP)
     {
-        magnitude = CSR_TIM8_PWM_TOP;
+        scaled = CSR_TIM8_PWM_TOP;
     }
 
-    return magnitude;
-}
-
-static uint16_t csr_motor_normalize_channel_drive(BitAction in1_level, uint16_t drive)
-{
-    const uint16_t reset_phase_offset = 1100U;
-
-    if (drive == 0U)
-    {
-        return 0U;
-    }
-
-    /*
-     * The IN1=RESET phase has the opposite duty slope on this board:
-     * lower raw magnitude produces stronger drive.  Normalize that here so
-     * the controller can use the same monotonic PWM command in both
-     * directions and on all wheels.
-     */
-    if (in1_level == Bit_RESET)
-    {
-        if (drive >= reset_phase_offset)
-        {
-            return 1U;
-        }
-        return (uint16_t)(reset_phase_offset - drive);
-    }
-
-    return drive;
+    return (uint16_t)scaled;
 }
 
 static void csr_motor_apply_unified(csr_channel_t channel, BitAction in1_level, uint16_t magnitude)
 {
     uint16_t drive = csr_motor_scale_drive(magnitude);
-    drive = csr_motor_normalize_channel_drive(in1_level, drive);
-
-    /*
-     * Board-level truth from bring-up: for this AT8236 wiring, a non-zero
-     * drive must use the high compare side. Direction is selected by IN1.
-     * This keeps the same signed PWM magnitude mapped to the same TIM8
-     * compare value on all four channels.
-     */
-    if (drive != 0U)
-    {
-        drive = (uint16_t)(CSR_TIM8_PWM_TOP - drive);
-    }
-
     csr_motor_write_raw(channel, in1_level, drive);
 }
 
@@ -265,6 +258,8 @@ void csr_motor_stop_all(void)
 
 void csr_motor_set(csr_channel_t channel, int16_t signed_pwm)
 {
+    uint16_t magnitude;
+
     if (channel >= CSR_CHANNEL_COUNT)
     {
         return;
@@ -283,6 +278,12 @@ void csr_motor_set(csr_channel_t channel, int16_t signed_pwm)
     {
         csr_motor_stop(channel);
         return;
+    }
+
+    magnitude = (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm);
+    if (magnitude < csr_motor_effective_min(channel, signed_pwm))
+    {
+        signed_pwm = (signed_pwm > 0) ? (int16_t)csr_motor_effective_min(channel, signed_pwm) : (int16_t)(-csr_motor_effective_min(channel, signed_pwm));
     }
 
     switch (channel)
