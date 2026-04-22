@@ -3,37 +3,22 @@
 static int16_t g_last_pwm[CSR_CHANNEL_COUNT] = {0};
 
 #define CSR_DRIVE_DOMINANT_MAX 2000U
+#define CSR_UNIFIED_DRIVE_MIN 1000U
 
 static const uint16_t g_effective_pwm_min_pos[CSR_CHANNEL_COUNT] = {
-    /* LR, LF, RR, RF raw positive minimums. */
-    120U,
-    30U,
-    120U,
-    120U
+    /* Keep all four motors on the same bringup floor. */
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN
 };
 
 static const uint16_t g_effective_pwm_min_neg[CSR_CHANNEL_COUNT] = {
-    /* LR, LF, RR, RF raw negative minimums. */
-    30U,
-    120U,
-    120U,
-    120U
-};
-
-static const uint16_t g_drive_dominant_min_pos[CSR_CHANNEL_COUNT] = {
-    /* LR, LF, RR, RF raw positive drive floors. */
-    1000U,
-    550U,
-    1000U,
-    1200U
-};
-
-static const uint16_t g_drive_dominant_min_neg[CSR_CHANNEL_COUNT] = {
-    /* LR, LF, RR, RF raw negative drive floors. */
-    550U,
-    1000U,
-    1100U,
-    1000U
+    /* Keep reverse symmetric with forward. */
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN,
+    CSR_EFFECTIVE_PWM_MIN
 };
 
 static void csr_motor_write_raw(csr_channel_t channel, BitAction in1_level, uint16_t compare)
@@ -75,10 +60,9 @@ static uint16_t csr_motor_effective_min(csr_channel_t channel, int16_t signed_pw
     return (signed_pwm >= 0) ? g_effective_pwm_min_pos[channel] : g_effective_pwm_min_neg[channel];
 }
 
-static uint16_t csr_motor_scale_drive(csr_channel_t channel, int16_t signed_pwm, uint16_t magnitude)
+static uint16_t csr_motor_scale_drive(uint16_t magnitude)
 {
     uint32_t scaled;
-    uint16_t drive_min;
 
     if (magnitude == 0U)
     {
@@ -90,16 +74,8 @@ static uint16_t csr_motor_scale_drive(csr_channel_t channel, int16_t signed_pwm,
         magnitude = CSR_INPUT_PWM_MAX;
     }
 
-    if (channel < CSR_CHANNEL_COUNT)
-    {
-        drive_min = (signed_pwm >= 0) ? g_drive_dominant_min_pos[channel] : g_drive_dominant_min_neg[channel];
-    }
-    else
-    {
-        drive_min = 950U;
-    }
-    scaled = drive_min;
-    scaled += ((uint32_t)(magnitude - 1U) * (uint32_t)(CSR_DRIVE_DOMINANT_MAX - drive_min)) / (uint32_t)(CSR_INPUT_PWM_MAX - 1);
+    scaled = CSR_UNIFIED_DRIVE_MIN;
+    scaled += ((uint32_t)(magnitude - 1U) * (uint32_t)(CSR_DRIVE_DOMINANT_MAX - CSR_UNIFIED_DRIVE_MIN)) / (uint32_t)(CSR_INPUT_PWM_MAX - 1);
 
     if (scaled > CSR_TIM8_PWM_TOP)
     {
@@ -109,19 +85,15 @@ static uint16_t csr_motor_scale_drive(csr_channel_t channel, int16_t signed_pwm,
     return (uint16_t)scaled;
 }
 
-static void csr_motor_apply_high_dominant(csr_channel_t channel, BitAction in1_level, uint16_t drive)
+static void csr_motor_apply_unified(csr_channel_t channel, BitAction in1_level, uint16_t magnitude)
 {
+    uint16_t drive = csr_motor_scale_drive(magnitude);
     csr_motor_write_raw(channel, in1_level, drive);
-}
-
-static void csr_motor_apply_low_dominant(csr_channel_t channel, BitAction in1_level, uint16_t drive)
-{
-    csr_motor_write_raw(channel, in1_level, (uint16_t)(CSR_TIM8_PWM_TOP - drive));
 }
 
 static void csr_motor_apply_cn1(int16_t signed_pwm)
 {
-    uint16_t drive = csr_motor_scale_drive(CSR_CHANNEL_CN1, signed_pwm, (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm));
+    uint16_t magnitude = (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm);
 
     if (signed_pwm == 0)
     {
@@ -136,17 +108,17 @@ static void csr_motor_apply_cn1(int16_t signed_pwm)
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN1, Bit_RESET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_RESET, magnitude);
     }
     else
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN1, Bit_SET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_SET, magnitude);
     }
 }
 
 static void csr_motor_apply_cn2(int16_t signed_pwm)
 {
-    uint16_t drive = csr_motor_scale_drive(CSR_CHANNEL_CN2, signed_pwm, (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm));
+    uint16_t magnitude = (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm);
 
     if (signed_pwm == 0)
     {
@@ -160,17 +132,17 @@ static void csr_motor_apply_cn2(int16_t signed_pwm)
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN2, Bit_SET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN2, Bit_SET, magnitude);
     }
     else
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN2, Bit_RESET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN2, Bit_RESET, magnitude);
     }
 }
 
 static void csr_motor_apply_cn3(int16_t signed_pwm)
 {
-    uint16_t drive = csr_motor_scale_drive(CSR_CHANNEL_CN3, signed_pwm, (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm));
+    uint16_t magnitude = (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm);
 
     if (signed_pwm == 0)
     {
@@ -184,17 +156,17 @@ static void csr_motor_apply_cn3(int16_t signed_pwm)
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN3, Bit_SET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN3, Bit_SET, magnitude);
     }
     else
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN3, Bit_RESET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN3, Bit_RESET, magnitude);
     }
 }
 
 static void csr_motor_apply_cn4(int16_t signed_pwm)
 {
-    uint16_t drive = csr_motor_scale_drive(CSR_CHANNEL_CN4, signed_pwm, (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm));
+    uint16_t magnitude = (uint16_t)((signed_pwm > 0) ? signed_pwm : -signed_pwm);
 
     if (signed_pwm == 0)
     {
@@ -208,11 +180,11 @@ static void csr_motor_apply_cn4(int16_t signed_pwm)
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_high_dominant(CSR_CHANNEL_CN4, Bit_RESET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_RESET, magnitude);
     }
     else
     {
-        csr_motor_apply_low_dominant(CSR_CHANNEL_CN4, Bit_SET, drive);
+        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_SET, magnitude);
     }
 }
 
