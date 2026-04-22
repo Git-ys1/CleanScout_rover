@@ -54,26 +54,11 @@ static uint16_t csr_motor_scale_drive(uint16_t magnitude)
 
 static uint16_t csr_motor_normalize_channel_drive(BitAction in1_level, uint16_t drive)
 {
-    const uint16_t reset_phase_offset = 1100U;
+    (void)in1_level;
 
     if (drive == 0U)
     {
         return 0U;
-    }
-
-    /*
-     * The IN1=RESET phase has the opposite duty slope on this board:
-     * lower raw magnitude produces stronger drive.  Normalize that here so
-     * the controller can use the same monotonic PWM command in both
-     * directions and on all wheels.
-     */
-    if (in1_level == Bit_RESET)
-    {
-        if (drive >= reset_phase_offset)
-        {
-            return 1U;
-        }
-        return (uint16_t)(reset_phase_offset - drive);
     }
 
     return drive;
@@ -108,18 +93,16 @@ static void csr_motor_apply_cn1(int16_t signed_pwm)
         return;
     }
 
-    /* CN1 truth:
-     * +pwm should be the physical "positive" direction,
-     * which currently maps to IN1=RESET and IN2 high-dominant.
-     * -pwm is the opposite pair.
+    /* Unified truth:
+     * +pwm uses the common forward H-bridge phase on every wheel.
      */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_RESET, magnitude);
+        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_SET, magnitude);
     }
     else
     {
-        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_SET, magnitude);
+        csr_motor_apply_unified(CSR_CHANNEL_CN1, Bit_RESET, magnitude);
     }
 }
 
@@ -133,10 +116,6 @@ static void csr_motor_apply_cn2(int16_t signed_pwm)
         return;
     }
 
-    /* CN2 truth:
-     * +pwm -> IN1=SET and IN2 low-dominant
-     * -pwm -> opposite pair
-     */
     if (signed_pwm > 0)
     {
         csr_motor_apply_unified(CSR_CHANNEL_CN2, Bit_SET, magnitude);
@@ -157,10 +136,6 @@ static void csr_motor_apply_cn3(int16_t signed_pwm)
         return;
     }
 
-    /* CN3 aligned truth:
-     * +pwm -> unified positive direction
-     * -pwm -> unified negative direction
-     */
     if (signed_pwm > 0)
     {
         csr_motor_apply_unified(CSR_CHANNEL_CN3, Bit_SET, magnitude);
@@ -181,17 +156,13 @@ static void csr_motor_apply_cn4(int16_t signed_pwm)
         return;
     }
 
-    /* CN4 aligned truth:
-     * +pwm -> unified positive direction
-     * -pwm -> unified negative direction
-     */
     if (signed_pwm > 0)
     {
-        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_RESET, magnitude);
+        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_SET, magnitude);
     }
     else
     {
-        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_SET, magnitude);
+        csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_RESET, magnitude);
     }
 }
 
