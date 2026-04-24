@@ -3,8 +3,11 @@
   <arg name="rf1_fallback_port" default="/dev/ttyUSB1" />
   <arg name="rf1_baud" default="115200" />
   <arg name="send_rate_hz" default="50.0" />
-  <arg name="cmd_vel_timeout" default="1.0" />
+  <arg name="cmd_vel_timeout" default="0.4" />
   <arg name="publish_odom_tf" default="true" />
+  <arg name="min_abs_vx_cmd" default="0.08" />
+  <arg name="min_abs_vy_cmd" default="0.0" />
+  <arg name="min_abs_wz_cmd" default="0.12" />
 
   <node pkg="csrpi_base_bridge" type="cmdvel_to_rf1.py" name="cmdvel_to_rf1" output="screen">
     <param name="wb_m" value="0.1905" />
@@ -15,6 +18,8 @@
     <param name="max_vx" value="0.20" />
     <param name="max_vy" value="0.15" />
     <param name="max_wz" value="0.35" />
+    <param name="min_wheel_ms" value="0.12" />
+    <param name="max_wheel_ms" value="0.30" />
   </node>
 
   <node pkg="csrpi_base_bridge" type="rf1_serial_bridge.py" name="rf1_serial_bridge" output="screen">
@@ -32,5 +37,8 @@
     <param name="odom_frame" value="odom" />
     <param name="base_frame" value="base_link" />
     <param name="publish_tf" value="$(arg publish_odom_tf)" />
+
+    <param name="base_yaw_offset" value="3.14159" />
+
   </node>
 </launch>

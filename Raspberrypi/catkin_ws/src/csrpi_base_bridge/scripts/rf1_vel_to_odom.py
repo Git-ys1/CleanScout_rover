@@ -16,6 +16,7 @@ class Rf1VelToOdom:
         self.odom_frame = rospy.get_param("~odom_frame", "odom")
         self.base_frame = rospy.get_param("~base_frame", "base_link")
         self.publish_tf = bool(rospy.get_param("~publish_tf", False))
+        self.base_yaw_offset = float(rospy.get_param("~base_yaw_offset", 0.0))
 
         self.x = 0.0
         self.y = 0.0
@@ -56,7 +57,8 @@ class Rf1VelToOdom:
         self.publish_odom(now, vx, vy, wz)
 
     def publish_odom(self, stamp, vx, vy, wz):
-        quat = tf.transformations.quaternion_from_euler(0.0, 0.0, self.yaw)
+        odom_yaw = self.yaw + self.base_yaw_offset
+        quat = tf.transformations.quaternion_from_euler(0.0, 0.0, odom_yaw)
 
         msg = Odometry()
         msg.header.stamp = stamp
