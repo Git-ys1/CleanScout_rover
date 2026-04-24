@@ -238,7 +238,8 @@ class Rf1SerialBridge:
         rate = rospy.Rate(self.send_rate_hz)
         while not rospy.is_shutdown():
             if not self.ensure_connection():
-                break
+                rate.sleep()
+                continue
 
             frame = self.format_targets_frame(self.last_targets)
             try:
@@ -246,6 +247,8 @@ class Rf1SerialBridge:
             except (AttributeError, serial.SerialException) as exc:
                 self.publish_status(f"RF1 serial write failed: {exc}")
                 self.close_serial()
+                rate.sleep()
+                continue
 
             rate.sleep()
 
