@@ -54,13 +54,19 @@ sync_backend_tree
 
 cd "${BACKEND_ROOT}"
 npm ci
-npx prisma generate
-npx prisma migrate deploy
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Environment file ${ENV_FILE} was not found. Create it first and point DATABASE_URL to a path outside the repo, for example ${DATA_ROOT}/dev.db" >&2
   exit 1
 fi
+
+set -a
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
+set +a
+
+npx prisma generate
+npx prisma migrate deploy
 
 render_systemd_unit
 ${SUDO} systemctl daemon-reload

@@ -12,6 +12,7 @@ fi
 APP_ROOT="${APP_ROOT:-/opt/vline-backend}"
 BACKEND_ROOT="${BACKEND_ROOT:-${APP_ROOT}/backend}"
 SERVICE_NAME="${SERVICE_NAME:-vline-backend}"
+ENV_FILE="${ENV_FILE:-/etc/vline-backend.env}"
 SUDO=''
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -34,6 +35,17 @@ sync_backend_tree
 
 cd "${BACKEND_ROOT}"
 npm ci
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "Environment file ${ENV_FILE} was not found. Create it before running Prisma commands." >&2
+  exit 1
+fi
+
+set -a
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
+set +a
+
 npx prisma generate
 npx prisma migrate deploy
 ${SUDO} systemctl restart "${SERVICE_NAME}"
@@ -41,3 +53,4 @@ ${SUDO} systemctl restart "${SERVICE_NAME}"
 echo "Backend update finished."
 echo "Backend directory: ${BACKEND_ROOT}"
 echo "systemd service: ${SERVICE_NAME}"
+echo "Environment file: ${ENV_FILE}"
