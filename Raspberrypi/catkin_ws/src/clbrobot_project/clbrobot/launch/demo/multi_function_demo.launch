@@ -1,0 +1,17 @@
+<launch>
+  <arg name="enable_edge_relay" default="false" />
+  <arg name="edge_url" default="ws://10.44.63.190:3000/edge/ros" />
+  <arg name="edge_device_id" default="csrpi-001" />
+  <arg name="edge_device_token" default="" />
+
+  <include file="$(find clbrobot)/launch/bringup_rf1_min.launch" />
+
+  <include file="$(find csrpi_fan_bridge)/launch/fan_dual_lid_bridge.launch" />
+
+  <include file="$(find csrpi_edge_relay)/launch/edge_relay.launch">
+    <arg name="enabled" value="$(arg enable_edge_relay)" />
+    <arg name="url" value="$(arg edge_url)" />
+    <arg name="device_id" value="$(arg edge_device_id)" />
+    <arg name="device_token" value="$(arg edge_device_token)" />
+  </include>
+</launch>

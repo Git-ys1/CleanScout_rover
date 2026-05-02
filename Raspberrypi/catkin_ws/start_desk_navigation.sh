@@ -6,6 +6,7 @@ ROSCORE_LOG="/tmp/c331_nav_roscore.log"
 RF1_LOG="/tmp/c331_nav_rf1.log"
 IMU_LOG="/tmp/c331_nav_imu.log"
 LIDAR_LOG="/tmp/c331_nav_lidar.log"
+LSM_LOG="/tmp/c331_nav_lsm.log"
 NAV_LOG="/tmp/c331_nav_406.log"
 
 cleanup_on_error() {
@@ -91,15 +92,6 @@ if ! wait_for_topic /rf1/vel 8; then
   exit 1
 fi
 
-echo "[c331-nav] 等待 /odom"
-if ! wait_for_topic /odom 8; then
-  echo "[c331-nav] ERROR: /odom 未就绪"
-  if ! kill -0 "$RF1_PID" 2>/dev/null; then
-    echo "[c331-nav] ERROR: bringup_rf1_min.launch 已退出，请检查 $RF1_LOG"
-  fi
-  exit 1
-fi
-
 echo "[c331-nav] 启动 imu_only.launch"
 IMU_PID=$(launch_bg "$IMU_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch')
 
@@ -124,12 +116,24 @@ if ! wait_for_topic /scan 8; then
   exit 1
 fi
 
+echo "[c331-nav] 启动 laser_scan_matcher_406.launch"
+LSM_PID=$(launch_bg "$LSM_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/slam/laser_scan_matcher_406.launch')
+
+echo "[c331-nav] 等待 /odom_lsm"
+if ! wait_for_topic /odom_lsm 8; then
+  echo "[c331-nav] ERROR: /odom_lsm 未就绪"
+  if ! kill -0 "$LSM_PID" 2>/dev/null; then
+    echo "[c331-nav] ERROR: laser_scan_matcher_406.launch 已退出，请检查 $LSM_LOG"
+  fi
+  exit 1
+fi
+
 echo "[c331-nav] 启动 nav/navigation_406_rf1.launch"
 NAV_PID=$(launch_bg "$NAV_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1.launch')
 
-echo "[c331-nav] 等待 /odom"
-if ! wait_for_topic /odom 3; then
-  echo "[c331-nav] ERROR: /odom 未就绪"
+echo "[c331-nav] 等待 /odom_lsm"
+if ! wait_for_topic /odom_lsm 3; then
+  echo "[c331-nav] ERROR: /odom_lsm 未就绪"
   if ! kill -0 "$NAV_PID" 2>/dev/null; then
     echo "[c331-nav] ERROR: navigation_406_rf1.launch 已退出，请检查 $NAV_LOG"
   fi

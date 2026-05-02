@@ -1,0 +1,39 @@
+<launch>
+  <arg name="relay_gpio" default="17" />
+  <arg name="fan_a_gpio" default="18" />
+  <arg name="fan_b_gpio" default="19" />
+  <arg name="fan_a_fg_in_gpio" default="23" />
+  <arg name="fan_a_fg_out_gpio" default="24" />
+  <arg name="fan_b_fg_in_gpio" default="25" />
+  <arg name="fan_b_fg_out_gpio" default="16" />
+  <arg name="pwm_freq_hz" default="25000" />
+  <arg name="enable_delay" default="0.3" />
+  <arg name="disable_delay" default="0.2" />
+  <arg name="servo_gpio" default="12" />
+  <arg name="open_angle_deg" default="90.0" />
+  <arg name="close_angle_deg" default="180.0" />
+  <arg name="move_settle_s" default="0.35" />
+  <arg name="release_after_move" default="true" />
+  <arg name="fg_pulses_per_rev" default="2.0" />
+  <arg name="fg_publish_interval_s" default="1.0" />
+
+  <node pkg="csrpi_fan_bridge" type="fan_dual_bridge.py" name="csrpi_fan_dual_bridge" output="screen">
+    <param name="relay_gpio" value="$(arg relay_gpio)" />
+    <param name="fan_a_gpio" value="$(arg fan_a_gpio)" />
+    <param name="fan_b_gpio" value="$(arg fan_b_gpio)" />
+    <param name="fan_a_fg_in_gpio" value="$(arg fan_a_fg_in_gpio)" />
+    <param name="fan_a_fg_out_gpio" value="$(arg fan_a_fg_out_gpio)" />
+    <param name="fan_b_fg_in_gpio" value="$(arg fan_b_fg_in_gpio)" />
+    <param name="fan_b_fg_out_gpio" value="$(arg fan_b_fg_out_gpio)" />
+    <param name="pwm_freq_hz" value="$(arg pwm_freq_hz)" />
+    <param name="enable_delay" value="$(arg enable_delay)" />
+    <param name="disable_delay" value="$(arg disable_delay)" />
+    <param name="servo_gpio" value="$(arg servo_gpio)" />
+    <param name="open_angle_deg" value="$(arg open_angle_deg)" />
+    <param name="close_angle_deg" value="$(arg close_angle_deg)" />
+    <param name="move_settle_s" value="$(arg move_settle_s)" />
+    <param name="release_after_move" value="$(arg release_after_move)" />
+    <param name="fg_pulses_per_rev" value="$(arg fg_pulses_per_rev)" />
+    <param name="fg_publish_interval_s" value="$(arg fg_publish_interval_s)" />
+  </node>
+</launch>

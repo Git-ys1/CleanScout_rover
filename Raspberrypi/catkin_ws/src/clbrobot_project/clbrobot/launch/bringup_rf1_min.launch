@@ -32,13 +32,10 @@
     <param name="reconnect_delay" value="1.0" />
   </node>
 
-  <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
+ <!-- <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
     <param name="k_m" value="0.18525" />
     <param name="odom_frame" value="odom" />
     <param name="base_frame" value="base_link" />
     <param name="publish_tf" value="$(arg publish_odom_tf)" />
-
-    <param name="base_yaw_offset" value="3.14159" />
-
-  </node>
+  </node>-->
 </launch>

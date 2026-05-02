@@ -9,5 +9,5 @@
   <param name="shield_start_angle"     type="int"    value="0"/>
   <param name="shield_end_angle"     type="int"    value="0"/>
   </node>
- <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser" args="0.04 0 0.18 0.7853 0 0  /base_link /laser  100"/>
+ <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser" args="0.04 0 0.18 0 0 0 /base_link /laser 100"/>
 </launch>

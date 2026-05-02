@@ -1,0 +1,17 @@
+<launch>
+  <arg name="port" default="/dev/ttyACM0" />
+  <arg name="baudrate" default="115200" />
+  <arg name="read_timeout" default="0.2" />
+  <arg name="write_timeout" default="0.5" />
+  <arg name="reconnect_delay" default="1.0" />
+  <arg name="offline_timeout" default="1.0" />
+
+  <node pkg="csrpi_openmv_bridge" type="openmv_usb_bridge.py" name="openmv_usb_bridge" output="screen">
+    <param name="port" value="$(arg port)" />
+    <param name="baudrate" value="$(arg baudrate)" />
+    <param name="read_timeout" value="$(arg read_timeout)" />
+    <param name="write_timeout" value="$(arg write_timeout)" />
+    <param name="reconnect_delay" value="$(arg reconnect_delay)" />
+    <param name="offline_timeout" value="$(arg offline_timeout)" />
+  </node>
+</launch>

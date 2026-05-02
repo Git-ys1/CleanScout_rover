@@ -15,5 +15,6 @@ catkin_install_python(PROGRAMS
   scripts/fan_dual_test.py
   scripts/fan_dual_bridge.py
   scripts/fan_dual_fg_test.py
+  scripts/servo_gpio12_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -10,6 +10,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, LaserScan
+from std_msgs.msg import Bool, Float32, String
 
 try:
     import websocket
@@ -44,6 +45,13 @@ class EdgeRelay:
         self.last_odom = None
         self.last_imu = None
         self.last_scan = None
+        self.last_fans_enabled = False
+        self.last_fan_a_pwm = 0.0
+        self.last_fan_b_pwm = 0.0
+        self.last_fan_a_rpm = 0.0
+        self.last_fan_b_rpm = 0.0
+        self.last_fan_lid_open = False
+        self.last_fan_summary = ""
         self.last_heartbeat_sent = 0.0
         self.last_telemetry_sent = 0.0
         self.cmd_hold_until = 0.0
@@ -51,9 +59,19 @@ class EdgeRelay:
         self.stop_requested = False
 
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=20)
+        self.fans_enable_pub = rospy.Publisher("/fans/enable", Bool, queue_size=10)
+        self.fan_a_pwm_pub = rospy.Publisher("/fan_a/pwm_percent", Float32, queue_size=10)
+        self.fan_b_pwm_pub = rospy.Publisher("/fan_b/pwm_percent", Float32, queue_size=10)
         rospy.Subscriber("/odom", Odometry, self.odom_callback, queue_size=20)
         rospy.Subscriber("/imu/data", Imu, self.imu_callback, queue_size=20)
         rospy.Subscriber("/scan", LaserScan, self.scan_callback, queue_size=5)
+        rospy.Subscriber("/fans/enable", Bool, self.fans_enable_callback, queue_size=10)
+        rospy.Subscriber("/fan_a/pwm_percent", Float32, self.fan_a_pwm_callback, queue_size=10)
+        rospy.Subscriber("/fan_b/pwm_percent", Float32, self.fan_b_pwm_callback, queue_size=10)
+        rospy.Subscriber("/fan_a/rpm", Float32, self.fan_a_rpm_callback, queue_size=10)
+        rospy.Subscriber("/fan_b/rpm", Float32, self.fan_b_rpm_callback, queue_size=10)
+        rospy.Subscriber("/fan_lid/state", Bool, self.fan_lid_state_callback, queue_size=10)
+        rospy.Subscriber("/fans/state_summary", String, self.fan_summary_callback, queue_size=10)
 
     def clamp(self, value, lower, upper):
         if value < lower:
@@ -73,6 +91,27 @@ class EdgeRelay:
 
     def scan_callback(self, msg):
         self.last_scan = msg
+
+    def fans_enable_callback(self, msg):
+        self.last_fans_enabled = bool(msg.data)
+
+    def fan_a_pwm_callback(self, msg):
+        self.last_fan_a_pwm = float(msg.data)
+
+    def fan_b_pwm_callback(self, msg):
+        self.last_fan_b_pwm = float(msg.data)
+
+    def fan_a_rpm_callback(self, msg):
+        self.last_fan_a_rpm = float(msg.data)
+
+    def fan_b_rpm_callback(self, msg):
+        self.last_fan_b_rpm = float(msg.data)
+
+    def fan_lid_state_callback(self, msg):
+        self.last_fan_lid_open = bool(msg.data)
+
+    def fan_summary_callback(self, msg):
+        self.last_fan_summary = msg.data
 
     def odom_payload(self):
         if self.last_odom is None:
@@ -179,7 +218,23 @@ class EdgeRelay:
             "odom": self.odom_payload(),
             "imu": self.imu_payload(),
             "scanSummary": self.scan_summary_payload(),
+            "fans": self.fan_payload(),
             "ts": self.now_ms(),
+        }
+
+    def fan_payload(self):
+        return {
+            "enabled": self.last_fans_enabled,
+            "fanA": {
+                "pwm": self.last_fan_a_pwm,
+                "rpm": self.last_fan_a_rpm,
+            },
+            "fanB": {
+                "pwm": self.last_fan_b_pwm,
+                "rpm": self.last_fan_b_rpm,
+            },
+            "lidOpen": self.last_fan_lid_open,
+            "summary": self.last_fan_summary,
         }
 
     def send_json(self, payload):
@@ -222,6 +277,13 @@ class EdgeRelay:
             self.stop_requested = True
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
+        elif op == "fan_enable":
+            self.fans_enable_pub.publish(Bool(data=bool(payload.get("enabled", False))))
+        elif op == "fan_pwm":
+            fan_a = self.clamp(float(payload.get("fanA", 0.0)), 0.0, 100.0)
+            fan_b = self.clamp(float(payload.get("fanB", 0.0)), 0.0, 100.0)
+            self.fan_a_pwm_pub.publish(Float32(data=fan_a))
+            self.fan_b_pwm_pub.publish(Float32(data=fan_b))
 
     def safe_hold_ms(self, payload):
         try:

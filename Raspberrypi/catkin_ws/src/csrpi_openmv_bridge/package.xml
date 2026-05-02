@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>csrpi_openmv_bridge</name>
+  <version>0.1.0</version>
+  <description>OpenMV USB serial ROS bridge for Raspberry Pi</description>
+
+  <maintainer email="clbrobot@example.com">clbrobot</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>python3-serial</exec_depend>
+
+  <export />
+</package>
