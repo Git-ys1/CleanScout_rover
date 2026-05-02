@@ -71,6 +71,7 @@ function buildTelemetrySummary(deviceId, payload, cache) {
     transport: 'edge-relay',
     lastUpdate: toIsoTime(payload.ts),
     telemetry: cache.getTelemetrySummary(),
+    fans: cache.getFanState(),
     scanSummary: payload.scanSummary || null,
   }
 }
@@ -272,6 +273,32 @@ export function createEdgeRelayHub(config, cache) {
     })
   }
 
+  async function handleFanTelemetry(session, payload) {
+    const timestamp = toIsoTime(payload?.ts)
+    session.lastSeenAt = new Date(timestamp).getTime()
+    session.lastTelemetryAt = timestamp
+
+    cache.updateEdgeFanTelemetry(payload, timestamp)
+
+    await prisma.edgeDevice.update({
+      where: { deviceId: session.deviceId },
+      data: {
+        lastSeenAt: toDate(timestamp),
+      },
+    })
+
+    await prisma.deviceCache.upsert({
+      where: { deviceId: session.deviceId },
+      update: {
+        summaryJson: stringifyJson(buildTelemetrySummary(session.deviceId, payload, cache), {}),
+      },
+      create: {
+        deviceId: session.deviceId,
+        summaryJson: stringifyJson(buildTelemetrySummary(session.deviceId, payload, cache), {}),
+      },
+    })
+  }
+
   async function handleAuthenticatedMessage(socket, payload) {
     const session = socket.edgeRelaySession
 
@@ -287,6 +314,11 @@ export function createEdgeRelayHub(config, cache) {
 
     if (payload.op === 'telemetry') {
       await handleTelemetry(session, payload)
+      return
+    }
+
+    if (payload.op === 'fan_telemetry') {
+      await handleFanTelemetry(session, payload)
       return
     }
 
@@ -460,6 +492,65 @@ export function createEdgeRelayHub(config, cache) {
     }
   }
 
+  async function sendFanEnable({ enabled }) {
+    if (!isEnabled()) {
+      throw new Error('edge-relay transport is disabled')
+    }
+
+    const session = getActiveSession()
+
+    if (!session) {
+      throw new Error('edge-relay device is not connected')
+    }
+
+    sequence += 1
+
+    const frame = {
+      op: 'fan_enable',
+      seq: sequence,
+      enabled: Boolean(enabled),
+    }
+
+    sendJson(session.socket, frame)
+    cache.updateFanEnable(enabled)
+
+    return {
+      seq: sequence,
+      frame,
+      deviceId: session.deviceId,
+    }
+  }
+
+  async function sendFanPwm({ fanA, fanB }) {
+    if (!isEnabled()) {
+      throw new Error('edge-relay transport is disabled')
+    }
+
+    const session = getActiveSession()
+
+    if (!session) {
+      throw new Error('edge-relay device is not connected')
+    }
+
+    sequence += 1
+
+    const frame = {
+      op: 'fan_pwm',
+      seq: sequence,
+      fanA: Number(fanA || 0),
+      fanB: Number(fanB || 0),
+    }
+
+    sendJson(session.socket, frame)
+    cache.updateFanPwm({ fanA, fanB })
+
+    return {
+      seq: sequence,
+      frame,
+      deviceId: session.deviceId,
+    }
+  }
+
   function getStatus() {
     const session = getActiveSession()
 
@@ -492,5 +583,7 @@ export function createEdgeRelayHub(config, cache) {
     close,
     getStatus,
     sendCommand,
+    sendFanEnable,
+    sendFanPwm,
   }
 }

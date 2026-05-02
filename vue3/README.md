@@ -229,6 +229,24 @@ backend
 - 本轮先吃 OpenClaw 的 HTTP 兼容面：`/v1/models`、`/v1/chat/completions`、`/v1/responses`
 - 下一轮树莓派联调优先使用 `SSH` 隧道，默认不把 Gateway 暴露到热点局域网
 
+### OpenMV WiFi 图传依据
+
+从当前轮起，OpenMV 前视图像接入也纳入官方依据施工：
+
+- WLAN 官方文档：https://docs.openmv.io/library/network.WLAN.html
+- WiFi MJPEG 示例：https://book.openmv.cc/example/14-WiFi-Shield/mjpeg-streamer.html
+
+当前接法冻结为：
+
+- `前端 -> backend -> OpenMV WiFi 图传`
+- 前端当前不长期直连 OpenMV 图传地址
+- backend 负责 OpenMV 探测与单帧代理：`/api/integrations/openmv/status`、`/api/integrations/openmv/snapshot`
+- 首页当前以“单帧周期刷新”的方式显示前视画面，先保证多端可用和链路稳定
+
+具体 env 与接线说明见：
+
+- `docs/openmv-wifi-adapter.md`
+
 ### ROS 接入依据
 
 从 `V-1.3.3` 起，V 线 ROS 接入按 `main` 中的真实树莓派工作区施工，不再使用失配的旧口径。当前结论为：
@@ -390,7 +408,7 @@ cmd /c npm.cmd run dev
 
 - 前端 API 已切换为 `VITE_API_BASE_URL` / `VITE_WS_BASE_URL`
 - H5 本地联调读取 `.env.h5.local`：`http://127.0.0.1:3000/api`
-- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.22.7.190:3000/api`
+- 微信小程序本地调试读取 `.env.mp-weixin.local`：`http://10.117.77.190:3000/api`
 - `.env.production` 仅作为后续公网占位，当前 WS 仍显式留空
 - `build:h5` 与 `build:mp-weixin` 当前默认用于本地联调出包
 - 正式微信小程序构建改走 `build:mp-weixin:production` 与 `scripts/release-mp-weixin.*`
@@ -506,9 +524,69 @@ public-edge:  frontend -> backend <- WSS /edge/ros <- edge-relay(Pi) -> ROS
 
 - `docs/releases/V-1.7.0/edge-relay-local-convergence.md`
 
+### V-1.7.10 公网 env 交付
+
+`V-1.7.10` 冻结公网 backend env 口径：
+
+- 云端 backend 使用 `APP_PROFILE=public-edge`
+- 云端 ROS 链路使用 `ROS_TRANSPORT=edge-relay`
+- Pi 侧连接 `wss://api.hzhhds.top/edge/ros`
+- `OPENCLAW_BASE_URL=127.0.0.1:18789` 当前因 `OPENCLAW_ENABLED=false` 不参与运行
+- `ROSBRIDGE_URL=127.0.0.1:9090` 当前因 `ROS_TRANSPORT=edge-relay` 不参与运行
+- 生产 `EDGE_DEVICE_BOOTSTRAP_TOKEN` 只通过部署 env 与 C 线交接，不写入仓库
+
+文档位置：
+
+- `docs/releases/V-1.7.0/public-edge-env-handoff.md`
+
+### V-1.7.11 Prisma EdgeDevice migration 热修
+
+`V-1.7.11` 修复云端 seed 阶段 `main.EdgeDevice does not exist`：
+
+- 新增 `backend/prisma/migrations/20260419073000_add_edge_device/migration.sql`
+- 云端继续使用 `npx prisma migrate deploy`
+- `npx prisma db push` 仅作为无法拉取最新代码时的临时应急方案，不作为正式发布纪律
+
+文档位置：
+
+- `docs/releases/V-1.7.0/prisma-edge-device-migration-hotfix.md`
+
+### V-1.7.12 微信小程序 AppID 构建热修
+
+`V-1.7.12` 修复微信小程序构建产物仍为 `touristappid` 的问题：
+
+- `src/manifest.json` 已写入正式 `mp-weixin.appid=wxce1a2e91132f4c41`
+- `scripts/release-mp-weixin.ps1` 和 `scripts/release-mp-weixin.sh` 已增加构建后 appid 校验
+- 微信开发者工具应导入 `dist/build/mp-weixin`
+
+文档位置：
+
+- `docs/releases/V-1.7.0/mp-weixin-appid-hotfix.md`
+
 `V-1.0.1` 文档补充通过标准：
 
 - `docs/releases/V-1.0.1/README.md` 与 `docs/releases/V-1.0.1/V-1.0.1_project_supplement.md` 同时存在
 - 根 `README.md` 已升级为“软件交互系统线”口径
 - 根 `README.md` 已明确主分支追踪规则、官方底层开发手册、后端已纳入系统边界
 - V-1.0.0 release 文档保持历史快照不回写
+## V-1.7.14 FunASR 中文语音输入
+
+从 `V-1.7.14` 起，聊天页新增中文语音输入准备能力，路线冻结为：
+
+```text
+前端录音 -> backend /api/asr/transcribe -> 独立 FunASR 服务 -> 文本回填聊天输入框 -> 用户确认后再发送
+```
+
+当前口径：
+
+- 语音识别引擎：`FunASR`
+- 语言：`zh`
+- 第一版形态：非流式整段录音上传
+- 第一版不自动发送到 `OpenClaw`
+- 音频格式统一由独立 ASR 服务通过 `ffmpeg` 转码
+
+新增文档：
+
+- `docs/releases/V-1.7.14/README.md`
+- `docs/releases/V-1.7.14/funasr-asr-service.md`
+- `services/funasr-asr/README.md`

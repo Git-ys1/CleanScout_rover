@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js'
 import deviceRoutes from './routes/device.js'
 import chatRoutes from './routes/chat.js'
 import adminRoutes from './routes/admin.js'
+import asrRoutes from './routes/asr.js'
 import integrationsRoutes from './routes/integrations.js'
 import rosRoutes from './routes/ros.js'
 import systemRoutes from './routes/system.js'
@@ -72,6 +73,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/device', deviceRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/asr', asrRoutes)
 app.use('/api/integrations', integrationsRoutes)
 app.use('/api/ros', rosRoutes)
 app.use('/api/system', systemRoutes)

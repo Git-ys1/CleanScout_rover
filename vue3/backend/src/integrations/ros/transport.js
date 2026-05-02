@@ -66,6 +66,9 @@ export function createMockTransport(config, cache) {
     async getTelemetrySummary() {
       return cache.getTelemetrySummary()
     },
+    async getFanState() {
+      return cache.getFanState()
+    },
     async sendCommand(command) {
       await publishCommand(command)
       const scheduledStopAt = scheduleRepeatedCommand({
@@ -76,6 +79,31 @@ export function createMockTransport(config, cache) {
       })
 
       return createBaseResult(command, 'mock', scheduledStopAt)
+    },
+    async sendFanEnable({ enabled }) {
+      cache.updateFanEnable(enabled)
+      return {
+        accepted: true,
+        transport: 'mock',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_enable',
+          enabled: Boolean(enabled),
+        },
+      }
+    },
+    async sendFanPwm({ fanA, fanB }) {
+      cache.updateFanPwm({ fanA, fanB })
+      return {
+        accepted: true,
+        transport: 'mock',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_pwm',
+          fanA,
+          fanB,
+        },
+      }
     },
   }
 }
@@ -103,6 +131,9 @@ export function createRosbridgeTransport(config, cache, client) {
     async getTelemetrySummary() {
       return cache.getTelemetrySummary()
     },
+    async getFanState() {
+      return cache.getFanState()
+    },
     async sendCommand(command) {
       await publishCommand(command)
       const scheduledStopAt = scheduleRepeatedCommand({
@@ -113,6 +144,31 @@ export function createRosbridgeTransport(config, cache, client) {
       })
 
       return createBaseResult(command, 'rosbridge', scheduledStopAt)
+    },
+    async sendFanEnable({ enabled }) {
+      await client.publishFanEnable(enabled)
+      return {
+        accepted: true,
+        transport: 'rosbridge',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_enable',
+          enabled: Boolean(enabled),
+        },
+      }
+    },
+    async sendFanPwm({ fanA, fanB }) {
+      await client.publishFanPwm({ fanA, fanB })
+      return {
+        accepted: true,
+        transport: 'rosbridge',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_pwm',
+          fanA,
+          fanB,
+        },
+      }
     },
   }
 }
@@ -134,6 +190,9 @@ export function createEdgeRelayTransport(config, cache, hub) {
     async getTelemetrySummary() {
       return cache.getTelemetrySummary()
     },
+    async getFanState() {
+      return cache.getFanState()
+    },
     async sendCommand(command) {
       await publishCommand(command)
       const scheduledStopAt = scheduleRepeatedCommand({
@@ -144,6 +203,33 @@ export function createEdgeRelayTransport(config, cache, hub) {
       })
 
       return createBaseResult(command, 'edge-relay', scheduledStopAt)
+    },
+    async sendFanEnable({ enabled }) {
+      const result = await hub.sendFanEnable({ enabled })
+      return {
+        accepted: true,
+        transport: 'edge-relay',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_enable',
+          enabled: Boolean(enabled),
+          seq: result.seq,
+        },
+      }
+    },
+    async sendFanPwm({ fanA, fanB }) {
+      const result = await hub.sendFanPwm({ fanA, fanB })
+      return {
+        accepted: true,
+        transport: 'edge-relay',
+        state: cache.getFanState(),
+        command: {
+          type: 'fan_pwm',
+          fanA,
+          fanB,
+          seq: result.seq,
+        },
+      }
     },
   }
 }

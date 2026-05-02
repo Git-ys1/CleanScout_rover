@@ -45,6 +45,14 @@ export function createRosbridgeClient(config, cache) {
     })
   }
 
+  function publish(topic, msg) {
+    sendJson({
+      op: 'publish',
+      topic,
+      msg,
+    })
+  }
+
   function handleMessage(data) {
     const payload = safeParseJson(data)
 
@@ -70,6 +78,41 @@ export function createRosbridgeClient(config, cache) {
 
     if (payload.topic === config.scanTopic) {
       cache.updateScan(payload.msg)
+      return
+    }
+
+    if (payload.topic === config.fanEnableTopic) {
+      cache.updateFanEnable(payload.msg?.data)
+      return
+    }
+
+    if (payload.topic === config.fanAPwmTopic) {
+      cache.updateFanPwm({ fanA: payload.msg?.data })
+      return
+    }
+
+    if (payload.topic === config.fanBPwmTopic) {
+      cache.updateFanPwm({ fanB: payload.msg?.data })
+      return
+    }
+
+    if (payload.topic === config.fanARpmTopic) {
+      cache.updateFanRpm('fanA', payload.msg?.data)
+      return
+    }
+
+    if (payload.topic === config.fanBRpmTopic) {
+      cache.updateFanRpm('fanB', payload.msg?.data)
+      return
+    }
+
+    if (payload.topic === config.fanLidStateTopic) {
+      cache.updateFanLidState(payload.msg?.data)
+      return
+    }
+
+    if (payload.topic === config.fanSummaryTopic) {
+      cache.updateFanSummary(payload.msg?.data)
     }
   }
 
@@ -111,6 +154,13 @@ export function createRosbridgeClient(config, cache) {
           subscribe(config.odomTopic, 'nav_msgs/Odometry')
           subscribe(config.imuTopic, 'sensor_msgs/Imu')
           subscribe(config.scanTopic, 'sensor_msgs/LaserScan')
+          subscribe(config.fanEnableTopic, 'std_msgs/Bool')
+          subscribe(config.fanAPwmTopic, 'std_msgs/Float32')
+          subscribe(config.fanBPwmTopic, 'std_msgs/Float32')
+          subscribe(config.fanARpmTopic, 'std_msgs/Float32')
+          subscribe(config.fanBRpmTopic, 'std_msgs/Float32')
+          subscribe(config.fanLidStateTopic, 'std_msgs/Bool')
+          subscribe(config.fanSummaryTopic, 'std_msgs/String')
         } catch (error) {
           cache.setLastError(error.message || 'ROS 订阅初始化失败')
         }
@@ -156,19 +206,36 @@ export function createRosbridgeClient(config, cache) {
 
   async function publishCmdVel(command) {
     await ensureConnected()
-    sendJson({
-      op: 'publish',
-      topic: config.cmdVelTopic,
-      msg: {
-        linear: command.linear,
-        angular: command.angular,
-      },
+    publish(config.cmdVelTopic, {
+      linear: command.linear,
+      angular: command.angular,
     })
     cache.applyCommand(command)
+  }
+
+  async function publishFanEnable(enabled) {
+    await ensureConnected()
+    publish(config.fanEnableTopic, {
+      data: Boolean(enabled),
+    })
+    cache.updateFanEnable(enabled)
+  }
+
+  async function publishFanPwm({ fanA, fanB }) {
+    await ensureConnected()
+    publish(config.fanAPwmTopic, {
+      data: Number(fanA || 0),
+    })
+    publish(config.fanBPwmTopic, {
+      data: Number(fanB || 0),
+    })
+    cache.updateFanPwm({ fanA, fanB })
   }
 
   return {
     ensureConnected,
     publishCmdVel,
+    publishFanEnable,
+    publishFanPwm,
   }
 }

@@ -12,7 +12,11 @@ node_modules
 dist
 *.local
 !.env.h5.local
+!.env.app.local
 !.env.mp-weixin.local
+__pycache__
+*.pyc
+services/funasr-asr/.venv
 
 # Editor directories and files
 .idea
