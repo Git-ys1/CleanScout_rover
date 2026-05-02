@@ -27,7 +27,13 @@
     {
       "path": "pages/admin/index",
       "style": {
-        "navigationBarTitleText": "管理员控制"
+        "navigationBarTitleText": "管理后台"
+      }
+    },
+    {
+      "path": "pages/openmv/index",
+      "style": {
+        "navigationBarTitleText": "前视详情"
       }
     },
     {

@@ -3,27 +3,27 @@ import { normalizeManualControlCommand } from './dto.js'
 
 export const MANUAL_PRESET_VALUES = {
   forward: {
-    linear: { x: 0.2, y: 0, z: 0 },
+    linear: { x: 0.08, y: 0, z: 0 },
     angular: { x: 0, y: 0, z: 0 },
   },
   backward: {
-    linear: { x: -0.2, y: 0, z: 0 },
+    linear: { x: -0.08, y: 0, z: 0 },
     angular: { x: 0, y: 0, z: 0 },
   },
   turn_left: {
     linear: { x: 0, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: 0.35 },
+    angular: { x: 0, y: 0, z: 0.2 },
   },
   turn_right: {
     linear: { x: 0, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: -0.35 },
+    angular: { x: 0, y: 0, z: -0.2 },
   },
   strafe_left: {
-    linear: { x: 0, y: 0.15, z: 0 },
+    linear: { x: 0, y: 0.08, z: 0 },
     angular: { x: 0, y: 0, z: 0 },
   },
   strafe_right: {
-    linear: { x: 0, y: -0.15, z: 0 },
+    linear: { x: 0, y: -0.08, z: 0 },
     angular: { x: 0, y: 0, z: 0 },
   },
   stop: {

@@ -41,6 +41,13 @@ export function getRosRuntimeConfig() {
     odomTopic: String(process.env.ROS_ODOM_TOPIC || '/odom').trim(),
     imuTopic: String(process.env.ROS_IMU_TOPIC || '/imu/data').trim(),
     scanTopic: String(process.env.ROS_SCAN_TOPIC || '/scan').trim(),
+    fanEnableTopic: String(process.env.ROS_FAN_ENABLE_TOPIC || '/fans/enable').trim(),
+    fanAPwmTopic: String(process.env.ROS_FAN_A_PWM_TOPIC || '/fan_a/pwm_percent').trim(),
+    fanBPwmTopic: String(process.env.ROS_FAN_B_PWM_TOPIC || '/fan_b/pwm_percent').trim(),
+    fanARpmTopic: String(process.env.ROS_FAN_A_RPM_TOPIC || '/fan_a/rpm').trim(),
+    fanBRpmTopic: String(process.env.ROS_FAN_B_RPM_TOPIC || '/fan_b/rpm').trim(),
+    fanLidStateTopic: String(process.env.ROS_FAN_LID_STATE_TOPIC || '/fan_lid/state').trim(),
+    fanSummaryTopic: String(process.env.ROS_FAN_SUMMARY_TOPIC || '/fans/state_summary').trim(),
     repeatHz: toPositiveInteger(process.env.ROS_CMD_REPEAT_HZ, 10),
     defaultHoldMs: toPositiveInteger(process.env.ROS_CMD_DEFAULT_HOLD_MS, 400),
     reconnectDelayMs: toPositiveInteger(process.env.ROS_RECONNECT_DELAY_MS, 1000),
@@ -94,6 +101,34 @@ export async function getRosTelemetrySummary() {
   return rosTransport.getTelemetrySummary()
 }
 
+function normalizeFanEnabledInput(input) {
+  if (input?.enabled === undefined) {
+    throw createHttpError(400, '风机总开关字段 enabled 必填', 'ROS_FAN_ENABLE_REQUIRED')
+  }
+
+  return {
+    enabled: Boolean(input.enabled),
+  }
+}
+
+function normalizeFanPwmInput(input) {
+  const fanA = Number(input?.fanA)
+  const fanB = Number(input?.fanB)
+
+  if (!Number.isFinite(fanA) || !Number.isFinite(fanB)) {
+    throw createHttpError(400, '风机 PWM 需要同时提供 fanA 和 fanB 数值', 'ROS_FAN_PWM_INVALID')
+  }
+
+  if (fanA < 0 || fanA > 100 || fanB < 0 || fanB > 100) {
+    throw createHttpError(400, '风机 PWM 范围必须在 0 到 100 之间', 'ROS_FAN_PWM_RANGE_INVALID')
+  }
+
+  return {
+    fanA,
+    fanB,
+  }
+}
+
 export async function sendRosCmdVel(input, source = 'admin') {
   ensureRosEnabled()
   const command = normalizeManualControlCommand(input, {
@@ -115,4 +150,19 @@ export async function sendRosManualPreset({ preset, holdMs }, source = 'admin') 
   })
 
   return rosTransport.sendCommand(command)
+}
+
+export async function getRosFanState() {
+  ensureRosEnabled()
+  return rosTransport.getFanState()
+}
+
+export async function sendRosFanEnable(input) {
+  ensureRosEnabled()
+  return rosTransport.sendFanEnable(normalizeFanEnabledInput(input))
+}
+
+export async function sendRosFanPwm(input) {
+  ensureRosEnabled()
+  return rosTransport.sendFanPwm(normalizeFanPwmInput(input))
 }
