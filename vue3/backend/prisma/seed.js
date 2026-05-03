@@ -19,13 +19,15 @@ async function ensureAdminSeed() {
   })
 
   if (existingAdmin) {
-    console.log(`Admin seed already exists: ${ADMIN_USERNAME}`)
+    console.log(
+      `[seed] admin detected: username=${existingAdmin.username}, role=${existingAdmin.role}, isEnabled=${existingAdmin.isEnabled}`
+    )
     return existingAdmin
   }
 
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, SALT_ROUNDS)
 
-  return prisma.user.create({
+  const admin = await prisma.user.create({
     data: {
       username: ADMIN_USERNAME,
       passwordHash,
@@ -33,6 +35,9 @@ async function ensureAdminSeed() {
       isEnabled: true,
     },
   })
+
+  console.log(`[seed] admin created: username=${admin.username}, role=${admin.role}, isEnabled=${admin.isEnabled}`)
+  return admin
 }
 
 async function ensureDeviceSeed() {
@@ -41,11 +46,11 @@ async function ensureDeviceSeed() {
   })
 
   if (existingDevice) {
-    console.log(`Device seed already exists: ${DEFAULT_DEVICE_ID}`)
+    console.log(`[seed] device cache detected: deviceId=${existingDevice.deviceId}`)
     return existingDevice
   }
 
-  return prisma.deviceCache.create({
+  const device = await prisma.deviceCache.create({
     data: {
       deviceId: DEFAULT_DEVICE_ID,
       summaryJson: JSON.stringify({
@@ -57,6 +62,9 @@ async function ensureDeviceSeed() {
       }),
     },
   })
+
+  console.log(`[seed] device cache created: deviceId=${device.deviceId}`)
+  return device
 }
 
 async function ensureSystemConfigSeed() {
@@ -65,11 +73,13 @@ async function ensureSystemConfigSeed() {
   })
 
   if (existingSystemConfig) {
-    console.log(`System config already exists: ${SYSTEM_CONFIG_ID}`)
+    console.log(
+      `[seed] system config detected: id=${existingSystemConfig.id}, registrationEnabled=${existingSystemConfig.registrationEnabled}, appEnabled=${existingSystemConfig.appEnabled}`
+    )
     return existingSystemConfig
   }
 
-  return prisma.systemConfig.create({
+  const systemConfig = await prisma.systemConfig.create({
     data: {
       id: SYSTEM_CONFIG_ID,
       registrationEnabled: true,
@@ -78,16 +88,25 @@ async function ensureSystemConfigSeed() {
       openclawEnabled: false,
     },
   })
+
+  console.log(
+    `[seed] system config created: id=${systemConfig.id}, registrationEnabled=${systemConfig.registrationEnabled}, appEnabled=${systemConfig.appEnabled}`
+  )
+  return systemConfig
 }
 
 async function ensureEdgeDeviceSeed() {
   if (!EDGE_DEVICE_BOOTSTRAP_ID || !EDGE_DEVICE_BOOTSTRAP_TOKEN) {
-    console.log('Edge device seed skipped: EDGE_DEVICE_BOOTSTRAP_ID or EDGE_DEVICE_BOOTSTRAP_TOKEN is empty')
+    console.log(
+      '[seed] edge device skipped: EDGE_DEVICE_BOOTSTRAP_ID or EDGE_DEVICE_BOOTSTRAP_TOKEN is empty; first public-edge deployment will not create csrpi-001'
+    )
     return null
   }
 
   if (EDGE_DEVICE_BOOTSTRAP_TOKEN.length < 32) {
-    console.log('Edge device seed skipped: EDGE_DEVICE_BOOTSTRAP_TOKEN must be at least 32 characters')
+    console.log(
+      '[seed] edge device skipped: EDGE_DEVICE_BOOTSTRAP_TOKEN must be at least 32 characters; first public-edge deployment will not create csrpi-001'
+    )
     return null
   }
 
@@ -96,13 +115,15 @@ async function ensureEdgeDeviceSeed() {
   })
 
   if (existingEdgeDevice) {
-    console.log(`Edge device seed already exists: ${EDGE_DEVICE_BOOTSTRAP_ID}`)
+    console.log(
+      `[seed] edge device detected: deviceId=${existingEdgeDevice.deviceId}, isEnabled=${existingEdgeDevice.isEnabled}, transport=${existingEdgeDevice.transport}`
+    )
     return existingEdgeDevice
   }
 
   const tokenHash = await bcrypt.hash(EDGE_DEVICE_BOOTSTRAP_TOKEN, SALT_ROUNDS)
 
-  return prisma.edgeDevice.create({
+  const edgeDevice = await prisma.edgeDevice.create({
     data: {
       deviceId: EDGE_DEVICE_BOOTSTRAP_ID,
       tokenHash,
@@ -117,6 +138,11 @@ async function ensureEdgeDeviceSeed() {
       capabilitiesJson: JSON.stringify(['manual_control', 'odom', 'imu', 'scan_summary']),
     },
   })
+
+  console.log(
+    `[seed] edge device created: deviceId=${edgeDevice.deviceId}, isEnabled=${edgeDevice.isEnabled}, transport=${edgeDevice.transport}`
+  )
+  return edgeDevice
 }
 
 async function main() {
@@ -125,13 +151,12 @@ async function main() {
   const systemConfig = await ensureSystemConfigSeed()
   const edgeDevice = await ensureEdgeDeviceSeed()
 
-  console.log(
-    `Seed complete for user ${admin.username}, device ${device.deviceId}, and system config ${systemConfig.id}`
-  )
-
-  if (edgeDevice) {
-    console.log(`Edge device seed ready: ${edgeDevice.deviceId}`)
-  }
+  console.log('[seed] verification summary')
+  console.log(`[seed] admin=${admin.username}`)
+  console.log(`[seed] deviceCache=${device.deviceId}`)
+  console.log(`[seed] systemConfig=${systemConfig.id}`)
+  console.log(`[seed] edgeDevice=${edgeDevice?.deviceId || 'skipped'}`)
+  console.log('[seed] complete')
 }
 
 main()
