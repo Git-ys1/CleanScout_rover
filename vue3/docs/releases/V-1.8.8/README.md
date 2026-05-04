@@ -121,7 +121,7 @@ PORT=3000
 DATABASE_URL="file:/var/lib/vline-backend/dev.db"
 JWT_SECRET="<至少 32 位随机字符串>"
 JWT_EXPIRES_IN=7d
-CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top
+CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top,https://cleanscoutrover-management.netlify.app
 
 OPENCLAW_ENABLED=false
 OPENCLAW_BASE_URL=http://127.0.0.1:18789
@@ -151,6 +151,14 @@ EDGE_ALLOWED_DEVICE_IDS=csrpi-001
 EDGE_DEVICE_BOOTSTRAP_ID=csrpi-001
 EDGE_DEVICE_BOOTSTRAP_TOKEN="<至少 32 位随机 token>"
 EOF
+
+如果 H5 部署在 Netlify 等第三方平台，`CORS_ALLOWED_ORIGINS` 需要同时包含正式自定义域名和第三方默认域名。当前 Netlify 默认域名为：
+
+```text
+https://cleanscoutrover-management.netlify.app
+```
+
+否则从 Netlify 默认域名打开 H5 时，浏览器会被 backend CORS 拦截。微信小程序不使用这个字段，仍然在微信后台配置 `request 合法域名`。
 
 cd /opt/cleanscout-src/vue3
 sudo bash scripts/bootstrap-backend.sh

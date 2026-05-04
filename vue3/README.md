@@ -422,6 +422,16 @@ cmd /c npm.cmd run dev
 - 管理员固定控制接口为 `/api/ros/cmd-vel` 与 `/api/ros/manual-preset`
 - ROS 最小遥测摘要接口为 `/api/ros/telemetry/summary`
 
+## 部署与联调统一入口
+
+从 `V-1.8.9` 起，`vue3/` 的部署、构建、本地联调、云端 H5、云端 backend、edge-relay 与 OpenClaw 交接口径只维护一个当前文档：
+
+```text
+docs/deployment.md
+```
+
+历史 `docs/releases/*` 文档只作为冻结快照保留，不再作为当前部署操作入口。
+
 ## V-1.4.0 构建与部署入口
 
 从 `V-1.4.0` 起，仓库已补齐前端构建脚本、backend 部署脚本和 ROS 联调合同文档：

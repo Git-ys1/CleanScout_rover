@@ -21,7 +21,7 @@ PORT=3000
 DATABASE_URL="file:/var/lib/vline-backend/dev.db"
 JWT_SECRET="<生产 JWT secret，至少 32 位随机字符串>"
 JWT_EXPIRES_IN=7d
-CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top
+CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top,https://cleanscoutrover-management.netlify.app
 
 OPENCLAW_ENABLED=false
 OPENCLAW_BASE_URL=http://127.0.0.1:18789
@@ -51,6 +51,36 @@ EDGE_ALLOWED_DEVICE_IDS=csrpi-001
 EDGE_DEVICE_BOOTSTRAP_ID=csrpi-001
 EDGE_DEVICE_BOOTSTRAP_TOKEN="<生产 edge device token，至少 32 位随机字符串>"
 ```
+
+## H5 / 第三方托管 CORS 规则
+
+`CORS_ALLOWED_ORIGINS` 只管浏览器 H5 / admin web 的 `Origin` 校验，不管微信小程序合法域名。
+
+当前 H5 已绑定自定义域名：
+
+```text
+https://h5.hzhhds.top
+```
+
+如果 H5 同时允许从第三方托管平台默认域名访问，例如 Netlify 默认域名：
+
+```text
+https://cleanscoutrover-management.netlify.app
+```
+
+则 VPS 的 `/etc/vline-backend.env` 必须把该 Origin 一并写入：
+
+```text
+CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top,https://cleanscoutrover-management.netlify.app
+```
+
+修改后必须重启 backend：
+
+```bash
+sudo systemctl restart vline-backend
+```
+
+如果只允许正式自定义域名访问，可以不加入 Netlify 默认域名；但此时从 `https://cleanscoutrover-management.netlify.app` 打开 H5，请求 backend 会被 CORS 拦截。
 
 ## 关于 loopback 地址
 
