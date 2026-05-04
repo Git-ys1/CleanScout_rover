@@ -1,17 +1,31 @@
 <template>
-  <view class="admin-page">
+  <view class="admin-page v-page">
     <view class="header-card">
-      <text class="header-title">管理后台</text>
-      <text class="header-desc">
-        本轮管理员页收口为后台管理职责：用户管理、系统开关、接入状态只读监看。设备控制已迁到首页快捷控制台。
-      </text>
+      <text class="header-kicker">后台管理</text>
+      <text class="header-title">系统管理台</text>
+      <text class="header-desc">管理账号、系统开关与设备接入状态。</text>
+    </view>
+
+    <view class="overview-grid">
+      <view class="overview-card v-card">
+        <text class="overview-value">{{ users.length }}</text>
+        <text class="overview-label">用户</text>
+      </view>
+      <view class="overview-card v-card">
+        <StatusBadge :value="systemConfig.appEnabled ? 'enabled' : 'disabled'" />
+        <text class="overview-label">软件状态</text>
+      </view>
+      <view class="overview-card v-card">
+        <StatusBadge :value="rosStatus.edgeRelayConnected ? 'online' : 'offline'" />
+        <text class="overview-label">边缘中继</text>
+      </view>
     </view>
 
     <view class="section-switcher">
       <button
         v-for="section in sections"
         :key="section.value"
-        class="section-button"
+        class="section-button v-pressable"
         :class="{ active: activeSection === section.value }"
         @tap="adminStore.setActiveSection(section.value)"
       >
@@ -19,7 +33,7 @@
       </button>
     </view>
 
-    <view v-if="activeSection === 'users'" class="panel-card">
+    <view v-if="activeSection === 'users'" class="panel-card v-card">
       <text class="panel-title">用户管理</text>
       <view class="create-form">
         <input v-model="newUserForm.username" class="field" placeholder="用户名" />
@@ -31,7 +45,7 @@
           <text class="switch-label">新增后立即启用</text>
           <switch :checked="newUserForm.isEnabled" @change="handleCreateEnabledChange" color="#205375" />
         </label>
-        <button class="primary-button" :loading="loadingStates.submitUser" @tap="submitNewUser">新增用户</button>
+        <button class="primary-button v-pressable" :loading="loadingStates.submitUser" @tap="submitNewUser">新增用户</button>
       </view>
 
       <view class="user-list">
@@ -45,19 +59,19 @@
           </view>
           <text class="user-time">创建时间：{{ formatDate(user.createdAt) }}</text>
           <view class="user-actions">
-            <button class="inline-button" @tap="toggleUserEnabled(user)">
+            <button class="inline-button v-pressable" @tap="toggleUserEnabled(user)">
               {{ user.isEnabled ? '停用' : '启用' }}
             </button>
-            <button class="inline-button" @tap="toggleUserRole(user)">
+            <button class="inline-button v-pressable" @tap="toggleUserRole(user)">
               改为{{ user.role === 'admin' ? '普通用户' : '管理员' }}
             </button>
-            <button class="inline-button danger" @tap="removeUser(user)">删除</button>
+            <button class="inline-button danger v-pressable" @tap="removeUser(user)">删除</button>
           </view>
         </view>
       </view>
     </view>
 
-    <view v-if="activeSection === 'system'" class="panel-card">
+    <view v-if="activeSection === 'system'" class="panel-card v-card">
       <text class="panel-title">系统开关</text>
       <label class="switch-row">
         <text class="switch-label">允许新用户注册</text>
@@ -77,12 +91,12 @@
         maxlength="120"
         placeholder="维护提示语，普通用户在维护模式下会看到这里的文本"
       />
-      <button class="primary-button" :loading="loadingStates.saveSystemConfig" @tap="saveSystemConfig">
+      <button class="primary-button v-pressable" :loading="loadingStates.saveSystemConfig" @tap="saveSystemConfig">
         保存系统配置
       </button>
     </view>
 
-    <view v-if="activeSection === 'gateway'" class="panel-card">
+    <view v-if="activeSection === 'gateway'" class="panel-card v-card">
       <text class="panel-title">接入状态</text>
 
       <view class="sub-panel">
@@ -162,7 +176,7 @@
       </view>
 
       <button
-        class="primary-button"
+        class="primary-button v-pressable"
         :loading="loadingStates.openclawStatus || rosLoadingStates.status || rosLoadingStates.telemetry"
         @tap="refreshGatewayStatus"
       >
@@ -390,52 +404,92 @@ function formatDate(value) {
   min-height: 100vh;
   padding: 28rpx;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #eef3f9 0%, #e5edf4 100%);
-}
-
-.header-card,
-.panel-card {
-  padding: 28rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 14rpx 38rpx rgba(20, 32, 51, 0.08);
 }
 
 .header-card {
-  background: linear-gradient(135deg, #17324d, #205375 62%, #4e8ca5);
+  padding: 32rpx;
+  border-radius: 36rpx;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(213, 138, 58, 0.18), transparent 26%),
+    linear-gradient(135deg, #17384a, #1f5263 62%, #5f98a4);
+  box-shadow: var(--v-shadow-float);
+}
+
+.header-kicker {
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .header-title {
   display: block;
-  font-size: 40rpx;
-  font-weight: 700;
+  margin-top: 10rpx;
+  font-size: 44rpx;
+  font-weight: 900;
   color: #ffffff;
 }
 
 .header-desc {
   display: block;
-  margin-top: 12rpx;
+  margin-top: 14rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.overview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.overview-card {
+  flex: 1;
+  min-width: 190rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.overview-value {
+  display: block;
+  color: var(--v-text-main);
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.overview-label {
+  display: block;
+  margin-top: 12rpx;
+  color: var(--v-text-muted);
+  font-size: 22rpx;
 }
 
 .section-switcher {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
-  margin: 20rpx -8rpx 0;
+  margin: 22rpx -6rpx 0;
+  padding: 8rpx 0;
   flex-wrap: wrap;
+  background: rgba(237, 243, 246, 0.86);
+  backdrop-filter: blur(16rpx);
 }
 
 .section-button {
-  width: calc(33.3333% - 16rpx);
-  margin: 0 8rpx 16rpx;
+  width: calc(33.3333% - 12rpx);
+  margin: 0 6rpx 12rpx;
   border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.88);
-  color: #445868;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--v-text-secondary);
+  font-weight: 800;
 }
 
 .section-button.active {
-  background: #205375;
+  background: var(--v-color-primary);
   color: #ffffff;
 }
 
@@ -447,14 +501,15 @@ function formatDate(value) {
 
 .panel-card {
   margin-top: 4rpx;
+  padding: 28rpx;
 }
 
 .panel-title {
   display: block;
   margin-bottom: 18rpx;
   font-size: 32rpx;
-  font-weight: 700;
-  color: #17324d;
+  font-weight: 900;
+  color: var(--v-text-main);
 }
 
 .sub-panel + .sub-panel {
@@ -465,14 +520,14 @@ function formatDate(value) {
   display: block;
   margin-bottom: 14rpx;
   font-size: 28rpx;
-  font-weight: 700;
-  color: #205375;
+  font-weight: 900;
+  color: var(--v-color-primary);
 }
 
 .create-form {
   padding: 24rpx;
-  border-radius: 22rpx;
-  background: #f4f8fb;
+  border-radius: 24rpx;
+  background: var(--v-bg-panel);
 }
 
 .field,
@@ -482,9 +537,9 @@ function formatDate(value) {
   margin-bottom: 16rpx;
   padding: 0 24rpx;
   box-sizing: border-box;
-  border-radius: 18rpx;
+  border-radius: 22rpx;
   background: #ffffff;
-  color: #17324d;
+  color: var(--v-text-main);
   font-size: 28rpx;
 }
 
@@ -507,13 +562,14 @@ function formatDate(value) {
 
 .switch-label {
   font-size: 26rpx;
-  color: #3d5061;
+  color: var(--v-text-secondary);
 }
 
 .primary-button {
   border-radius: 999rpx;
-  background: #205375;
+  background: var(--v-color-primary);
   color: #ffffff;
+  font-weight: 800;
 }
 
 .user-list {
@@ -523,9 +579,9 @@ function formatDate(value) {
 .user-card {
   margin-top: 16rpx;
   padding: 22rpx;
-  border-radius: 22rpx;
+  border-radius: 24rpx;
   background: #ffffff;
-  box-shadow: 0 12rpx 30rpx rgba(20, 32, 51, 0.06);
+  box-shadow: var(--v-shadow-card);
 }
 
 .user-head {
@@ -537,8 +593,8 @@ function formatDate(value) {
 
 .user-name {
   font-size: 30rpx;
-  font-weight: 700;
-  color: #17324d;
+  font-weight: 900;
+  color: var(--v-text-main);
 }
 
 .user-tags {
@@ -552,7 +608,7 @@ function formatDate(value) {
   display: block;
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #6a7b8b;
+  color: var(--v-text-muted);
 }
 
 .user-actions {
@@ -565,13 +621,14 @@ function formatDate(value) {
   width: calc(33.3333% - 16rpx);
   margin: 0 8rpx 14rpx;
   border-radius: 999rpx;
-  background: #eff5f9;
-  color: #17324d;
+  background: #eef5f7;
+  color: var(--v-text-main);
+  font-weight: 800;
 }
 
 .inline-button.danger {
-  background: #f4d8d2;
-  color: #8b2f20;
+  background: rgba(200, 93, 74, 0.14);
+  color: var(--v-color-danger);
 }
 
 .maintenance-input {
@@ -589,8 +646,8 @@ function formatDate(value) {
   width: calc(50% - 16rpx);
   margin: 0 8rpx 16rpx;
   padding: 22rpx;
-  border-radius: 20rpx;
-  background: #f7fafc;
+  border-radius: 22rpx;
+  background: var(--v-bg-panel);
   box-sizing: border-box;
 }
 
@@ -601,15 +658,15 @@ function formatDate(value) {
 .status-label {
   display: block;
   font-size: 22rpx;
-  color: #6a7b8b;
+  color: var(--v-text-muted);
 }
 
 .status-value {
   display: block;
   margin-top: 10rpx;
   font-size: 30rpx;
-  font-weight: 700;
-  color: #17324d;
+  font-weight: 800;
+  color: var(--v-text-main);
 }
 
 .status-value.compact {

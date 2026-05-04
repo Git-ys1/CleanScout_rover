@@ -46,13 +46,13 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "V线控制端",
-    "navigationBarBackgroundColor": "#EEF3F9",
-    "backgroundColor": "#EEF3F9"
+    "navigationBarBackgroundColor": "#F0F5F7",
+    "backgroundColor": "#EDF3F6"
   },
   "tabBar": {
-    "color": "#708090",
-    "selectedColor": "#205375",
-    "backgroundColor": "#FFFFFF",
+    "color": "#6C7F8F",
+    "selectedColor": "#1F5263",
+    "backgroundColor": "#F9FCFD",
     "borderStyle": "black",
     "list": [
       {

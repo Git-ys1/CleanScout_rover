@@ -26,35 +26,47 @@ const resolved = computed(() => getStatusMeta(props.value, props.fallbackText))
   align-items: center;
   justify-content: center;
   min-height: 40rpx;
-  padding: 6rpx 16rpx;
+  padding: 7rpx 16rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
   line-height: 1.2;
   box-sizing: border-box;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status-badge::before {
+  content: '';
+  width: 10rpx;
+  height: 10rpx;
+  margin-right: 8rpx;
+  border-radius: 999rpx;
+  background: currentColor;
+  opacity: 0.72;
 }
 
 .status-badge.success {
-  background: #ddf1ea;
-  color: #1c7c54;
+  background: rgba(40, 121, 90, 0.12);
+  color: var(--v-color-success, #28795a);
 }
 
 .status-badge.warn {
-  background: #f8ead1;
-  color: #9a6510;
+  background: rgba(213, 138, 58, 0.14);
+  color: var(--v-color-warning, #b87320);
 }
 
 .status-badge.danger {
-  background: #f4d8d2;
-  color: #8b2f20;
+  background: rgba(200, 93, 74, 0.14);
+  color: var(--v-color-danger, #a64033);
 }
 
 .status-badge.brand {
-  background: #d9eef2;
-  color: #205375;
+  background: rgba(31, 82, 99, 0.13);
+  color: var(--v-color-primary, #1f5263);
 }
 
 .status-badge.neutral {
-  background: #e7edf2;
-  color: #516274;
+  background: rgba(77, 111, 131, 0.12);
+  color: var(--v-color-info, #4d6f83);
 }
 </style>

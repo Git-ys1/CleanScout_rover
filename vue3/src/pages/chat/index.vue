@@ -1,14 +1,15 @@
 <template>
-  <view class="chat-page">
-    <view class="page-header">
-      <text class="page-title">对话控制</text>
-      <text class="page-subtitle">
-        当前页面已按 OpenClaw 接入预留为流式消息界面，本轮后端协议仍保持一次性返回，前端先使用伪流式展示。
-      </text>
-      <view class="transport-row">
-        <StatusBadge :value="transport.mode" />
-        <StatusBadge :value="transport.status" />
-        <StatusBadge :value="transport.apiMode" />
+  <view class="chat-page v-page">
+    <view class="page-header v-card">
+      <view class="header-main">
+        <view>
+          <text class="page-kicker">智能控制入口</text>
+          <text class="page-title">对话</text>
+        </view>
+        <view class="transport-row">
+          <StatusBadge :value="transport.mode" />
+          <StatusBadge :value="transport.status" />
+        </view>
       </view>
       <view class="transport-banner" :class="{ warn: transport.fallback, error: transport.status === 'error' }">
         <text class="transport-label">{{ transportBannerText }}</text>
@@ -47,6 +48,17 @@
     <view class="composer-spacer" :style="{ height: composerSpacerHeight }"></view>
 
     <view class="composer-card" :style="{ bottom: composerBottomOffset }">
+      <view class="suggestion-row">
+        <button
+          v-for="item in suggestions"
+          :key="item"
+          class="suggestion-chip v-pressable"
+          @tap="applySuggestion(item)"
+        >
+          {{ item }}
+        </button>
+      </view>
+
       <view class="voice-meta-row">
         <view class="voice-meta-left">
           <StatusBadge :value="voiceBadgeValue" />
@@ -59,19 +71,19 @@
         v-model="draftText"
         class="composer-input"
         maxlength="240"
-        placeholder="输入任务描述、自然语言控制意图，或先点语音录入后再确认发送"
+        placeholder="输入任务，或先语音识别后确认发送"
       />
 
       <view class="composer-actions">
         <button
-          class="composer-secondary-button"
+          class="voice-button v-pressable"
           :disabled="!canUseVoiceAction"
           @tap="handleVoiceAction"
         >
           {{ voiceButtonText }}
         </button>
         <button
-          class="composer-button"
+          class="composer-button v-pressable"
           :loading="sending"
           :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'"
           @tap="handleSend"
@@ -116,11 +128,12 @@ const asrStatus = ref({
   model: '',
 })
 const voiceState = ref('idle')
+const suggestions = ['前进', '停止', '查看状态', '打开风机']
 
 const composerBottomOffset = computed(() =>
   isH5 ? 'calc(136rpx + env(safe-area-inset-bottom))' : 'calc(20rpx + env(safe-area-inset-bottom))'
 )
-const composerSpacerHeight = computed(() => (isH5 ? '320rpx' : '280rpx'))
+const composerSpacerHeight = computed(() => (isH5 ? '250rpx' : '220rpx'))
 
 const transportBannerText = computed(() => {
   const modeText = formatStatusText(transport.value.mode, '未知链路')
@@ -334,6 +347,10 @@ async function handleSend() {
   }
 }
 
+function applySuggestion(text) {
+  chatStore.setDraftText(text)
+}
+
 function formatDate(value) {
   if (!value) {
     return '--'
@@ -355,62 +372,63 @@ function formatDuration(value) {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: 28rpx;
+  padding: 24rpx;
   box-sizing: border-box;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top right, rgba(70, 150, 180, 0.16), transparent 34%),
-    linear-gradient(180deg, #eef3f9 0%, #e5edf4 100%);
 }
 
 .page-header {
-  padding: 28rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(135deg, #17324d, #205375 62%, #4e8ca5);
-  box-shadow: 0 16rpx 44rpx rgba(23, 50, 77, 0.12);
+  padding: 24rpx;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.page-kicker {
+  display: block;
+  margin-bottom: 8rpx;
+  color: var(--v-text-muted);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .page-title {
   display: block;
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.page-subtitle {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--v-text-main);
+  font-size: 42rpx;
+  font-weight: 900;
 }
 
 .transport-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10rpx;
-  margin-top: 18rpx;
 }
 
 .transport-banner {
-  margin-top: 18rpx;
-  padding: 18rpx 20rpx;
+  margin-top: 16rpx;
+  padding: 16rpx 18rpx;
   border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(31, 82, 99, 0.08);
 }
 
 .transport-banner.warn {
-  background: rgba(248, 234, 209, 0.22);
+  background: rgba(213, 138, 58, 0.13);
 }
 
 .transport-banner.error {
-  background: rgba(244, 216, 210, 0.22);
+  background: rgba(200, 93, 74, 0.13);
 }
 
 .transport-label {
-  font-size: 24rpx;
+  font-size: 22rpx;
   line-height: 1.6;
-  color: #ffffff;
+  color: var(--v-text-secondary);
 }
 
 .chat-list {
@@ -439,26 +457,26 @@ function formatDuration(value) {
 
 .bubble-card {
   max-width: 78%;
-  padding: 20rpx 22rpx;
-  border-radius: 24rpx;
-  box-shadow: 0 12rpx 34rpx rgba(20, 32, 51, 0.08);
+  padding: 20rpx 24rpx;
+  border-radius: 28rpx;
+  box-shadow: var(--v-shadow-card);
 }
 
 .bubble-card.user {
   border-bottom-right-radius: 10rpx;
-  background: #d9eef2;
+  background: linear-gradient(135deg, #dbecef, #cfe4e8);
 }
 
 .bubble-card.assistant {
   border-bottom-left-radius: 10rpx;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .bubble-role {
   display: block;
   font-size: 22rpx;
-  font-weight: 700;
-  color: #205375;
+  font-weight: 800;
+  color: var(--v-color-primary);
 }
 
 .bubble-text {
@@ -466,7 +484,7 @@ function formatDuration(value) {
   margin-top: 10rpx;
   font-size: 28rpx;
   line-height: 1.7;
-  color: #17324d;
+  color: var(--v-text-main);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -475,14 +493,14 @@ function formatDuration(value) {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #9a6510;
+  color: var(--v-color-warning);
 }
 
 .bubble-time {
   display: block;
   margin-top: 12rpx;
   font-size: 20rpx;
-  color: #6a7b8b;
+  color: var(--v-text-muted);
 }
 
 .system-message {
@@ -496,7 +514,7 @@ function formatDuration(value) {
   font-size: 22rpx;
   line-height: 1.7;
   text-align: center;
-  color: #6a7b8b;
+  color: var(--v-text-muted);
 }
 
 .scroll-anchor {
@@ -509,21 +527,46 @@ function formatDuration(value) {
 
 .composer-card {
   position: fixed;
-  left: 28rpx;
-  right: 28rpx;
-  padding: 18rpx 22rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12rpx 34rpx rgba(20, 32, 51, 0.08);
+  left: 24rpx;
+  right: 24rpx;
+  padding: 16rpx 18rpx 18rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.72);
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--v-shadow-float);
+  backdrop-filter: blur(20rpx);
   box-sizing: border-box;
   z-index: 40;
+}
+
+.suggestion-row {
+  display: flex;
+  gap: 10rpx;
+  overflow-x: auto;
+  padding-bottom: 10rpx;
+  white-space: nowrap;
+}
+
+.suggestion-chip {
+  flex: 0 0 auto;
+  min-height: 52rpx;
+  padding: 0 22rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 82, 99, 0.08);
+  color: var(--v-color-primary);
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.suggestion-chip::after {
+  border: none;
 }
 
 .voice-meta-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 
 .voice-meta-left {
@@ -534,51 +577,55 @@ function formatDuration(value) {
 
 .voice-meta-text {
   flex: 1;
-  font-size: 22rpx;
+  font-size: 20rpx;
   line-height: 1.6;
-  color: #6a7b8b;
+  color: var(--v-text-muted);
   text-align: right;
 }
 
 .composer-input {
   width: 100%;
-  height: 84rpx;
-  min-height: 84rpx;
-  margin-top: 12rpx;
-  padding: 8rpx 0;
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #17324d;
+  height: 62rpx;
+  min-height: 62rpx;
+  margin-top: 8rpx;
+  padding: 6rpx 0;
+  font-size: 26rpx;
+  line-height: 1.45;
+  color: var(--v-text-main);
 }
 
 .composer-actions {
   display: flex;
-  gap: 14rpx;
-  margin-top: 12rpx;
+  gap: 12rpx;
+  margin-top: 10rpx;
 }
 
-.composer-secondary-button,
+.voice-button,
 .composer-button {
   flex: 1;
+  min-height: 68rpx;
   border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 800;
 }
 
-.composer-secondary-button {
-  background: #d9eef2;
-  color: #205375;
+.voice-button {
+  flex: 0.72;
+  background: rgba(213, 138, 58, 0.14);
+  color: var(--v-color-warning);
 }
 
 .composer-button {
-  background: #205375;
+  background: var(--v-color-primary);
   color: #ffffff;
 }
 
-.composer-secondary-button[disabled],
+.voice-button[disabled],
 .composer-button[disabled] {
   opacity: 0.58;
 }
 
-.composer-secondary-button::after,
+.voice-button::after,
 .composer-button::after {
   border: none;
 }
