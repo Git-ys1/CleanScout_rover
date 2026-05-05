@@ -20,7 +20,9 @@ except ImportError:  # pragma: no cover
 
 class EdgeRelay:
     def __init__(self):
-        self.url = rospy.get_param("~url", "ws://10.22.7.190:3000/edge/ros")
+        self.url = rospy.get_param("~url", "wss://api.hzhhds.top/edge/ros")
+        self.fallback_url = rospy.get_param("~fallback_url", "ws://10.156.250.190:3000/edge/ros")
+        self.primary_failures_before_fallback = int(rospy.get_param("~primary_failures_before_fallback", 3))
         self.device_id = rospy.get_param("~device_id", "csrpi-001")
         self.device_token = rospy.get_param("~device_token", "")
         self.heartbeat_ms = int(rospy.get_param("~heartbeat_ms", 5000))
@@ -42,6 +44,8 @@ class EdgeRelay:
         self.hello_acked = False
         self.recv_thread = None
         self.stop_event = threading.Event()
+        self.active_url = self.url
+        self.primary_connect_failures = 0
         self.last_odom = None
         self.last_imu = None
         self.last_scan = None
@@ -244,6 +248,11 @@ class EdgeRelay:
                 return
             self.ws.send(body)
 
+    def select_connect_url(self):
+        if self.fallback_url and self.primary_connect_failures >= max(1, self.primary_failures_before_fallback):
+            return self.fallback_url
+        return self.url
+
     def log_ws_closed(self, exc):
         code = getattr(exc, "status_code", None)
         reason = getattr(exc, "reason", None)
@@ -335,14 +344,17 @@ class EdgeRelay:
             headers.append(f"Authorization: Bearer {self.device_token}")
 
         self.stop_event = threading.Event()
+        self.active_url = self.select_connect_url()
         self.ws = websocket.create_connection(
-            self.url,
+            self.active_url,
             header=headers,
             sslopt={"cert_reqs": ssl.CERT_REQUIRED},
             timeout=1,
         )
         self.connected = True
         self.hello_acked = False
+        if self.active_url == self.url:
+            self.primary_connect_failures = 0
         self.send_json(self.hello_payload())
         self.recv_thread = threading.Thread(target=self.recv_loop, daemon=True)
         self.recv_thread.start()
@@ -375,7 +387,8 @@ class EdgeRelay:
         while not rospy.is_shutdown():
             try:
                 if self.ws is None:
-                    rospy.loginfo("edge relay connecting to %s", self.url)
+                    target_url = self.select_connect_url()
+                    rospy.loginfo("edge relay connecting to %s", target_url)
                     self.connect()
                     reconnect_delay = max(1.0, self.reconnect_delay_ms / 1000.0)
                     self.last_heartbeat_sent = 0.0
@@ -388,6 +401,14 @@ class EdgeRelay:
                 self.telemetry_tick()
                 cmd_rate.sleep()
             except Exception as exc:  # pragma: no cover
+                if self.ws is None and self.active_url == self.url:
+                    self.primary_connect_failures += 1
+                    if self.fallback_url and self.primary_connect_failures >= max(1, self.primary_failures_before_fallback):
+                        rospy.logwarn(
+                            "edge relay primary endpoint failed %d times, switching to fallback %s",
+                            self.primary_connect_failures,
+                            self.fallback_url,
+                        )
                 rospy.logwarn("edge relay reconnect pending: %s", str(exc))
                 self.close_ws()
                 self.cmd_pub.publish(Twist())

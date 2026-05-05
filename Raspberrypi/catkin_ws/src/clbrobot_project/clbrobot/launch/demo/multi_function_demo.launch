@@ -1,8 +1,10 @@
 <launch>
-  <arg name="enable_edge_relay" default="false" />
-  <arg name="edge_url" default="ws://10.44.63.190:3000/edge/ros" />
+  <arg name="enable_edge_relay" default="true" />
+  <arg name="edge_url" default="wss://api.hzhhds.top/edge/ros" />
+  <arg name="edge_fallback_url" default="ws://10.156.250.190:3000/edge/ros" />
+  <arg name="edge_primary_failures_before_fallback" default="3" />
   <arg name="edge_device_id" default="csrpi-001" />
-  <arg name="edge_device_token" default="" />
+  <arg name="edge_device_token" default="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2" />
 
   <include file="$(find clbrobot)/launch/bringup_rf1_min.launch" />
 
@@ -11,6 +13,8 @@
   <include file="$(find csrpi_edge_relay)/launch/edge_relay.launch">
     <arg name="enabled" value="$(arg enable_edge_relay)" />
     <arg name="url" value="$(arg edge_url)" />
+    <arg name="fallback_url" value="$(arg edge_fallback_url)" />
+    <arg name="primary_failures_before_fallback" value="$(arg edge_primary_failures_before_fallback)" />
     <arg name="device_id" value="$(arg edge_device_id)" />
     <arg name="device_token" value="$(arg edge_device_token)" />
   </include>

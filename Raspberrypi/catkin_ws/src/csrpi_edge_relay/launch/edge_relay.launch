@@ -1,6 +1,8 @@
 <launch>
   <arg name="enabled" default="false" />
-  <arg name="url" default="ws://10.22.7.190:3000/edge/ros" />
+  <arg name="url" default="wss://api.hzhhds.top/edge/ros" />
+  <arg name="fallback_url" default="ws://10.156.250.190:3000/edge/ros" />
+  <arg name="primary_failures_before_fallback" default="3" />
   <arg name="device_id" default="csrpi-001" />
   <arg name="device_token" default="" />
   <arg name="heartbeat_ms" default="5000" />
@@ -13,6 +15,8 @@
 
   <node if="$(arg enabled)" pkg="csrpi_edge_relay" type="edge_relay.py" name="edge_relay" output="screen">
     <param name="url" value="$(arg url)" />
+    <param name="fallback_url" value="$(arg fallback_url)" />
+    <param name="primary_failures_before_fallback" value="$(arg primary_failures_before_fallback)" />
     <param name="device_id" value="$(arg device_id)" />
     <param name="device_token" value="$(arg device_token)" />
     <param name="heartbeat_ms" value="$(arg heartbeat_ms)" />
