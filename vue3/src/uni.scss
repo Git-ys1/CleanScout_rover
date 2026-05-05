@@ -1,21 +1,23 @@
-/* uni-app common design tokens used by the current shell baseline. */
-$uni-color-primary: #007aff;
-$uni-color-success: #4cd964;
-$uni-color-warning: #f0ad4e;
-$uni-color-error: #dd524d;
+@import './styles/tokens.scss';
 
-$uni-text-color: #333;
+/* uni-app common variables mapped to the V-line device control design system. */
+$uni-color-primary: $v-color-primary;
+$uni-color-success: $v-color-success;
+$uni-color-warning: $v-color-warning;
+$uni-color-error: $v-color-danger;
+
+$uni-text-color: $v-color-slate-900;
 $uni-text-color-inverse: #fff;
-$uni-text-color-grey: #999;
-$uni-text-color-placeholder: #808080;
-$uni-text-color-disable: #c0c0c0;
+$uni-text-color-grey: $v-color-slate-500;
+$uni-text-color-placeholder: #8b9aa7;
+$uni-text-color-disable: #b7c3cb;
 
-$uni-bg-color: #fff;
-$uni-bg-color-grey: #f8f8f8;
-$uni-bg-color-hover: #f1f1f1;
-$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+$uni-bg-color: $v-bg-elevated;
+$uni-bg-color-grey: $v-bg-page;
+$uni-bg-color-hover: #e7eff3;
+$uni-bg-color-mask: rgba(20, 36, 51, 0.42);
 
-$uni-border-color: #c8c7cc;
+$uni-border-color: $v-color-slate-300;
 
 $uni-font-size-sm: 12px;
 $uni-font-size-base: 14px;
@@ -25,9 +27,9 @@ $uni-img-size-sm: 20px;
 $uni-img-size-base: 26px;
 $uni-img-size-lg: 40px;
 
-$uni-border-radius-sm: 2px;
-$uni-border-radius-base: 3px;
-$uni-border-radius-lg: 6px;
+$uni-border-radius-sm: 7px;
+$uni-border-radius-base: 11px;
+$uni-border-radius-lg: 16px;
 $uni-border-radius-circle: 50%;
 
 $uni-spacing-row-sm: 5px;
@@ -40,9 +42,9 @@ $uni-spacing-col-lg: 12px;
 
 $uni-opacity-disabled: 0.3;
 
-$uni-color-title: #2c405a;
+$uni-color-title: $v-color-slate-900;
 $uni-font-size-title: 20px;
-$uni-color-subtitle: #555;
+$uni-color-subtitle: $v-color-slate-700;
 $uni-font-size-subtitle: 18px;
-$uni-color-paragraph: #3f536e;
+$uni-color-paragraph: $v-color-slate-700;
 $uni-font-size-paragraph: 15px;

@@ -1,0 +1,112 @@
+/* V-1.9.0 visual tokens: low-saturation device control system. */
+$v-color-primary: #1f5263;
+$v-color-primary-deep: #17384a;
+$v-color-primary-soft: #d9e9ec;
+$v-color-accent: #d58a3a;
+$v-color-coral: #c85d4a;
+$v-color-success: #28795a;
+$v-color-warning: #b87320;
+$v-color-danger: #a64033;
+$v-color-info: #4d6f83;
+$v-color-slate-900: #142433;
+$v-color-slate-700: #33495c;
+$v-color-slate-500: #6c7f8f;
+$v-color-slate-300: #d9e3ea;
+$v-color-slate-100: #f4f7f9;
+
+$v-bg-page: #edf3f6;
+$v-bg-page-deep: #dfe9ee;
+$v-bg-card: rgba(255, 255, 255, 0.94);
+$v-bg-panel: rgba(246, 250, 252, 0.92);
+$v-bg-elevated: #ffffff;
+
+$v-radius-sm: 14rpx;
+$v-radius-md: 22rpx;
+$v-radius-lg: 32rpx;
+$v-radius-xl: 44rpx;
+
+$v-space-xs: 8rpx;
+$v-space-sm: 14rpx;
+$v-space-md: 22rpx;
+$v-space-lg: 30rpx;
+$v-space-xl: 42rpx;
+
+$v-shadow-card: 0 18rpx 46rpx rgba(24, 56, 72, 0.08);
+$v-shadow-float: 0 26rpx 70rpx rgba(24, 56, 72, 0.14);
+$v-shadow-press: 0 10rpx 26rpx rgba(24, 56, 72, 0.12);
+
+page {
+  --v-color-primary: #{$v-color-primary};
+  --v-color-primary-deep: #{$v-color-primary-deep};
+  --v-color-primary-soft: #{$v-color-primary-soft};
+  --v-color-accent: #{$v-color-accent};
+  --v-color-coral: #{$v-color-coral};
+  --v-color-success: #{$v-color-success};
+  --v-color-warning: #{$v-color-warning};
+  --v-color-danger: #{$v-color-danger};
+  --v-color-info: #{$v-color-info};
+  --v-text-main: #{$v-color-slate-900};
+  --v-text-secondary: #{$v-color-slate-700};
+  --v-text-muted: #{$v-color-slate-500};
+  --v-border: #{$v-color-slate-300};
+  --v-bg-page: #{$v-bg-page};
+  --v-bg-page-deep: #{$v-bg-page-deep};
+  --v-bg-card: #{$v-bg-card};
+  --v-bg-panel: #{$v-bg-panel};
+  --v-bg-elevated: #{$v-bg-elevated};
+  --v-radius-sm: #{$v-radius-sm};
+  --v-radius-md: #{$v-radius-md};
+  --v-radius-lg: #{$v-radius-lg};
+  --v-radius-xl: #{$v-radius-xl};
+  --v-space-sm: #{$v-space-sm};
+  --v-space-md: #{$v-space-md};
+  --v-space-lg: #{$v-space-lg};
+  --v-shadow-card: #{$v-shadow-card};
+  --v-shadow-float: #{$v-shadow-float};
+}
+
+.v-page {
+  min-height: 100vh;
+  color: var(--v-text-main);
+  background:
+    radial-gradient(circle at 16% 0%, rgba(95, 152, 164, 0.18), transparent 34%),
+    linear-gradient(180deg, #f7fbfc 0%, var(--v-bg-page) 42%, #e8f0f4 100%);
+}
+
+.v-card {
+  border: 1rpx solid rgba(255, 255, 255, 0.72);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-bg-card);
+  box-shadow: var(--v-shadow-card);
+  backdrop-filter: blur(18rpx);
+}
+
+.v-panel {
+  border-radius: var(--v-radius-md);
+  background: var(--v-bg-panel);
+}
+
+.v-pressable {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.v-pressable:active {
+  transform: scale(0.985);
+  box-shadow: #{$v-shadow-press};
+}
+
+.v-fade-in {
+  animation: vFadeIn 0.42s ease both;
+}
+
+@keyframes vFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

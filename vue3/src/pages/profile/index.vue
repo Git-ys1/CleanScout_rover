@@ -1,38 +1,42 @@
 <template>
-  <view class="profile-page">
+  <view class="profile-page v-page">
     <view class="profile-card">
-      <text class="profile-title">个人中心</text>
-      <text class="profile-subtitle">当前联调仅保留登录态、角色展示和退出登录。</text>
-    </view>
-
-    <view class="detail-card">
-      <view class="detail-row">
-        <text class="detail-label">用户名</text>
-        <text class="detail-value">{{ userInfo?.username || '--' }}</text>
-      </view>
-      <view class="detail-row">
-        <text class="detail-label">角色</text>
-        <text class="detail-value">{{ roleLabel }}</text>
-      </view>
-      <view class="detail-row">
-        <text class="detail-label">登录态</text>
-        <text class="detail-value">{{ isLoggedIn ? '已登录' : '未登录' }}</text>
-      </view>
-      <view class="detail-row">
-        <text class="detail-label">Token 摘要</text>
-        <text class="detail-value token">{{ tokenPreview }}</text>
+      <view class="avatar-block">{{ (userInfo?.username || 'U').slice(0, 1).toUpperCase() }}</view>
+      <view class="profile-copy">
+        <text class="profile-kicker">账户</text>
+        <text class="profile-title">{{ userInfo?.username || '未登录' }}</text>
+        <StatusBadge :value="authStore.role || 'user'" />
       </view>
     </view>
 
-    <view v-if="authStore.role === 'admin'" class="admin-card">
-      <text class="admin-card-title">管理员入口</text>
-      <text class="admin-card-desc">
-        当前账号具备管理员权限。管理台已从一级导航移出，请从这里进入用户管理、系统开关和接入状态工作台。
-      </text>
-      <button class="admin-entry-button" @tap="goToAdminConsole">进入管理台</button>
+    <view class="summary-grid">
+      <view class="summary-card v-card">
+        <text class="summary-value">{{ isLoggedIn ? '已登录' : '未登录' }}</text>
+        <text class="summary-label">登录状态</text>
+      </view>
+      <view class="summary-card v-card">
+        <text class="summary-value">{{ roleLabel }}</text>
+        <text class="summary-label">当前权限</text>
+      </view>
+      <view class="summary-card v-card">
+        <text class="summary-value">云端 API</text>
+        <text class="summary-label">后端入口</text>
+      </view>
+      <view class="summary-card v-card">
+        <text class="summary-value">边缘中继</text>
+        <text class="summary-label">设备链路</text>
+      </view>
     </view>
 
-    <button class="logout-button" @tap="handleLogout">退出登录</button>
+    <view v-if="authStore.role === 'admin'" class="admin-card v-pressable" @tap="goToAdminConsole">
+      <view>
+        <text class="admin-card-title">管理台</text>
+        <text class="admin-card-desc">用户、系统开关与接入状态集中管理。</text>
+      </view>
+      <text class="admin-arrow">进入</text>
+    </view>
+
+    <button class="logout-button v-pressable" @tap="handleLogout">退出登录</button>
 
     <!-- #ifdef H5 -->
     <H5TabBarFallback current="profile" />
@@ -48,10 +52,11 @@ import { useAppStore } from '../../stores/app.js'
 import { useAuthStore } from '../../stores/auth.js'
 import { ensureLoggedIn } from '../../utils/auth-guard.js'
 import H5TabBarFallback from '../../components/H5TabBarFallback.vue'
+import StatusBadge from '../../components/StatusBadge.vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
-const { userInfo, token, isLoggedIn } = storeToRefs(authStore)
+const { userInfo, isLoggedIn } = storeToRefs(authStore)
 
 const roleLabel = computed(() => {
   if (authStore.role === 'admin') {
@@ -63,18 +68,6 @@ const roleLabel = computed(() => {
   }
 
   return '未识别'
-})
-
-const tokenPreview = computed(() => {
-  if (!token.value) {
-    return '--'
-  }
-
-  if (token.value.length <= 24) {
-    return token.value
-  }
-
-  return `${token.value.slice(0, 24)}...`
 })
 
 onShow(async () => {
@@ -109,76 +102,100 @@ function goToAdminConsole() {
   min-height: 100vh;
   padding: 28rpx;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #eef3f9 0%, #e7eef4 100%);
-}
-
-.profile-card,
-.detail-card {
-  padding: 28rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 14rpx 38rpx rgba(20, 32, 51, 0.08);
 }
 
 .profile-card {
-  background: linear-gradient(135deg, #17324d, #205375 64%, #5ca4a9);
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 32rpx;
+  border-radius: 36rpx;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(213, 138, 58, 0.18), transparent 28%),
+    linear-gradient(135deg, #17384a, #1f5263 64%, #5f98a4);
+  box-shadow: var(--v-shadow-float);
+}
+
+.avatar-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--v-color-primary-deep);
+  font-size: 48rpx;
+  font-weight: 900;
+}
+
+.profile-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-kicker {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
 .profile-title {
   display: block;
-  font-size: 40rpx;
-  font-weight: 700;
+  margin: 8rpx 0 12rpx;
+  font-size: 42rpx;
+  font-weight: 900;
   color: #ffffff;
 }
 
-.profile-subtitle {
+.summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.summary-card {
+  flex: 1 1 40%;
+  min-width: 260rpx;
+  padding: 26rpx;
+  box-sizing: border-box;
+}
+
+.summary-value {
   display: block;
-  margin-top: 14rpx;
-  font-size: 24rpx;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.88);
+  font-size: 30rpx;
+  font-weight: 900;
+  color: var(--v-text-main);
 }
 
-.detail-card {
-  margin-top: 20rpx;
-}
-
-.detail-row + .detail-row {
-  margin-top: 18rpx;
-  padding-top: 18rpx;
-  border-top: 2rpx solid rgba(23, 50, 77, 0.06);
-}
-
-.detail-label {
-  display: block;
-  font-size: 22rpx;
-  color: #6a7b8b;
-}
-
-.detail-value {
+.summary-label {
   display: block;
   margin-top: 10rpx;
-  font-size: 28rpx;
-  line-height: 1.6;
-  color: #17324d;
-}
-
-.detail-value.token {
-  word-break: break-all;
+  font-size: 22rpx;
+  color: var(--v-text-muted);
 }
 
 .admin-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
   margin-top: 20rpx;
-  padding: 28rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(135deg, #6f1d1b, #a53f2b 68%, #d17f54);
-  box-shadow: 0 14rpx 38rpx rgba(20, 32, 51, 0.08);
+  padding: 30rpx;
+  border-radius: 32rpx;
+  background:
+    radial-gradient(circle at 90% 12%, rgba(255, 255, 255, 0.18), transparent 26%),
+    linear-gradient(135deg, var(--v-color-primary-deep), var(--v-color-primary) 68%, var(--v-color-accent));
+  box-shadow: var(--v-shadow-card);
 }
 
 .admin-card-title {
   display: block;
   font-size: 34rpx;
-  font-weight: 700;
+  font-weight: 900;
   color: #ffffff;
 }
 
@@ -187,25 +204,25 @@ function goToAdminConsole() {
   margin-top: 12rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.admin-entry-button {
-  margin-top: 18rpx;
+.admin-arrow {
+  flex: 0 0 auto;
+  padding: 12rpx 22rpx;
   border-radius: 999rpx;
-  background: #ffffff;
-  color: #8b2f20;
-}
-
-.admin-entry-button::after {
-  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--v-color-primary);
+  font-size: 24rpx;
+  font-weight: 900;
 }
 
 .logout-button {
   margin-top: 24rpx;
   border-radius: 999rpx;
-  background: #a53f2b;
-  color: #ffffff;
+  background: rgba(200, 93, 74, 0.14);
+  color: var(--v-color-danger);
+  font-weight: 800;
 }
 
 .logout-button::after {
