@@ -110,6 +110,22 @@ backend: http://127.0.0.1:3000
 edge: ws://<当前本机局域网IP>:3000/edge/ros
 ```
 
+快捷控制台默认开环预设速度：
+
+```text
+ROS_MANUAL_LINEAR_SPEED=0.5
+ROS_MANUAL_STRAFE_SPEED=0.5
+ROS_MANUAL_ANGULAR_SPEED=0.8
+ROS_CMD_DEFAULT_HOLD_MS=400
+```
+
+含义：
+
+- 前进 / 后退：`0.5 m/s`
+- 左平移 / 右平移：`0.5 m/s`
+- 左转 / 右转：`0.8 rad/s`
+- 单次按钮默认持续：`400 ms`，到期后由 backend 补 `stop`
+
 ### 手动启动本地前端 H5
 
 ```powershell
