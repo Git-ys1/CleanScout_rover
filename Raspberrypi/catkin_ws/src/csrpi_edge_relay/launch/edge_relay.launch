@@ -9,8 +9,10 @@
   <arg name="odom_hz" default="5" />
   <arg name="imu_hz" default="5" />
   <arg name="scan_hz" default="1" />
-  <arg name="cmd_repeat_hz" default="10" />
-  <arg name="default_hold_ms" default="400" />
+  <arg name="cmd_repeat_hz" default="50" />
+  <arg name="default_hold_ms" default="1000" />
+  <arg name="max_hold_ms" default="1500" />
+  <arg name="toggle_motion_enabled" default="false" />
   <arg name="reconnect_delay_ms" default="1000" />
 
   <node if="$(arg enabled)" pkg="csrpi_edge_relay" type="edge_relay.py" name="edge_relay" output="screen">
@@ -25,6 +27,8 @@
     <param name="scan_hz" value="$(arg scan_hz)" />
     <param name="cmd_repeat_hz" value="$(arg cmd_repeat_hz)" />
     <param name="default_hold_ms" value="$(arg default_hold_ms)" />
+    <param name="max_hold_ms" value="$(arg max_hold_ms)" />
+    <param name="toggle_motion_enabled" value="$(arg toggle_motion_enabled)" />
     <param name="reconnect_delay_ms" value="$(arg reconnect_delay_ms)" />
   </node>
 </launch>

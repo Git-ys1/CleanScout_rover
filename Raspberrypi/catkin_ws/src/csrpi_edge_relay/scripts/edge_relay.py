@@ -29,8 +29,10 @@ class EdgeRelay:
         self.odom_hz = float(rospy.get_param("~odom_hz", 5.0))
         self.imu_hz = float(rospy.get_param("~imu_hz", 5.0))
         self.scan_hz = float(rospy.get_param("~scan_hz", 1.0))
-        self.cmd_repeat_hz = float(rospy.get_param("~cmd_repeat_hz", 10.0))
-        self.default_hold_ms = int(rospy.get_param("~default_hold_ms", 400))
+        self.cmd_repeat_hz = float(rospy.get_param("~cmd_repeat_hz", 50.0))
+        self.default_hold_ms = int(rospy.get_param("~default_hold_ms", 1000))
+        self.max_hold_ms = int(rospy.get_param("~max_hold_ms", 1500))
+        self.toggle_motion_enabled = bool(rospy.get_param("~toggle_motion_enabled", False))
         self.reconnect_delay_ms = int(rospy.get_param("~reconnect_delay_ms", 1000))
         self.scan_danger_threshold = float(rospy.get_param("~scan_danger_threshold", 0.35))
 
@@ -60,6 +62,7 @@ class EdgeRelay:
         self.last_telemetry_sent = 0.0
         self.cmd_hold_until = 0.0
         self.cmd_message = Twist()
+        self.toggle_motion_active = False
         self.stop_requested = False
 
         self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=20)
@@ -276,16 +279,21 @@ class EdgeRelay:
             vx = self.clamp(float(payload.get("vx", 0.0)), -self.max_vx, self.max_vx)
             vy = self.clamp(float(payload.get("vy", 0.0)), -self.max_vy, self.max_vy)
             wz = self.clamp(float(payload.get("wz", 0.0)), -self.max_wz, self.max_wz)
-            hold_ms = self.safe_hold_ms(payload)
-            self.cmd_message.linear.x = vx
-            self.cmd_message.linear.y = vy
-            self.cmd_message.angular.z = wz
-            self.cmd_hold_until = time.time() + (max(0, hold_ms) / 1000.0)
-            self.stop_requested = False
+            if self.toggle_motion_enabled:
+                self.handle_toggle_motion(vx, vy, wz)
+            else:
+                hold_ms = self.safe_hold_ms(payload)
+                self.cmd_message.linear.x = vx
+                self.cmd_message.linear.y = vy
+                self.cmd_message.angular.z = wz
+                self.cmd_hold_until = time.time() + (max(0, hold_ms) / 1000.0)
+                self.stop_requested = False
+                self.toggle_motion_active = False
         elif op == "stop":
             self.stop_requested = True
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
+            self.toggle_motion_active = False
         elif op == "fan_enable":
             self.fans_enable_pub.publish(Bool(data=bool(payload.get("enabled", False))))
         elif op == "fan_pwm":
@@ -299,7 +307,31 @@ class EdgeRelay:
             hold_ms = int(payload.get("holdMs", self.default_hold_ms))
         except (TypeError, ValueError):
             hold_ms = self.default_hold_ms
-        return max(0, min(hold_ms, self.default_hold_ms))
+        return max(0, min(hold_ms, self.max_hold_ms))
+
+    def same_motion(self, vx, vy, wz):
+        return (
+            abs(self.cmd_message.linear.x - vx) < 1e-4 and
+            abs(self.cmd_message.linear.y - vy) < 1e-4 and
+            abs(self.cmd_message.angular.z - wz) < 1e-4
+        )
+
+    def handle_toggle_motion(self, vx, vy, wz):
+        if self.toggle_motion_active and self.same_motion(vx, vy, wz):
+            self.stop_requested = True
+            self.toggle_motion_active = False
+            self.cmd_hold_until = 0.0
+            self.cmd_message = Twist()
+            rospy.loginfo("edge relay toggle motion stopped")
+            return
+
+        self.cmd_message.linear.x = vx
+        self.cmd_message.linear.y = vy
+        self.cmd_message.angular.z = wz
+        self.stop_requested = False
+        self.toggle_motion_active = True
+        self.cmd_hold_until = float("inf")
+        rospy.loginfo("edge relay toggle motion active vx=%.3f vy=%.3f wz=%.3f", vx, vy, wz)
 
     def recv_loop(self):
         while not rospy.is_shutdown() and not self.stop_event.is_set():
@@ -362,7 +394,7 @@ class EdgeRelay:
     def command_tick(self):
         now = time.time()
         msg = Twist()
-        if not self.stop_requested and now < self.cmd_hold_until:
+        if not self.stop_requested and (self.toggle_motion_active or now < self.cmd_hold_until):
             msg = self.cmd_message
         self.cmd_pub.publish(msg)
 

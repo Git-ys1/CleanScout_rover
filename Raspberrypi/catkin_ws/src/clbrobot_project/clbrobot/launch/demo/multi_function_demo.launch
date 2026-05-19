@@ -17,5 +17,6 @@
     <arg name="primary_failures_before_fallback" value="$(arg edge_primary_failures_before_fallback)" />
     <arg name="device_id" value="$(arg edge_device_id)" />
     <arg name="device_token" value="$(arg edge_device_token)" />
+    <arg name="toggle_motion_enabled" value="true" />
   </include>
 </launch>
