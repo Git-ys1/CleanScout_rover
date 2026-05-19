@@ -1,0 +1,40 @@
+编译：
+$proj = (Resolve-Path '_local\openrf1_keil_work_2\Project\RVMDK（uv5）\BH-STM32.uvprojx').Path
+$log = Join-Path (Split-Path $proj) 'manual_rf1_build.log'
+
+& 'D:\Work\Keil5\UV4\uVision.com' -b $proj -o $log
+
+Get-Content -LiteralPath $log -Tail 80
+
+烧录：
+$cli = 'F:\CodeForge\STM32CubeIDE_2.1.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.400.202601091506\tools\bin\STM32_Programmer_CLI.exe'
+$hex = (Resolve-Path '_local\openrf1_keil_work_2\Output\template.hex').Path
+
+& $cli -c port=SWD -w $hex -v -rst
+
+调试：
+前进：
+.\tools\openrf1_serial_probe.ps1
+# 低速前进
+.\tools\openrf1_serial_probe.ps1 -WheelA 0.05 -WheelB 0.05 -WheelC 0.05 -WheelD 0.05
+
+# 中速前进
+.\tools\openrf1_serial_probe.ps1 -WheelA 0.15 -WheelB 0.15 -WheelC 0.15 -WheelD 0.15
+
+# 较高速前进
+.\tools\openrf1_serial_probe.ps1 -WheelA 0.25 -WheelB 0.25 -WheelC 0.25 -WheelD 0.25
+
+# 后退
+.\tools\openrf1_serial_probe.ps1 -WheelA -0.10 -WheelB -0.10 -WheelC -0.10 -WheelD -0.10
+
+# 左转
+.\tools\openrf1_serial_probe.ps1 -WheelA -0.10 -WheelB -0.10 -WheelC 0.10 -WheelD 0.10
+
+# 右转
+.\tools\openrf1_serial_probe.ps1 -WheelA 0.10 -WheelB 0.10 -WheelC -0.10 -WheelD -0.10
+
+# 左移
+.\tools\openrf1_serial_probe.ps1 -WheelA 0.10 -WheelB -0.10 -WheelC -0.10 -WheelD 0.10
+
+# 右移
+.\tools\openrf1_serial_probe.ps1 -WheelA -0.10 -WheelB 0.10 -WheelC 0.10 -WheelD -0.10
