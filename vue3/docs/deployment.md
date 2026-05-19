@@ -375,3 +375,39 @@ sudo systemctl reload nginx
 - 云端 H5：Netlify `h5.hzhhds.top`
 - edge 设备：`csrpi-001`
 - 明文 token 不写入仓库，按 env / handoff 文档 / 现场启动参数交接
+
+## V-1.9.7 云端 backend 更新验收
+
+判断云端 backend 是否已经更新到最新，按三步看：
+
+```bash
+cd /opt/cleanscout-src
+git rev-parse --short=12 HEAD
+```
+
+```bash
+cat /opt/vline-backend/backend/.deploy-revision
+```
+
+```bash
+curl -s https://api.hzhhds.top/api/system/health
+```
+
+预期：
+
+- `/opt/cleanscout-src` 的提交号等于 `/opt/vline-backend/backend/.deploy-revision`
+- `/api/system/health` 返回的 `data.revision` 等于同一个提交号
+- `data.profile` 为 `public-edge`
+
+如果 `revision=unknown`，说明当前服务还不是通过新版 `bootstrap-backend.sh` / `update-backend.sh` 部署的，重新执行：
+
+```bash
+cd /opt/cleanscout-src/vue3
+sudo bash scripts/update-backend.sh
+```
+
+## V-1.9.7 控制职责说明
+
+V 线只向树莓派发送 `vx / vy / wz / holdMs` 这类速度意图，不决定下位机使用 `W` 开环协议还是 `M` 闭环协议；树莓派 / C 线负责把速度意图转换成对应底盘协议。
+
+持续前进切换逻辑也应放在树莓派侧：收到一次切换命令后由树莓派本地以 50Hz 持续发布，再次收到后停止，云端 backend 不承担 50Hz 实时循环。
