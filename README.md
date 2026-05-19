@@ -50,12 +50,3 @@
 | 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |
 | 机械臂 | [jixiebi/](jixiebi/) | 机械臂实验入口 |
 
-## README 定位
-
-这份首页只承担三件事：
-
-1. 说明仓库当前是什么。
-2. 给出可直接点击的主要入口。
-3. 把详细命令与阶段结论引导到专门文档。
-
-不要继续把长篇调试记录堆到首页；新增操作命令优先补到 [docs/快速上手.md](docs/快速上手.md)，阶段结论优先补到 `docs/PLAN/`、`docs/SOFTWARE/` 或 `docs/VERIFY/`。
