@@ -41,12 +41,10 @@
 ### 3.1 总述与交接
 
 - [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
-- [项目退休交接总包](docs/clean_scout_rover_退休交接总包.md)
-- [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
 
 ### 3.2 操作与调试
 
-- [操作指令速查](docs/000操作指令)
+- [快速上手](docs/快速上手.md)
 - [`tools/`](tools/)
 
 ### 3.3 OpenRF1 / STM32 下位机
@@ -99,8 +97,7 @@
 ### 想先搞清全貌
 
 1. [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
-2. [项目退休交接总包](docs/clean_scout_rover_退休交接总包.md)
-3. [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
+2. [快速上手](docs/快速上手.md)
 
 ### 想先看底盘
 
@@ -113,7 +110,6 @@
 
 1. [`Raspberrypi/README.md`](Raspberrypi/README.md)
 2. [`Raspberrypi/releases/`](Raspberrypi/releases/)
-3. [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
 
 ### 想先看机械臂
 
