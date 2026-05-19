@@ -16,6 +16,7 @@ SERVICE_NAME="${SERVICE_NAME:-vline-backend}"
 SERVICE_USER="${SERVICE_USER:-vline}"
 ENV_FILE="${ENV_FILE:-/etc/vline-backend.env}"
 SYSTEMD_UNIT_PATH="${SYSTEMD_UNIT_PATH:-/etc/systemd/system/${SERVICE_NAME}.service}"
+DEPLOY_REVISION="$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
 SUDO=''
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -162,6 +163,7 @@ check_node_version
 load_runtime_env
 ensure_service_user
 sync_backend_tree
+printf '%s\n' "${DEPLOY_REVISION}" | ${SUDO} tee "${BACKEND_ROOT}/.deploy-revision" >/dev/null
 
 cd "${BACKEND_ROOT}"
 log "installing backend dependencies"
@@ -192,3 +194,4 @@ log "initial backend bootstrap finished"
 log "backend directory: ${BACKEND_ROOT}"
 log "systemd service: ${SERVICE_NAME}"
 log "environment file: ${ENV_FILE}"
+log "deployed revision: ${DEPLOY_REVISION}"

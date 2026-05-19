@@ -13,6 +13,7 @@ APP_ROOT="${APP_ROOT:-/opt/vline-backend}"
 BACKEND_ROOT="${BACKEND_ROOT:-${APP_ROOT}/backend}"
 SERVICE_NAME="${SERVICE_NAME:-vline-backend}"
 ENV_FILE="${ENV_FILE:-/etc/vline-backend.env}"
+DEPLOY_REVISION="$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
 SUDO=''
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -32,6 +33,7 @@ sync_backend_tree() {
 
 ${SUDO} mkdir -p "${APP_ROOT}"
 sync_backend_tree
+printf '%s\n' "${DEPLOY_REVISION}" | ${SUDO} tee "${BACKEND_ROOT}/.deploy-revision" >/dev/null
 
 cd "${BACKEND_ROOT}"
 npm ci
@@ -46,6 +48,11 @@ set -a
 source "${ENV_FILE}"
 set +a
 
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  echo "DATABASE_URL is missing after loading ${ENV_FILE}." >&2
+  exit 1
+fi
+
 npx prisma generate
 npx prisma migrate deploy
 ${SUDO} systemctl restart "${SERVICE_NAME}"
@@ -54,3 +61,4 @@ echo "Backend update finished."
 echo "Backend directory: ${BACKEND_ROOT}"
 echo "systemd service: ${SERVICE_NAME}"
 echo "Environment file: ${ENV_FILE}"
+echo "Deployed revision: ${DEPLOY_REVISION}"
