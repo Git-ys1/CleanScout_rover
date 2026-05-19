@@ -1,236 +1,133 @@
 # CleanScout_rover
 
-实验室清扫巡检系统仓库。  
-当前仓名与工程代号仍为 `CleanScout_rover`，但当前统一对内口径已收拢为“实验室清扫巡检系统”。
+实验室清扫巡检系统主仓。
 
-## 1. 项目定位
+当前这个仓库不再只是“一个小车代码仓”，而是围绕车体 `C` 线展开的统一工程仓，包含：
 
-当前项目不是单独做一个会吸尘的小车、一个独立机械臂或一个独立飞行器，而是在尝试构建面向实验室场景的综合运维系统。
+- `OpenRF1` 下位机固件
+- `Raspberry Pi 4B + ROS` 上位机工作区
+- 机械臂 `J` 线受控实验副本
+- 硬件/软件/验证/交接文档
 
-当前主线目标包括：
+## 1. 如果你只读一个文件
 
-- 近地面移动与基础清扫
-- 日常巡检与异常发现
-- 近场接近与局部处置
-- 结果留痕与后续协同
+先读：
 
-当前统一角色口径：
+- [docs/C-3.4.2_仓库总述与导航.md](docs/C-3.4.2_仓库总述与导航.md)
 
-- `C`：车体 / 小车本体，当前核心地面终端与主线原型
-- `J`：机械臂，近场操作与局部处置候选子系统
-- `FSD`：飞行器，高位感知与协同扩展候选子系统
+这份文档是当前仓库的统一总述，专门用来回答：
 
-管理总纲见：
+- 这个仓库现在到底是什么
+- 当前实物硬件是什么
+- 当前软件主线是什么
+- 新同学应该先看哪里
 
-- `docs/before_all.md`
+## 2. 当前实物系统一句话
 
-## 2. 当前文档入口
+当前主车实物已经收敛为：
 
-### 2.1 系统定位
+- 上位机：`Raspberry Pi 4B`
+- 下位机：`OpenRF1 (STM32F103RCT6)`
+- 感知：`思岚 A3` 激光雷达、`MPU6050`
+- 执行：四轮霍尔编码麦轮底盘、双风机、继电器、顶盖舵机
+- 扩展：`OpenMV` 机械臂
 
-- `docs/SYSTEM/C-1.1.6_lab_system_positioning.md`
+也就是：
 
-### 2.2 C 线硬件与软件冻结
+**树莓派负责 ROS 与系统协调，OpenRF1 负责底盘实时控制。**
 
-- `docs/HARDWARE/C-1.1.1_hardware_freeze.md`
-- `docs/HARDWARE/C-1.1.1_pin_budget.md`
-- `docs/HARDWARE/C-1.1.1_power_and_relay_plan.md`
-- `docs/SOFTWARE/C-1.1.3B_protocol_freeze.md`
-- `docs/SOFTWARE/C-1.1.3B_event_vs_mode.md`
-- `docs/SOFTWARE/C-1.1.3B_test_cases.md`
-- `docs/PLAN/C-1.2.0.md`
-- `docs/SOFTWARE/C-1.2.0_cj_comm_poc_protocol.md`
-- `docs/HARDWARE/C-1.2.0_cj_comm_wiring.md`
-- `docs/VERIFY/C-1.2.0_test_log.md`
+## 3. 仓库主入口
 
-### 2.3 J 线资料评估
+### 3.1 总述与交接
 
-- `docs/JLINE/C-1.1.6_J_line_material_inventory.md`
-- `docs/JLINE/C-1.1.6_J_line_system_assessment.md`
+- [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
+- [项目退休交接总包](docs/clean_scout_rover_退休交接总包.md)
+- [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
 
-### 2.4 J 线受控实验副本
+### 3.2 操作与调试
 
-- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/README.md`
-- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/wiring.md`
-- `jixiebi/experiments/C-1.2.0_color_grasp_uart_poc/test_record.md`
+- [操作指令速查](docs/000操作指令)
+- [`tools/`](tools/)
 
-说明：
+### 3.3 OpenRF1 / STM32 下位机
 
-- `J-jixiebi/` 当前未纳入 Git 历史。
-- `J-jixiebi/` 仍作为卖家原始资料证据链保留。
-- `jixiebi/` 目录中的 `C-1.2.0` 内容是受控实验副本，可继续二开。
+- [OpenRF1 开发速查](docs/STM32F103RCT6/OpenRF1_开发速查.md)
+- [OpenRF1 运行时基线](docs/SOFTWARE/C-3.0.4_openrf1_runtime_baseline.md)
+- [OpenRF1 闭环与协议更新](docs/SOFTWARE/C-3.0.6_pid_close_loop_and_protocol_update.md)
+- [OpenRF1 定时器复测收敛](docs/VERIFY/C-3.1.4B_openrf1_timer_final_convergence.md)
+- [OpenRF1 后轮方向热修](docs/VERIFY/C-3.1.4C_openrf1_rear_wheel_direction_hotfix.md)
+- [OpenRF1 闭环平滑调试](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md)
+- 当前本地固件工作副本：
+  - [`_local/openrf1_keil_work_3/`](./_local/openrf1_keil_work_3/)
 
-### 2.5 树莓派端发布入口
+### 3.4 Raspberry Pi / ROS 上位机
 
-- `Raspberrypi/README.md`
-- `Raspberrypi/releases/README.md`
-- `docs/PLAN/C-2.0.5_raspberrypi_publish_path.md`
+- [`Raspberrypi/README.md`](Raspberrypi/README.md)
+- [`Raspberrypi/releases/`](Raspberrypi/releases/)
 
-说明：
+### 3.5 机械臂 J 线
 
-- `Raspberrypi/` 用于承接树莓派侧由 `opencode` 或本地端独立推进的结果发布。
-- 树莓派端每轮结果先在 `Raspberrypi/releases/` 下按版本目录留痕。
-- 树莓派端与当前 `UNO + AFMotor` 基线隔离推进，需回写主线时再单独立项。
+- [`jixiebi/`](jixiebi/)
+- `J-jixiebi/` 仅保留为原始资料/历史脏目录，不是当前规范主线
 
-### 2.6 C-2.x 树莓派接管归档
+## 4. 当前仓库结构怎么理解
 
-- `docs/PLAN/C-2.2.1.md`
-- `docs/SYSTEM/C-2.2.1_takeover_research_report.md`
-- `docs/HARDWARE/C-2.2.1_hardware_boundary_update.md`
-- `docs/SOFTWARE/C-2.2.1_noetic_entry_review.md`
-- `Raspberrypi/releases/C-2.2.1_noetic_handover/README.md`
+### `docs/`
 
-说明：
+文档主入口。  
+优先看这里，不要先从分支名和零散提交猜项目状态。
 
-- `C-2.2.1` 已将树莓派 `Noetic` 环境审计日志与镜像接管结论正式入库。
-- `C-1.1.1` 继续作为历史硬件冻结事实保留。
-- `C-2.x` 当前实施主线已切换到“树莓派上位接管 + 底层边界重映射”。
+### `_local/`
 
-### 2.7 C-2.2.x 上下位控制真相文档
+本地工作副本、Keil 工程、vendor 对照副本。  
+当前 RF1 底层最重要的施工目录在这里。
 
-- `docs/SOFTWARE/C-2.2.4_upper_lower_control_freeze.md`
-- `docs/SOFTWARE/C-2.2.4_serial_link_notes.md`
-- `docs/PLAN/C-2.2.5A.md`
-- `docs/SOFTWARE/C-2.2.5A_uno_encoder_architecture_freeze.md`
-- `docs/PLAN/C-2.2.6A.md`
-- `docs/SOFTWARE/C-2.2.6A_uno_encoder_pid_execution.md`
-- `docs/PLAN/C-2.2.7.md`
-- `docs/SOFTWARE/C-2.2.7A_uno_w_protocol_freeze.md`
-- `docs/SOFTWARE/C-2.2.7_serial_protocol_contract.md`
-- `Raspberrypi/releases/C-2.2.4_upper_lower_control_truth/README.md`
-- `Raspberrypi/releases/C-2.2.7/README.md`
+### `Raspberrypi/`
 
-说明：
+树莓派 ROS 工作区、脚本与发布目录。
 
-- `C-2.2.4` 冻结了“联调临时态 vs 正式速度控制态”的真相口径。
-- 当前 `1~9` 动作码只保留为联调过渡协议，不再作为长期正式接口冻结。
-- 长期正式方向已明确为“树莓派持续发送速度命令 + UNO 短超时急停 + 下一轮编码器闭环”。
-- `C-2.2.5A` 继续冻结 `UNO` 编码器接入架构、引脚映射与 `PCINT` 采样方向。
-- `C-2.2.6A` 开始在 `UNO` 本地侧落地四轮编码器 `x1` 采样、四路 `PI` 和新的 `W,w1,w2,w3,w4` 桥接协议。
-- `C-2.2.7` 明确冻结当前唯一联调真相为 `W,w1,w2,w3,w4`，并要求树莓派端先对齐 `W` 协议桥，再进入 `cmd_vel -> W` 下一阶段。
+### `jixiebi/`
 
-### 2.8 C-3.0.x UNO 止损结论与下一轮入口
+机械臂受控实验副本。
 
-- `docs/PLAN/C-3.0.2A.md`
-- `docs/PLAN/C-3.0.2C.md`
-- `docs/SOFTWARE/C-3.0.2C_x2_closure_conclusion.md`
-- `docs/PLAN/C-3.0.2D.md`
-- `docs/SOFTWARE/C-3.0.2D_x2_wheel_gap_strategy.md`
+### `tools/`
 
-说明：
+本地构建、串口测试、辅助脚本入口。
 
-- `C-3.0.2C` 已冻结当前 `UNO` 侧的止损结论：`X2` 暂停，主线回退到 `X1`。
-- 当前真实结论不是“`X2` 已通过”，而是“`X2` 在当前硬件条件下放大了轮间差异，而 `X1` 曾经证明过可以流畅同步转动”。
-- `C-3.0.2D` 作为下一轮入口，不再继续做 `X2` 优化，而是专门针对 `X1` 重新整定 `PI`，恢复三轮流畅同步转动。
+## 5. 阅读建议
 
-## 3. 当前阶段判断
+### 想先搞清全貌
 
-- `C` 线已经具备核心终端原型地位，当前仓库中的受控代码与构建流程仍以 C 线为主。
-- `J` 线已进入“资料归纳 + 主线适配判断”阶段，当前更像半开放二开平台，不是纯黑盒，也不是已成熟可直接并线模块。
-- `FSD` 线当前未在本仓纳入本地材料，因此只保留系统角色接口，不在本轮做事实评估。
+1. [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
+2. [项目退休交接总包](docs/clean_scout_rover_退休交接总包.md)
+3. [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
 
-## 4. C 线工程基线
+### 想先看底盘
 
-当前 C 线仍沿用 `Tyler` 基线收编路线：
+1. [OpenRF1 开发速查](docs/STM32F103RCT6/OpenRF1_开发速查.md)
+2. [OpenRF1 运行时基线](docs/SOFTWARE/C-3.0.4_openrf1_runtime_baseline.md)
+3. [OpenRF1 闭环与协议更新](docs/SOFTWARE/C-3.0.6_pid_close_loop_and_protocol_update.md)
+4. [`_local/openrf1_keil_work_3/`](./_local/openrf1_keil_work_3/)
 
-- 上游原始基线：`Tyler_1_Library/`
-- 受控维护副本：`libraries/Tyler_1/`
-- 风机控制模块：`libraries/CleanScoutFan/`
-- 电机驱动依赖：`Adafruit-Motor-Shield-library-master/`
-- 标准闭环编译入口：`sketches/c003_uno_encoder_pid_bridge/c003_uno_encoder_pid_bridge.ino`
-- 手动联调回退入口：`sketches/c002_uno_baseline/c002_uno_baseline.ino`
+### 想先看树莓派
 
-当前 C 线硬件冻结摘要：
+1. [`Raspberrypi/README.md`](Raspberrypi/README.md)
+2. [`Raspberrypi/releases/`](Raspberrypi/releases/)
+3. [树莓派 4B / OpenClaw 交接书](docs/OpenClaw_树莓派4B_项目交接书.md)
 
-- 风机方案当前仅为继电器开关版，不包含调速实现
-- 蓝牙当前作为下行控制通道
-- 主控与 IO 余量有限，后续扩展可能触发重评估
-- `C-1.2.0` 已新增 `UNO <-> F411 <-> J(OpenMV)` 最小双向通信闭环的软件骨架
+### 想先看机械臂
 
-## 5. Windows 环境准备（arduino-cli 标准）
+1. [`jixiebi/`](jixiebi/)
+2. `C-1.2.5_vendor_actuator_baseline`
+3. `C-1.2.6_vendor_vision_grasp_baseline`
 
-### 5.1 安装 arduino-cli
+## 6. 当前 README 的定位
 
-可选方案：
+这份 `README` 现在只承担两件事：
 
-1. 官方安装文档：<https://docs.arduino.cc/arduino-cli/installation/>
-2. 使用 VSCode Arduino Community Edition 插件内置 `arduino-cli`
+1. 告诉你这个仓库当前是什么
+2. 把你跳转到正确的文档入口
 
-安装后确认：
+具体阶段细节、冻结结论、验证记录，不再继续直接堆在首页，而统一收口到：
 
-```powershell
-arduino-cli version
-```
-
-### 5.2 安装 UNO core
-
-```powershell
-arduino-cli core update-index
-arduino-cli core install arduino:avr
-arduino-cli lib update-index
-arduino-cli lib install Servo
-```
-
-或直接运行：
-
-```powershell
-.\tools\setup_arduino_cli.ps1
-```
-
-## 6. C 线标准编译入口
-
-推荐：
-
-```powershell
-.\tools\compile_uno_cli.ps1
-```
-
-回退：
-
-```powershell
-.\tools\compile_uno.ps1
-```
-
-Arduino IDE 直接 Verify 兼容入口：
-
-```powershell
-.\tools\install_sketchbook_links.ps1
-```
-
-`C-1.2.0` 的 F411 桥接最小产物构建：
-
-```powershell
-.\tools\build_f411_bridge.ps1
-```
-
-说明：
-
-- 仓库脚本当前默认编译 `c003_uno_encoder_pid_bridge`
-- `c002_uno_baseline` 保留为手动动作码回退线，可通过脚本参数手动指定
-- Arduino IDE 直接 Verify 是兼容入口
-- `"Servo.h" 对应多个库` 只是库选择提示，不是 `CleanScoutFan.h` 缺失的根因
-- `build_f411_bridge.ps1` 当前只验证 F411 桥接源码能产出 `.elf/.hex`，不等同于实板 Gate0 已完成
-
-## 7. VSCode 使用方式
-
-- 默认构建任务：`C-0.0.2: compile UNO (arduino-cli)`
-- 回退任务：`compile UNO (arduino-builder)`
-- `.ino` 已在工作区配置中关联为 C++ 语法高亮
-
-## 8. 第三方来源与许可证
-
-详见：
-
-- `THIRD_PARTY_NOTICES.md`
-
-当前 `Tyler` 与 `AFMotor` 的许可证信息在仓内均未发现明确 `LICENSE` 文件，状态标记为“待核验”。
-
-## 9. Git 纪律（摘要）
-
-- 开工先 checkpoint，再施工提交
-- 一轮只解决一类问题，保持可追踪、可回退
-- 共享分支回退优先 `revert`
-
-详细规则见：
-
-- `docs/before_all.md`
+- [docs/C-3.4.2_仓库总述与导航.md](docs/C-3.4.2_仓库总述与导航.md)

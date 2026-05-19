@@ -1,6 +1,24 @@
 .build/
 __pycache__/
 *.pyc
+
+# Local large/reference packages and generated artifacts that are not published.
+*.img.xz
+*.torrent
+J-jixiebi/
+docs/STM32F103RCT6/03.源代码程序/
+docs/STM32F103RCT6/03.源代码程序.zip
+docs/STM32F103RCT6/开发资料/
+docs/STM32F103RCT6/*.pdf
+docs/arduino uno/
+docs/未确认-新文件/
+docs/Clean Scout Rover 退休交接总包.pdf
+_local/C24+V2.1/
+_local/**/Output/
+_local/**/Listing/
+_local/**/*.log
+_local/**/*.zip
+/package.json
 _local/openrf1_keil_work/
 _local/openrf1_keil_work_2/Output/
 _local/openrf1_keil_work_2/Listing/
