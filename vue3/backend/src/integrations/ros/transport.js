@@ -174,11 +174,6 @@ export function createRosbridgeTransport(config, cache, client) {
 }
 
 export function createEdgeRelayTransport(config, cache, hub) {
-  const timers = {
-    intervalId: null,
-    stopTimeoutId: null,
-  }
-
   async function publishCommand(command) {
     await hub.sendCommand(command)
   }
@@ -194,15 +189,10 @@ export function createEdgeRelayTransport(config, cache, hub) {
       return cache.getFanState()
     },
     async sendCommand(command) {
+      // edge-relay devices latch manual_control locally and run their own 50Hz loop.
+      // Repeating the same frame here would toggle the Pi-side command back to stop.
       await publishCommand(command)
-      const scheduledStopAt = scheduleRepeatedCommand({
-        command,
-        repeatHz: config.repeatHz,
-        publishCommand,
-        timers,
-      })
-
-      return createBaseResult(command, 'edge-relay', scheduledStopAt)
+      return createBaseResult(command, 'edge-relay', null)
     },
     async sendFanEnable({ enabled }) {
       const result = await hub.sendFanEnable({ enabled })

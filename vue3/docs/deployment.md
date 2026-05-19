@@ -411,3 +411,14 @@ sudo bash scripts/update-backend.sh
 V 线只向树莓派发送 `vx / vy / wz / holdMs` 这类速度意图，不决定下位机使用 `W` 开环协议还是 `M` 闭环协议；树莓派 / C 线负责把速度意图转换成对应底盘协议。
 
 持续前进切换逻辑也应放在树莓派侧：收到一次切换命令后由树莓派本地以 50Hz 持续发布，再次收到后停止，云端 backend 不承担 50Hz 实时循环。
+
+## V-1.9.8 edge-relay 持续控制口径
+
+`edge-relay` 模式下，backend 对一次 `/api/ros/manual-preset` 请求只下发一帧 `manual_control` 或 `stop`：
+
+- 点击一次“前进 / 后退 / 左转 / 右转 / 平移”只发送一次 `manual_control`
+- 再次点击同方向同速度时，仍只发送一次相同 `manual_control`，由树莓派侧解释为翻转停止
+- 点击“停止”只发送一次 `stop`
+- backend 不再在 `edge-relay` 模式下按 `ROS_CMD_REPEAT_HZ` 重复下发同一条速度帧，也不在 `holdMs` 到期后自动补发 stop
+
+`rosbridge` 和 `mock` transport 仍保留旧的 `holdMs + repeatHz` 行为，避免破坏本地旧链路调试。
