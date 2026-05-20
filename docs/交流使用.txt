@@ -3,6 +3,49 @@
 零、清理脚本
 bash /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/clean_mapping_nav_sessions.sh
 
+最新报错：
+clbrobot@clbrobot:~/Work/CleanScout_rover/Raspberrypi/catkin_ws$ bash ./start_desk_navigation.sh
+CleanScout Pi environment loaded
+ROS_MASTER_URI=http://10.44.63.84:11311
+ROS_IP=10.44.63.84
+ROS_HOSTNAME=10.44.63.84
+[c331-nav] clean 旧会话
+[c331-nav] 显式启动 roscore
+[c331-nav] 启动 bringup_rf1_min.launch
+[c331-nav] 等待 /rf1/vel
+[c331-nav] 等待 /odom
+[c331-nav] ERROR: /odom 未就绪
+[c331-nav] ERROR: 启动失败，自动清理残留 ROS 会话
+clbrobot@clbrobot:~/Work/CleanScout_rover/Raspberrypi/catkin_ws$
+
+云端后端参数：
+edge_url=wss://api.hzhhds.top/edge/ros
+edge_device_id=csrpi-001
+edge_device_token=沿用当前 edge token
+
+多功能节点当前 edge-relay 已支持：
+
+1. 优先连接云端后端：`wss://api.hzhhds.top/edge/ros`
+2. 如果连续 3 次连接失败，则自动切换到本地后端：`ws://10.156.250.190:3000/edge/ros`
+3. 当前不需要后端改协议，只是树莓派端增加了连接优先级切换
+
+当前多功能 demo 推荐启动方式：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/demo/multi_function_demo.launch \
+  enable_edge_relay:=true \
+  edge_device_id:=csrpi-001 \
+  edge_device_token:=ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2 \
+  edge_url:=wss://api.hzhhds.top/edge/ros \
+  edge_fallback_url:=ws://10.156.250.190:3000/edge/ros \
+  edge_primary_failures_before_fallback:=3
+
+观察日志时，如果看到类似下面口径，说明已经自动切本地：
+
+`edge relay primary endpoint failed 3 times, switching to fallback ws://10.156.250.190:3000/edge/ros`
+
+
 一、先做一次当前工作区编译刷新
 
 在树莓派本机执行：
@@ -23,63 +66,109 @@ bash -lc 'cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws && catki
 cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
 export EDGE_DEVICE_ID=csrpi-001
 export EDGE_DEVICE_TOKEN=ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2
-export EDGE_RELAY_URL=ws://10.22.7.190:3000/edge/ros
+export EDGE_RELAY_URL=ws://10.63.109.190:3000/edge/ros
 bash ./run_slam_mapping.sh
 
-十、最小 RF1 主动控制自检
+十二、导航链手动逐层启动方式（用于直接看每层报错）
 
-如果已经确认：
+如果 `start_desk_navigation.sh` 太黑盒，当前不要先跑脚本，改用手动逐层启动。
 
-1. 手动拨动车轮时地图 / 坐标会变化
-2. 但导航点击后小车完全不动
-
-此时不要继续在大链里猜，先做最小 RF1 主动控制自检。
-
-在树莓派本机执行：
+每个新终端都先执行：
 
 cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
-bash ./test_rf1_cmd_vel.sh
-最新报错：
-[rf1-test] clean 旧会话
-[rf1-test] 启动 roscore
-[rf1-test] 启动最小 RF1 主动控制链
-[rf1-test] 等待 /rf1/vel
-[rf1-test] 等待 /rf1/wheel_target_ms
-[rf1-test] 当前 topic 检查
-/cmd_vel
-/rf1/cmdvel_debug
-/rf1/status
-/rf1/vel
-/rf1/wheel_target_ms
-[rf1-test] 发送脉冲 forward: vx=0.08 vy=0.0 wz=0.0
-publishing and latching message for 3.0 seconds
-[rf1-test] /rf1/wheel_target_ms 快照 (forward)
-layout:
-  dim: []
-  data_offset: 0
-data: [0.0, 0.0, 0.0, 0.0]
----
-layout:
-  dim: []
-  data_offset: 0
-data: [0.0, 0.0, 0.0, 0.0]
----
-layout:
-  dim: []
-  data_offset: 0
-data: [0.0, 0.0, 0.0, 0.0]
----
-[rf1-test] /rf1/cmdvel_debug 快照 (forward)
-data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
----
-data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
----
-data: "cmd_vel vx=0.000 vy=0.000 wz=0.000 targets=[0.0, 0.0, 0.0, 0.0]"
----
-[rf1-test] /rf1/status 快照 (forward)
-data: "RF1 serial connected"
+source ./use_cleanscout_pi.sh
 
-注意，实际上轮子转了，在执行发送脉冲时小车实际转了，但后续没有转，也没有任何数据，让你查底层啊！查个底层就这么困难？
+0. 先清理旧会话：
+
+bash ./clean_mapping_nav_sessions.sh
+
+1. 终端 1：启动 roscore
+
+roscore
+
+2. 终端 2：启动最小底盘链
+
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.launch
+
+确认：
+
+rostopic list | grep -E "/rf1/vel|/rf1/status|/rf1/wheel_target_ms|/rf1/cmdvel_debug"
+
+3. 终端 3：启动 IMU
+
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch
+
+确认：
+
+rostopic list | grep /imu/data
+
+4. 终端 4：启动雷达
+
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch
+
+确认：
+
+rostopic list | grep /scan
+
+5. 终端 5：启动 laser_scan_matcher
+
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/slam/laser_scan_matcher_406.launch
+
+确认：
+
+rostopic list | grep /odom_lsm
+
+6. 终端 6：启动导航主链
+
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1.launch
+
+确认：
+
+rostopic list | grep -E "/amcl_pose|/move_base/status|/cmd_vel"
+
+建议额外开观察终端：
+
+终端 7：
+
+rostopic echo /odom_lsm
+
+终端 8：
+
+rostopic echo /amcl_pose
+
+终端 9：
+
+rostopic echo /move_base/status
+
+终端 10：
+
+rostopic echo /cmd_vel
+
+终端 11：
+
+rostopic echo /rf1/cmdvel_debug
+
+终端 12：
+
+rostopic echo /rf1/wheel_target_ms
+
+如果还要在虚拟机 / 上位机看 RViz：
+
+1. Fixed Frame = `map`
+2. 先 `2D Pose Estimate`
+3. 再 `2D Nav Goal`
+
+当前手动正常启动顺序等价于：
+
+1. `roscore`
+2. `bringup_rf1_min.launch`
+3. `imu_only.launch`
+4. `rplidar.launch`
+5. `laser_scan_matcher_406.launch`
+6. `navigation_406_rf1.launch`
+
+如果某一层直接报错，不要跳步，直接把那个终端的原始报错贴回来。
+
 
 当前正式建图默认口径已经切到：
 
@@ -122,10 +211,12 @@ bash ./start_desk_navigation.sh
 7. 等待 `/imu/data`
 8. 启动 `lidar/rplidar.launch`
 9. 等待 `/scan`
-10. 启动 `nav/navigation_406_rf1.launch`
-11. 等待 `/odom`
-12. 等待 `/amcl_pose`
-13. 等待 `/move_base/status`
+10. 启动 `slam/laser_scan_matcher_406.launch`
+11. 等待 `/odom_lsm`
+12. 启动 `nav/navigation_406_rf1.launch`
+13. 等待 `/odom_lsm`
+14. 等待 `/amcl_pose`
+15. 等待 `/move_base/status`
 
 默认导航地图已改为：
 
@@ -168,7 +259,7 @@ RViz 里建议先看：
 
 导航链重点回报：
 
-1. `/odom` 是否存在
+1. `/odom_lsm` 是否存在
 2. `/scan` 是否存在
 3. `/amcl_pose` 是否存在
 4. `/move_base/status` 是否存在

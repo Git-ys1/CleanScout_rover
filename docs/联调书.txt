@@ -1,132 +1,37 @@
-## V-1.9.7 控制职责说明
+发现一个实际问题，小车在左右转的时候没法正常运动，前进后退和平移都是正常，但是左右转的时候左前和右后始终与正常逻辑相反，以左转为例：需要左前、左后负，右前、右后正；而实际上是左前右前正、左后右后负。你先来查一下是不是你这里的速度给错了？如果你这里的速度没有错，那就要去查树莓派那边对应节点是不是速度给错了
 
-V 线只向树莓派发送 `vx / vy / wz / holdMs` 这类速度意图，不决定下位机使用 `W` 开环协议还是 `M` 闭环协议；树莓派 / C 线负责把速度意图转换成对应底盘协议。
+V 线这里没有把左右转速度给错。
 
-持续前进切换逻辑也应放在树莓派侧：收到一次切换命令后由树莓派本地以 50Hz 持续发布，再次收到后停止，云端 backend 不承担 50Hz 实时循环。
+当前 backend preset 是：
 
-实际结果：
-[INFO] [1779160215.689098]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160215.782903]: edge relay toggle motion stopped
-[INFO] [1779160217.290636]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160217.389133]: edge relay toggle motion stopped
-[INFO] [1779160217.493213]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160217.598586]: edge relay toggle motion stopped
-[INFO] [1779160218.520854]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160218.633146]: edge relay toggle motion stopped
-[INFO] [1779160218.724981]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160218.826296]: edge relay toggle motion stopped
-[INFO] [1779160219.657536]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160219.757450]: edge relay toggle motion stopped
-[INFO] [1779160219.857171]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160219.969106]: edge relay toggle motion stopped
-[INFO] [1779160220.933139]: edge relay toggle motion active vx=-0.080 vy=0.000 wz=0.000
-[INFO] [1779160221.033375]: edge relay toggle motion stopped
-[INFO] [1779160221.133953]: edge relay toggle motion active vx=-0.080 vy=0.000 wz=0.000
-[INFO] [1779160221.235909]: edge relay toggle motion stopped
-[INFO] [1779160222.924782]: edge relay toggle motion active vx=0.000 vy=0.000 wz=0.200
-[INFO] [1779160223.029159]: edge relay toggle motion stopped
-[INFO] [1779160223.124816]: edge relay toggle motion active vx=0.000 vy=0.000 wz=0.200
-[INFO] [1779160223.225456]: edge relay toggle motion stopped
-[INFO] [1779160225.157548]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160225.257021]: edge relay toggle motion stopped
-[INFO] [1779160225.360981]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160225.460968]: edge relay toggle motion stopped
-[INFO] [1779160226.571506]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160226.665380]: edge relay toggle motion stopped
-[INFO] [1779160226.777344]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160226.869269]: edge relay toggle motion stopped
-[INFO] [1779160228.248487]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160228.253772]: edge relay toggle motion stopped
-[INFO] [1779160228.350076]: edge relay toggle motion active vx=0.080 vy=0.000 wz=0.000
-[INFO] [1779160228.445342]: edge relay toggle motion stopped
+turn_left:
+linear.x = 0
+linear.y = 0
+angular.z = +0.8
 
-## 当前排查结论
+turn_right:
+linear.x = 0
+linear.y = 0
+angular.z = -0.8
+edge-relay 下发帧也是原样：
 
-树莓派侧当前多功能节点已经按下面逻辑执行：
+{
+  "op": "manual_control",
+  "vx": 0,
+  "vy": 0,
+  "wz": 0.8,
+  "holdMs": 400
+}
+所以 V 线只是在发标准 Twist 语义：
 
-1. 收到一次 `manual_control(vx, vy, wz)`
-2. 树莓派本地锁存该速度意图
-3. 以 50Hz 持续发布 `/cmd_vel`
-4. 再次收到**同方向同速度**的 `manual_control(vx, vy, wz)`
-5. 视为“翻转停止”
+左转 = wz 正
+右转 = wz 负
+你描述的错误现象：
 
-当前日志表现为：
+期望左转：左前/左后负，右前/右后正
+实际：左前/右前正，左后/右后负
+这不是 V 线发错 vx/vy/wz，而是树莓派侧把 wz 分解到四轮时，轮位映射或左右/前后轮编号语义错了。尤其“左前右前同号、左后右后同号”更像是把“前后轴”当成“左右侧”在做旋转分解。
 
-1. `active`
-2. 约 80ms ~ 110ms 后立即 `stopped`
-3. 然后又 `active`
-4. 然后又 `stopped`
+给树莓派侧排查口径：
 
-这说明树莓派侧不是“持续逻辑没生效”，而是**在一次前端点击流程里，后端/前端很可能连续发了两次相同的 `manual_control`**。
-
-也就是说，当前最像的真实链路是：
-
-1. 点击按下时发一次 `manual_control`
-2. 松开时又发一次同样的 `manual_control`
-3. 树莓派侧按翻转逻辑把第二次解释成“停止”
-
-于是现场看起来就像：
-
-1. 两次短脉冲前进
-2. 走一下就停
-
-## 当前树莓派侧判断
-
-从当前日志与代码对照看，树莓派侧翻转逻辑是自洽的：
-
-1. `active` 是第一次切到持续运动
-2. `stopped` 是第二次同指令触发翻转停止
-
-当前没有证据表明：
-
-1. 树莓派侧 50Hz 持续发布失败
-2. 底层 `W` 闭环协议失效
-3. RF1 下位机没有接到持续目标
-
-## 当前建议给 V 线 / 后端的修改方向
-
-后端 / 小程序侧当前不要再把“点击一次前进”做成：
-
-1. 按下发一次 `manual_control`
-2. 松开发一次同样的 `manual_control`
-
-因为这会在树莓派侧形成：
-
-1. 第一次 = 开始持续运动
-2. 第二次 = 翻转停止
-
-### 推荐改法
-
-后端 / 小程序侧应改为：
-
-1. 用户点击一次“前进”按钮，只发**一次** `manual_control`
-2. 用户再次点击同一个“前进”按钮时，再发**一次相同** `manual_control`
-3. 如果要立即停车，单独发：
-
-```json
-{"op":"stop"}
-```
-
-### 不推荐改法
-
-不要做：
-
-1. 按下发 `manual_control`
-2. 松开发同样的 `manual_control`
-
-也不要做：
-
-1. 按下发 `manual_control`
-2. 松开发全 0 `manual_control`
-
-如果要“松开即停”，那应该明确发：
-
-```json
-{"op":"stop"}
-```
-
-而不是再发一次速度切换指令。
-
-## 给 V 线的一句话口径
-
-“树莓派侧当前已经实现本地翻转式持续运动；现在现场两次脉冲前进、立刻停止的现象，高概率是前端/后端在一次点击流程里连续发了两次相同 `manual_control`，第二次被树莓派解释为翻转停止。请 V 线改成：单击只发一次 `manual_control`，再次点击同方向才发第二次；若要立即停车，单独发 `stop`。”
+V 线左转只发 manual_control: vx=0, vy=0, wz=+0.8；右转只发 wz=-0.8。若左转时实际轮向变成前排同号、后排同号，问题在 Pi 侧 cmd_vel -> 四轮目标速度分解或轮位编号映射，不在前端/backend。请检查 RF1 当前轮位顺序是否仍为 CN1/LR、CN2/LF、CN3/RR、CN4/RF，以及 wz 项在 mecanum/omni 分解公式里的符号分配。

@@ -14,15 +14,34 @@ class Mpu6050Node:
         self.address = int(rospy.get_param("~address", 0x68))
         self.frame_id = rospy.get_param("~frame_id", "imu_link")
         self.rate_hz = float(rospy.get_param("~rate_hz", 50.0))
+        
         self.accel_scale = float(rospy.get_param("~accel_scale", 16384.0))
         self.gyro_scale = float(rospy.get_param("~gyro_scale", 131.0))
+
+        self.raw_topic = rospy.get_param("~topic", "/imu/data_raw")
+        self.raw_pub = rospy.Publisher(self.raw_topic, Imu, queue_size=50)
+
+        self.gyro_bias_x = float(rospy.get_param("~gyro_bias_x", 0.0))
+        self.gyro_bias_y = float(rospy.get_param("~gyro_bias_y", 0.0))
+        self.gyro_bias_z = float(rospy.get_param("~gyro_bias_z", 0.0))
+
         self.bus_handle = smbus.SMBus(self.bus)
 
-        self.raw_pub = rospy.Publisher("/imu/data", Imu, queue_size=50)
-
         self.write_register(0x6B, 0x00)
+
         self.write_register(0x1C, 0x00)
+
         self.write_register(0x1B, 0x00)
+
+        rospy.loginfo("MPU6050 node started")
+        rospy.loginfo("Publishing raw IMU to: %s", self.raw_topic)
+        rospy.loginfo("frame_id: %s", self.frame_id)
+        rospy.loginfo(
+            "gyro_bias: x=%.6f y=%.6f z=%.6f rad/s",
+            self.gyro_bias_x,
+            self.gyro_bias_y,
+            self.gyro_bias_z,
+        )
 
     def write_register(self, register, value):
         self.bus_handle.write_byte_data(self.address, register, value)
@@ -39,9 +58,11 @@ class Mpu6050Node:
         accel_x = self.read_word_signed(0x3B)
         accel_y = self.read_word_signed(0x3D)
         accel_z = self.read_word_signed(0x3F)
+
         gyro_x = self.read_word_signed(0x43)
         gyro_y = self.read_word_signed(0x45)
         gyro_z = self.read_word_signed(0x47)
+
         return accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
 
     def publish_once(self):
@@ -50,20 +71,29 @@ class Mpu6050Node:
         msg = Imu()
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = self.frame_id
+
+        msg.orientation.x = 0.0
+        msg.orientation.y = 0.0
+        msg.orientation.z = 0.0
+        msg.orientation.w = 1.0
+        msg.orientation_covariance[0] = -1.0
+
         msg.linear_acceleration = Vector3(
             x=(accel_x / self.accel_scale) * 9.80665,
             y=(accel_y / self.accel_scale) * 9.80665,
             z=(accel_z / self.accel_scale) * 9.80665,
         )
+
         msg.angular_velocity = Vector3(
-            x=math.radians(gyro_x / self.gyro_scale),
-            y=math.radians(gyro_y / self.gyro_scale),
-            z=math.radians(gyro_z / self.gyro_scale),
+            x=math.radians(gyro_x / self.gyro_scale) - self.gyro_bias_x,
+            y=math.radians(gyro_y / self.gyro_scale) - self.gyro_bias_y,
+            z=math.radians(gyro_z / self.gyro_scale) - self.gyro_bias_z,
         )
-        msg.orientation_covariance[0] = -1.0
+
         msg.angular_velocity_covariance[0] = 0.02
         msg.angular_velocity_covariance[4] = 0.02
         msg.angular_velocity_covariance[8] = 0.02
+
         msg.linear_acceleration_covariance[0] = 0.04
         msg.linear_acceleration_covariance[4] = 0.04
         msg.linear_acceleration_covariance[8] = 0.04

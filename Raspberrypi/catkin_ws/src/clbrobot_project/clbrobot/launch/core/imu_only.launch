@@ -1,10 +1,47 @@
 <launch>
-  <node pkg="mpu6050_i2c_bridge" type="mpu6050_node.py" name="mpu6050_i2c_node" output="screen">
+  <node pkg="mpu6050_i2c_bridge"
+        type="mpu6050_node.py"
+        name="mpu6050_i2c_node"
+        output="screen">
+
     <param name="bus" value="1" />
     <param name="address" value="104" />
     <param name="rate_hz" value="50.0" />
     <param name="frame_id" value="imu_link" />
+
+    <!-- 关键：原始数据发到 /imu/data_raw -->
+    <param name="topic" value="/imu/data_raw" />
+
+    <!-- 先用 0，后面按静止数据校准 -->
+    <param name="gyro_bias_x" value="0.0" />
+    <param name="gyro_bias_y" value="0.0" />
+    <param name="gyro_bias_z" value="0.0" />
   </node>
 
-  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_imu_link" args="0 0 0 0 0 0 base_link imu_link" />
+  <node pkg="imu_filter_madgwick"
+        type="imu_filter_node"
+        name="imu_filter_madgwick"
+        output="screen">
+
+    <!-- MPU6050 没有磁力计，必须 false -->
+    <param name="use_mag" value="false" />
+
+    <!-- 不让 IMU filter 发布 TF，避免和导航 TF 打架 -->
+    <param name="publish_tf" value="false" />
+
+    <param name="world_frame" value="enu" />
+    <param name="fixed_frame" value="odom_lsm" />
+    <param name="remove_gravity_vector" value="false" />
+
+    <!-- 调试用，可看到 /imu/rpy/filtered -->
+    <param name="publish_debug_topics" value="true" />
+
+    <remap from="imu/data_raw" to="/imu/data_raw" />
+    <remap from="imu/data" to="/imu/data" />
+  </node>
+
+  <node pkg="tf2_ros"
+        type="static_transform_publisher"
+        name="base_link_to_imu_link"
+        args="0 0 0 0 0 0 base_link imu_link" />
 </launch>

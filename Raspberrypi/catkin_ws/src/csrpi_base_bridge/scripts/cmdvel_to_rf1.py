@@ -66,13 +66,22 @@ class CmdvelToRf1:
         return sign * mag
 
     def convert_cmd_vel(self, vx, vy, wz):
-        targets = [
+        # Logical wheel order here is [LF, RF, LR, RR].
+        # Current RF1 wiring order is [CN1=LR, CN2=LF, CN3=RR, CN4=RF],
+        # so remap before publishing to /rf1/wheel_target_ms.
+        logical_targets = [
             vx - vy - self.k_m * wz,
             vx + vy + self.k_m * wz,
             vx + vy - self.k_m * wz,
             vx - vy + self.k_m * wz,
         ]
-        return [self.lift_wheel(v) for v in targets]
+        remapped_targets = [
+            logical_targets[2],
+            logical_targets[0],
+            logical_targets[3],
+            logical_targets[1],
+        ]
+        return [self.lift_wheel(v) for v in remapped_targets]
 
     def publish_debug(self, vx, vy, wz, targets):
         text = "cmd_vel vx=%.3f vy=%.3f wz=%.3f targets=[%.3f, %.3f, %.3f, %.3f]" % (
