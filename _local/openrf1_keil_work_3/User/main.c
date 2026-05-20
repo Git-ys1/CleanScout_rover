@@ -18,6 +18,7 @@ static int16_t g_raw_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 static int16_t g_output_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 
 static float g_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_smooth_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_measured_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -121,6 +122,7 @@ static void csr_clear_velocity_targets(void)
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         g_target_vel[index] = 0.0f;
+        g_smooth_target_vel[index] = 0.0f;
     }
 }
 
@@ -190,6 +192,28 @@ static void csr_reset_channel_pi_state(csr_channel_t channel)
     g_output_pwm[channel] = 0;
 }
 
+static float csr_ramp_target(float current, float target, float step_limit)
+{
+    if (target > current)
+    {
+        current += step_limit;
+        if (current > target)
+        {
+            current = target;
+        }
+    }
+    else if (target < current)
+    {
+        current -= step_limit;
+        if (current < target)
+        {
+            current = target;
+        }
+    }
+
+    return current;
+}
+
 static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, float measured)
 {
     float error;
@@ -230,12 +254,16 @@ static void csr_control_tick(void)
 {
     uint8_t index;
     float raw_velocity;
+    float step_limit;
+
+    step_limit = CSR_MAX_ACCEL_MPS2 * ((float)CSR_CONTROL_PERIOD_MS / 1000.0f);
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         raw_velocity = csr_measure_speed_mps((csr_channel_t)index);
         g_filtered_vel[index] = (CSR_VEL_FILTER_ALPHA * g_filtered_vel[index]) + ((1.0f - CSR_VEL_FILTER_ALPHA) * raw_velocity);
         g_measured_vel[index] = g_filtered_vel[index];
+        g_smooth_target_vel[index] = csr_ramp_target(g_smooth_target_vel[index], g_target_vel[index], step_limit);
     }
 
     if (g_control_mode == CSR_MODE_RAW)
@@ -255,7 +283,7 @@ static void csr_control_tick(void)
 
         next_pwm = csr_compute_closed_loop_pwm(
             (csr_channel_t)index,
-            g_target_vel[index],
+            g_smooth_target_vel[index],
             g_measured_vel[index]
         );
         g_output_pwm[index] = next_pwm;
