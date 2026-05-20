@@ -1,129 +1,52 @@
 # CleanScout_rover
 
-实验室清扫巡检系统主仓。
+实验室清扫巡检系统主仓。当前仓库围绕车体 `C` 线展开，统一收纳底盘下位机、树莓派 ROS 上位机、机械臂实验副本、硬件资料和验证文档。
 
-当前这个仓库不再只是“一个小车代码仓”，而是围绕车体 `C` 线展开的统一工程仓，包含：
+## 快速入口
 
-- `OpenRF1` 下位机固件
-- `Raspberry Pi 4B + ROS` 上位机工作区
-- 机械臂 `J` 线受控实验副本
-- 硬件/软件/验证/交接文档
+| 入口 | 地址 / 文件 | 用途 |
+| --- | --- | --- |
+| 仓库总述 | [docs/C-3.4.2_仓库总述与导航.md](docs/C-3.4.2_仓库总述与导航.md) | 了解仓库定位、当前硬件、软件主线和阅读路径 |
+| 快速上手 | [docs/快速上手.md](docs/快速上手.md) | 常用启动、编译、烧录、串口调试、Vue/H5/后端运维命令 |
+| H5 正式入口 | [https://h5.hzhhds.top](https://h5.hzhhds.top) | 小程序 / H5 管理前端正式域名 |
+| H5 Netlify 入口 | [https://cleanscoutrover-management.netlify.app](https://cleanscoutrover-management.netlify.app) | H5 托管平台备用/源站入口 |
+| RF1 串口工具 | [tools/openrf1_serial_probe.ps1](tools/openrf1_serial_probe.ps1) | Windows 下位机串口调试入口 |
+| RF1 固件工作区 | [_local/openrf1_keil_work_3/User/](./_local/openrf1_keil_work_3/User/) | 当前 OpenRF1 自写运行层源码 |
 
-## 1. 如果你只读一个文件
+## 当前实物系统
 
-先读：
+| 层级 | 当前实物 / 模块 | 当前职责 |
+| --- | --- | --- |
+| 上位机 | Raspberry Pi 4B | ROS 工作区、传感器接入、系统协调、上层功能编排 |
+| 下位机 | OpenRF1 / STM32F103RCT6 | 四轮底盘实时控制、编码器采样、闭环控制、串口协议 |
+| 感知 | 思岚 A3、MPU6050 | 激光扫描、IMU 数据 |
+| 执行 | 四轮霍尔编码麦轮、双风机、继电器、顶盖舵机 | 运动、清扫、开关控制 |
+| 扩展 | OpenMV 机械臂 | 机械臂视觉与抓取实验线 |
 
-- [docs/C-3.4.2_仓库总述与导航.md](docs/C-3.4.2_仓库总述与导航.md)
 
-这份文档是当前仓库的统一总述，专门用来回答：
+## 仓库目录
 
-- 这个仓库现在到底是什么
-- 当前实物硬件是什么
-- 当前软件主线是什么
-- 新同学应该先看哪里
+| 路径 | 状态 | 说明 |
+| --- | --- | --- |
+| [docs/](docs/) | 主线文档 | 总述、计划、软件说明、验证记录、硬件速查 |
+| [_local/openrf1_keil_work_3/](./_local/openrf1_keil_work_3/) | 当前 RF1 本地固件工作区 | OpenRF1 自写运行层，配合 Keil 工程编译烧录 |
+| [Raspberrypi/](Raspberrypi/) | 树莓派 / ROS 工作区 | ROS 包、launch、脚本与发布目录 |
+| [jixiebi/](jixiebi/) | 机械臂受控实验副本 | OpenMV / 机械臂实验线当前可读入口 |
+| `vue3/`（外部工作区：`F:\Project\CSc——uniapp\vue3`） | 前后端 / 小程序 / H5 系统 | uni-app / H5 管理端、Node 后端、Edge 联调与云端发布体系 |
+| [tools/](tools/) | 本地工具 | 串口探测、UNO/RF1 辅助脚本等 |
 
-## 2. 当前实物系统一句话
+## 主线文档
 
-当前主车实物已经收敛为：
+| 方向 | 推荐入口 | 说明 |
+| --- | --- | --- |
+| 全局总览 | [C-3.4.2_仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md) | 新同学先读这一份 |
+| 快速操作 | [快速上手](docs/快速上手.md) | 启动 pigpiod、catkin_make、RF1 串口、H5/后端命令 |
+| RF1 速查 | [OpenRF1_开发速查](docs/STM32F103RCT6/OpenRF1_开发速查.md) | OpenRF1 板级资源与接线事实 |
+| RF1 协议 | [C-3.0.6_pid_close_loop_and_protocol_update](docs/SOFTWARE/C-3.0.6_pid_close_loop_and_protocol_update.md) | `W/M/E/D/STOP`、闭环周期、看门狗与遥测 |
+| RF1 收敛 | [C-3.1.4B_openrf1_timer_final_convergence](docs/VERIFY/C-3.1.4B_openrf1_timer_final_convergence.md) | 原生定时器与编码器问题收敛证据 |
+| RF1 方向热修 | [C-3.1.4C_openrf1_rear_wheel_direction_hotfix](docs/VERIFY/C-3.1.4C_openrf1_rear_wheel_direction_hotfix.md) | CN1/CN3 方向与后轮热修记录 |
+| RF1 平滑调试 | [C-3.1.4D_openrf1_closed_loop_smoothing](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md) | 闭环平顺性调参记录 |
+| 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |
+| 机械臂 | [jixiebi/](jixiebi/) | 机械臂实验入口 |
 
-- 上位机：`Raspberry Pi 4B`
-- 下位机：`OpenRF1 (STM32F103RCT6)`
-- 感知：`思岚 A3` 激光雷达、`MPU6050`
-- 执行：四轮霍尔编码麦轮底盘、双风机、继电器、顶盖舵机
-- 扩展：`OpenMV` 机械臂
 
-也就是：
-
-**树莓派负责 ROS 与系统协调，OpenRF1 负责底盘实时控制。**
-
-## 3. 仓库主入口
-
-### 3.1 总述与交接
-
-- [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
-
-### 3.2 操作与调试
-
-- [快速上手](docs/快速上手.md)
-- [`tools/`](tools/)
-
-### 3.3 OpenRF1 / STM32 下位机
-
-- [OpenRF1 开发速查](docs/STM32F103RCT6/OpenRF1_开发速查.md)
-- [OpenRF1 运行时基线](docs/SOFTWARE/C-3.0.4_openrf1_runtime_baseline.md)
-- [OpenRF1 闭环与协议更新](docs/SOFTWARE/C-3.0.6_pid_close_loop_and_protocol_update.md)
-- [OpenRF1 定时器复测收敛](docs/VERIFY/C-3.1.4B_openrf1_timer_final_convergence.md)
-- [OpenRF1 后轮方向热修](docs/VERIFY/C-3.1.4C_openrf1_rear_wheel_direction_hotfix.md)
-- [OpenRF1 闭环平滑调试](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md)
-- 当前本地固件工作副本：
-  - [`_local/openrf1_keil_work_3/`](./_local/openrf1_keil_work_3/)
-
-### 3.4 Raspberry Pi / ROS 上位机
-
-- [`Raspberrypi/README.md`](Raspberrypi/README.md)
-- [`Raspberrypi/releases/`](Raspberrypi/releases/)
-
-### 3.5 机械臂 J 线
-
-- [`jixiebi/`](jixiebi/)
-- `J-jixiebi/` 仅保留为原始资料/历史脏目录，不是当前规范主线
-
-## 4. 当前仓库结构怎么理解
-
-### `docs/`
-
-文档主入口。  
-优先看这里，不要先从分支名和零散提交猜项目状态。
-
-### `_local/`
-
-本地工作副本、Keil 工程、vendor 对照副本。  
-当前 RF1 底层最重要的施工目录在这里。
-
-### `Raspberrypi/`
-
-树莓派 ROS 工作区、脚本与发布目录。
-
-### `jixiebi/`
-
-机械臂受控实验副本。
-
-### `tools/`
-
-本地构建、串口测试、辅助脚本入口。
-
-## 5. 阅读建议
-
-### 想先搞清全貌
-
-1. [仓库总述与导航](docs/C-3.4.2_仓库总述与导航.md)
-2. [快速上手](docs/快速上手.md)
-
-### 想先看底盘
-
-1. [OpenRF1 开发速查](docs/STM32F103RCT6/OpenRF1_开发速查.md)
-2. [OpenRF1 运行时基线](docs/SOFTWARE/C-3.0.4_openrf1_runtime_baseline.md)
-3. [OpenRF1 闭环与协议更新](docs/SOFTWARE/C-3.0.6_pid_close_loop_and_protocol_update.md)
-4. [`_local/openrf1_keil_work_3/`](./_local/openrf1_keil_work_3/)
-
-### 想先看树莓派
-
-1. [`Raspberrypi/README.md`](Raspberrypi/README.md)
-2. [`Raspberrypi/releases/`](Raspberrypi/releases/)
-
-### 想先看机械臂
-
-1. [`jixiebi/`](jixiebi/)
-2. `C-1.2.5_vendor_actuator_baseline`
-3. `C-1.2.6_vendor_vision_grasp_baseline`
-
-## 6. 当前 README 的定位
-
-这份 `README` 现在只承担两件事：
-
-1. 告诉你这个仓库当前是什么
-2. 把你跳转到正确的文档入口
-
-具体阶段细节、冻结结论、验证记录，不再继续直接堆在首页，而统一收口到：
-
-- [docs/C-3.4.2_仓库总述与导航.md](docs/C-3.4.2_仓库总述与导航.md)
