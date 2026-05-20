@@ -42,12 +42,12 @@ typedef enum
 #define CSR_TIM8_PWM_TOP                2000U
 
 #define CSR_FEEDFORWARD_PWM_AT_0_10_MPS 260.0f
-#define CSR_PI_CORRECTION_LIMIT         120.0f
+#define CSR_PI_CORRECTION_LIMIT         800.0f
 
 #define CSR_PI_KP_DEFAULT               600.0f
-#define CSR_PI_KI_DEFAULT               60.0f
+#define CSR_PI_KI_DEFAULT               150.0f
 #define CSR_PI_KD_DEFAULT               0.0f
-#define CSR_PI_INTEGRAL_LIMIT           0.30f
+#define CSR_PI_INTEGRAL_LIMIT           3.0f
 #define CSR_PI_OUTPUT_LIMIT             CSR_PI_CORRECTION_LIMIT
 #define CSR_VEL_FILTER_ALPHA            0.35f
 
