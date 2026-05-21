@@ -1,6 +1,6 @@
 # CleanScout_rover
 
-实验室清扫巡检系统主仓。当前仓库围绕车体 `C` 线展开，统一收纳底盘下位机、树莓派 ROS 上位机、机械臂实验副本、硬件资料和验证文档。
+实验室清扫巡检系统主仓。当前仓库围绕车体 `C` 线与前后端 `V` 线展开，统一收纳底盘下位机、树莓派 ROS 上位机、Vue3/uni-app 前后端、机械臂实验副本、硬件资料和验证文档。
 
 ## 快速入口
 
@@ -33,7 +33,7 @@
 | [Raspberrypi/](Raspberrypi/) | 树莓派 / ROS 工作区 | ROS 包、launch、脚本与发布目录 |
 | [jixiebi/](jixiebi/) | 机械臂受控实验副本 | OpenMV / 机械臂实验线当前可读入口 |
 | [tools/](tools/) | 本地工具 | 串口探测、UNO/RF1 辅助脚本等 |
-| `J-jixiebi/` | 非主线 | 原始资料/历史脏目录，不作为规范入口 |
+| [vue3/](vue3/) | V 线前后端工程 | uni-app Vue3 前端、Express/Prisma 后端、H5/小程序/App 构建与云端 edge-relay 接入 |
 
 ## 主线文档
 
@@ -47,5 +47,6 @@
 | RF1 方向热修 | [C-3.1.4C_openrf1_rear_wheel_direction_hotfix](docs/VERIFY/C-3.1.4C_openrf1_rear_wheel_direction_hotfix.md) | CN1/CN3 方向与后轮热修记录 |
 | RF1 平滑调试 | [C-3.1.4D_openrf1_closed_loop_smoothing](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md) | 闭环平顺性调参记录 |
 | 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |
+| Vue3 前后端 | [vue3/README.md](vue3/README.md) | 前端页面、云端 backend、edge-relay、OpenClaw/ASR/OpenMV 适配入口 |
 | 机械臂 | [jixiebi/](jixiebi/) | 机械臂实验入口 |
 
