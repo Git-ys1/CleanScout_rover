@@ -3,25 +3,18 @@
 零、清理脚本
 bash /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/clean_mapping_nav_sessions.sh
 
-最新报错：
-clbrobot@clbrobot:~/Work/CleanScout_rover/Raspberrypi/catkin_ws$ bash ./start_desk_navigation.sh
-CleanScout Pi environment loaded
-ROS_MASTER_URI=http://10.44.63.84:11311
-ROS_IP=10.44.63.84
-ROS_HOSTNAME=10.44.63.84
-[c331-nav] clean 旧会话
-[c331-nav] 显式启动 roscore
-[c331-nav] 启动 bringup_rf1_min.launch
-[c331-nav] 等待 /rf1/vel
-[c331-nav] 等待 /odom
-[c331-nav] ERROR: /odom 未就绪
-[c331-nav] ERROR: 启动失败，自动清理残留 ROS 会话
-clbrobot@clbrobot:~/Work/CleanScout_rover/Raspberrypi/catkin_ws$
-
 云端后端参数：
 edge_url=wss://api.hzhhds.top/edge/ros
 edge_device_id=csrpi-001
 edge_device_token=沿用当前 edge token
+
+当前唯一验收通过并允许继续使用的成熟节点口径如下：
+
+1. 多功能：`clbrobot/launch/demo/multi_function_demo.launch`
+2. 导航：`bash ./start_desk_navigation.sh`
+3. 如果导航排障，则使用本文件里的“手动逐层启动方式”
+
+不允许把未验证的新节点、新脚本直接当正式入口替换这两个成熟入口。
 
 多功能节点当前 edge-relay 已支持：
 
@@ -41,9 +34,21 @@ roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobo
   edge_fallback_url:=ws://10.156.250.190:3000/edge/ros \
   edge_primary_failures_before_fallback:=3
 
+如果默认值已经写死完成，也可以直接启动：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/demo/multi_function_demo.launch
+
 观察日志时，如果看到类似下面口径，说明已经自动切本地：
 
 `edge relay primary endpoint failed 3 times, switching to fallback ws://10.156.250.190:3000/edge/ros`
+
+当前多功能节点是**已验证通过**的节点：
+
+1. 底盘遥控相关能力通过它验证
+2. 风机 / 继电器 / 舵机联动通过它验证
+3. 后端当前如果要联调多功能，只允许继续使用它
 
 
 一、先做一次当前工作区编译刷新
@@ -226,6 +231,12 @@ bash ./start_desk_navigation.sh
 
 `/home/clbrobot/Work/CleanScout_rover/Raspberrypi/maps/desk_map_001.yaml`
 
+当前导航入口 `bash ./start_desk_navigation.sh` 是**已验证通过**的正式入口：
+
+1. 虚拟机 / 上位机 RViz 导航继续使用它
+2. 当前不要换成别的“导航 demo 节点”或未验证联合脚本
+3. 如果需要定位/排障，只能退回本文件里的“手动逐层启动方式”来查
+
 五、虚拟机 / 上位机查看建议
 
 source /opt/ros/noetic/setup.bash
@@ -263,6 +274,55 @@ RViz 里建议先看：
 2. `/scan` 是否存在
 3. `/amcl_pose` 是否存在
 4. `/move_base/status` 是否存在
+
+九、导航与多功能 当前允许的联合演示口径
+
+当前“导航与多功能”不是一个新的独立正式节点，也不是要替换现有入口。
+
+当前允许的联合演示方式，必须基于上面已经验收通过的两个成熟入口：
+
+1. 导航仍然使用：`bash ./start_desk_navigation.sh`
+2. 多功能仍然使用：`clbrobot/launch/demo/multi_function_demo.launch`
+
+当前联合演示分工固定为：
+
+1. 导航：虚拟机 / 上位机 RViz 控制
+2. 多功能：后端控制风机 / 继电器 / 舵机联动
+3. 当前后端不接管导航控制
+
+一句话：
+
+当前“导航与多功能”联合演示，是**两个成熟入口并行运行**，不是换成一个未经验证的新节点。
+
+十、当前要启动的节点名字（最短口径）
+
+1. 多功能正式节点：`multi_function_demo.launch`
+
+启动命令：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/demo/multi_function_demo.launch
+
+2. 导航正式入口：`start_desk_navigation.sh`
+
+启动命令：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+bash ./start_desk_navigation.sh
+
+3. 导航与多功能联合演示脚本：`run_nav_and_multifunction_demo.sh`
+
+启动命令：
+
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+bash ./run_nav_and_multifunction_demo.sh
+
+一句话：
+
+1. 平时多功能只起 `multi_function_demo.launch`
+2. 平时导航只起 `start_desk_navigation.sh`
+3. 要联合演示时才起 `run_nav_and_multifunction_demo.sh`
 
 八、新版可前端控制建图版本
 

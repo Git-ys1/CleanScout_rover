@@ -38,9 +38,23 @@ class EdgeRelay:
         self.reconnect_delay_ms = int(rospy.get_param("~reconnect_delay_ms", 1000))
         self.scan_danger_threshold = float(rospy.get_param("~scan_danger_threshold", 0.35))
 
-        self.max_vx = 0.20
-        self.max_vy = 0.15
-        self.max_wz = 0.35
+        self.cmd_vel_topic = rospy.get_param("~cmd_vel_topic", "/cmd_vel")
+        self.odom_topic = rospy.get_param("~odom_topic", "/odom_lsm")
+        self.imu_topic = rospy.get_param("~imu_topic", "/imu/data")
+        self.scan_topic = rospy.get_param("~scan_topic", "/scan")
+        self.fans_enable_topic = rospy.get_param("~fans_enable_topic", "/fans/enable")
+        self.fan_a_pwm_topic = rospy.get_param("~fan_a_pwm_topic", "/fan_a/pwm_percent")
+        self.fan_b_pwm_topic = rospy.get_param("~fan_b_pwm_topic", "/fan_b/pwm_percent")
+        self.fan_a_rpm_topic = rospy.get_param("~fan_a_rpm_topic", "/fan_a/rpm")
+        self.fan_b_rpm_topic = rospy.get_param("~fan_b_rpm_topic", "/fan_b/rpm")
+        self.fan_lid_state_topic = rospy.get_param("~fan_lid_state_topic", "/fan_lid/state")
+        self.fans_state_summary_topic = rospy.get_param("~fans_state_summary_topic", "/fans/state_summary")
+
+        self.publish_cmd_vel = bool(rospy.get_param("~publish_cmd_vel", self.allow_manual_control))
+
+        self.max_vx = float(rospy.get_param("~max_vx", 0.20))
+        self.max_vy = float(rospy.get_param("~max_vy", 0.15))
+        self.max_wz = float(rospy.get_param("~max_wz", 0.35))
 
         self.ws = None
         self.ws_lock = threading.Lock()
@@ -50,6 +64,7 @@ class EdgeRelay:
         self.stop_event = threading.Event()
         self.active_url = self.url
         self.primary_connect_failures = 0
+
         self.last_odom = None
         self.last_imu = None
         self.last_scan = None
@@ -60,27 +75,39 @@ class EdgeRelay:
         self.last_fan_b_rpm = 0.0
         self.last_fan_lid_open = False
         self.last_fan_summary = ""
+
         self.last_heartbeat_sent = 0.0
         self.last_telemetry_sent = 0.0
+
         self.cmd_hold_until = 0.0
         self.cmd_message = Twist()
         self.toggle_motion_active = False
         self.stop_requested = False
 
-        self.cmd_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=20)
-        self.fans_enable_pub = rospy.Publisher("/fans/enable", Bool, queue_size=10)
-        self.fan_a_pwm_pub = rospy.Publisher("/fan_a/pwm_percent", Float32, queue_size=10)
-        self.fan_b_pwm_pub = rospy.Publisher("/fan_b/pwm_percent", Float32, queue_size=10)
-        rospy.Subscriber("/odom", Odometry, self.odom_callback, queue_size=20)
-        rospy.Subscriber("/imu/data", Imu, self.imu_callback, queue_size=20)
-        rospy.Subscriber("/scan", LaserScan, self.scan_callback, queue_size=5)
-        rospy.Subscriber("/fans/enable", Bool, self.fans_enable_callback, queue_size=10)
-        rospy.Subscriber("/fan_a/pwm_percent", Float32, self.fan_a_pwm_callback, queue_size=10)
-        rospy.Subscriber("/fan_b/pwm_percent", Float32, self.fan_b_pwm_callback, queue_size=10)
-        rospy.Subscriber("/fan_a/rpm", Float32, self.fan_a_rpm_callback, queue_size=10)
-        rospy.Subscriber("/fan_b/rpm", Float32, self.fan_b_rpm_callback, queue_size=10)
-        rospy.Subscriber("/fan_lid/state", Bool, self.fan_lid_state_callback, queue_size=10)
-        rospy.Subscriber("/fans/state_summary", String, self.fan_summary_callback, queue_size=10)
+        self.cmd_pub = None
+        if self.publish_cmd_vel:
+            self.cmd_pub = rospy.Publisher(self.cmd_vel_topic, Twist, queue_size=20)
+            rospy.logwarn(
+                "edge relay cmd_vel publishing is enabled on %s; do not run this with move_base unless intended",
+                self.cmd_vel_topic,
+            )
+        else:
+            rospy.loginfo("edge relay cmd_vel publishing is disabled")
+
+        self.fans_enable_pub = rospy.Publisher(self.fans_enable_topic, Bool, queue_size=10)
+        self.fan_a_pwm_pub = rospy.Publisher(self.fan_a_pwm_topic, Float32, queue_size=10)
+        self.fan_b_pwm_pub = rospy.Publisher(self.fan_b_pwm_topic, Float32, queue_size=10)
+
+        rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=20)
+        rospy.Subscriber(self.imu_topic, Imu, self.imu_callback, queue_size=20)
+        rospy.Subscriber(self.scan_topic, LaserScan, self.scan_callback, queue_size=5)
+        rospy.Subscriber(self.fans_enable_topic, Bool, self.fans_enable_callback, queue_size=10)
+        rospy.Subscriber(self.fan_a_pwm_topic, Float32, self.fan_a_pwm_callback, queue_size=10)
+        rospy.Subscriber(self.fan_b_pwm_topic, Float32, self.fan_b_pwm_callback, queue_size=10)
+        rospy.Subscriber(self.fan_a_rpm_topic, Float32, self.fan_a_rpm_callback, queue_size=10)
+        rospy.Subscriber(self.fan_b_rpm_topic, Float32, self.fan_b_rpm_callback, queue_size=10)
+        rospy.Subscriber(self.fan_lid_state_topic, Bool, self.fan_lid_state_callback, queue_size=10)
+        rospy.Subscriber(self.fans_state_summary_topic, String, self.fan_summary_callback, queue_size=10)
 
     def clamp(self, value, lower, upper):
         if value < lower:
@@ -199,18 +226,24 @@ class EdgeRelay:
         return abs(((a - b + 180.0) % 360.0) - 180.0)
 
     def hello_payload(self):
+        capabilities = ["odom", "imu", "scan_summary"]
+        if self.allow_manual_control and self.publish_cmd_vel:
+            capabilities.append("manual_control")
+        if self.allow_fan_control:
+            capabilities.append("fan_control")
+
         return {
             "op": "hello",
             "deviceId": self.device_id,
             "token": self.device_token,
             "transport": "edge-relay",
             "topics": {
-                "cmd_vel": "/cmd_vel",
-                "odom": "/odom",
-                "imu": "/imu/data",
-                "scan": "/scan",
+                "cmd_vel": self.cmd_vel_topic if self.publish_cmd_vel else None,
+                "odom": self.odom_topic,
+                "imu": self.imu_topic,
+                "scan": self.scan_topic,
             },
-            "capabilities": ["manual_control", "odom", "imu", "scan_summary"],
+            "capabilities": capabilities,
         }
 
     def heartbeat_payload(self):
@@ -280,6 +313,9 @@ class EdgeRelay:
         elif op == "manual_control":
             if not self.allow_manual_control:
                 return
+            if not self.publish_cmd_vel or self.cmd_pub is None:
+                rospy.logwarn_throttle(2.0, "edge relay ignored manual_control because cmd_vel publishing is disabled")
+                return
             vx = self.clamp(float(payload.get("vx", 0.0)), -self.max_vx, self.max_vx)
             vy = self.clamp(float(payload.get("vy", 0.0)), -self.max_vy, self.max_vy)
             wz = self.clamp(float(payload.get("wz", 0.0)), -self.max_wz, self.max_wz)
@@ -296,10 +332,13 @@ class EdgeRelay:
         elif op == "stop":
             if not self.allow_manual_control:
                 return
+            if not self.publish_cmd_vel or self.cmd_pub is None:
+                return
             self.stop_requested = True
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
             self.toggle_motion_active = False
+            self.publish_stop_once()
         elif op == "fan_enable":
             if not self.allow_fan_control:
                 return
@@ -354,8 +393,7 @@ class EdgeRelay:
                 message = active_ws.recv()
                 if not message:
                     raise RuntimeError("websocket closed by peer")
-                if message:
-                    self.handle_message(message)
+                self.handle_message(message)
             except websocket.WebSocketTimeoutException:
                 continue
             except Exception as exc:  # pragma: no cover
@@ -401,7 +439,14 @@ class EdgeRelay:
         self.recv_thread = threading.Thread(target=self.recv_loop, daemon=True)
         self.recv_thread.start()
 
+    def publish_stop_once(self):
+        if self.cmd_pub is not None:
+            self.cmd_pub.publish(Twist())
+
     def command_tick(self):
+        if not self.publish_cmd_vel or self.cmd_pub is None:
+            return
+
         now = time.time()
         msg = Twist()
         if not self.stop_requested and (self.toggle_motion_active or now < self.cmd_hold_until):
@@ -418,14 +463,21 @@ class EdgeRelay:
             self.send_json(self.heartbeat_payload())
             self.last_heartbeat_sent = now
 
-        min_period = 1.0 / max(self.odom_hz, self.imu_hz, self.scan_hz)
+        telemetry_rate = max(self.odom_hz, self.imu_hz, self.scan_hz, 0.1)
+        min_period = 1.0 / telemetry_rate
         if now - self.last_telemetry_sent >= min_period:
             self.send_json(self.telemetry_payload())
             self.last_telemetry_sent = now
 
+    def spin_rate_hz(self):
+        if self.publish_cmd_vel:
+            return max(self.cmd_repeat_hz, 1.0)
+        return max(max(self.odom_hz, self.imu_hz, self.scan_hz), 1.0)
+
     def spin(self):
         reconnect_delay = max(1.0, self.reconnect_delay_ms / 1000.0)
-        cmd_rate = rospy.Rate(self.cmd_repeat_hz)
+        rate = rospy.Rate(self.spin_rate_hz())
+
         while not rospy.is_shutdown():
             try:
                 if self.ws is None:
@@ -441,7 +493,7 @@ class EdgeRelay:
 
                 self.command_tick()
                 self.telemetry_tick()
-                cmd_rate.sleep()
+                rate.sleep()
             except Exception as exc:  # pragma: no cover
                 if self.ws is None and self.active_url == self.url:
                     self.primary_connect_failures += 1
@@ -453,11 +505,11 @@ class EdgeRelay:
                         )
                 rospy.logwarn("edge relay reconnect pending: %s", str(exc))
                 self.close_ws()
-                self.cmd_pub.publish(Twist())
+                self.publish_stop_once()
                 rospy.sleep(reconnect_delay)
                 reconnect_delay = min(reconnect_delay * 2.0, 30.0)
 
-        self.cmd_pub.publish(Twist())
+        self.publish_stop_once()
         self.close_ws()
 
 
