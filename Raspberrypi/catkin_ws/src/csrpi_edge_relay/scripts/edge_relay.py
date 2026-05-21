@@ -33,6 +33,8 @@ class EdgeRelay:
         self.default_hold_ms = int(rospy.get_param("~default_hold_ms", 1000))
         self.max_hold_ms = int(rospy.get_param("~max_hold_ms", 1500))
         self.toggle_motion_enabled = bool(rospy.get_param("~toggle_motion_enabled", False))
+        self.allow_manual_control = bool(rospy.get_param("~allow_manual_control", True))
+        self.allow_fan_control = bool(rospy.get_param("~allow_fan_control", True))
         self.reconnect_delay_ms = int(rospy.get_param("~reconnect_delay_ms", 1000))
         self.scan_danger_threshold = float(rospy.get_param("~scan_danger_threshold", 0.35))
 
@@ -276,6 +278,8 @@ class EdgeRelay:
             self.hello_acked = accepted
             rospy.loginfo("edge relay hello_ack accepted=%s deviceId=%s", accepted, payload.get("deviceId"))
         elif op == "manual_control":
+            if not self.allow_manual_control:
+                return
             vx = self.clamp(float(payload.get("vx", 0.0)), -self.max_vx, self.max_vx)
             vy = self.clamp(float(payload.get("vy", 0.0)), -self.max_vy, self.max_vy)
             wz = self.clamp(float(payload.get("wz", 0.0)), -self.max_wz, self.max_wz)
@@ -290,13 +294,19 @@ class EdgeRelay:
                 self.stop_requested = False
                 self.toggle_motion_active = False
         elif op == "stop":
+            if not self.allow_manual_control:
+                return
             self.stop_requested = True
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
             self.toggle_motion_active = False
         elif op == "fan_enable":
+            if not self.allow_fan_control:
+                return
             self.fans_enable_pub.publish(Bool(data=bool(payload.get("enabled", False))))
         elif op == "fan_pwm":
+            if not self.allow_fan_control:
+                return
             fan_a = self.clamp(float(payload.get("fanA", 0.0)), 0.0, 100.0)
             fan_b = self.clamp(float(payload.get("fanB", 0.0)), 0.0, 100.0)
             self.fan_a_pwm_pub.publish(Float32(data=fan_a))

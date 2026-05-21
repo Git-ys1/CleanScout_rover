@@ -13,6 +13,8 @@
   <arg name="default_hold_ms" default="1000" />
   <arg name="max_hold_ms" default="1500" />
   <arg name="toggle_motion_enabled" default="false" />
+  <arg name="allow_manual_control" default="true" />
+  <arg name="allow_fan_control" default="true" />
   <arg name="reconnect_delay_ms" default="1000" />
 
   <node if="$(arg enabled)" pkg="csrpi_edge_relay" type="edge_relay.py" name="edge_relay" output="screen">
@@ -29,6 +31,8 @@
     <param name="default_hold_ms" value="$(arg default_hold_ms)" />
     <param name="max_hold_ms" value="$(arg max_hold_ms)" />
     <param name="toggle_motion_enabled" value="$(arg toggle_motion_enabled)" />
+    <param name="allow_manual_control" value="$(arg allow_manual_control)" />
+    <param name="allow_fan_control" value="$(arg allow_fan_control)" />
     <param name="reconnect_delay_ms" value="$(arg reconnect_delay_ms)" />
   </node>
 </launch>
