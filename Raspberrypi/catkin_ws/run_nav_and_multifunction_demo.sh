@@ -8,6 +8,7 @@ IMU_LOG="/tmp/c331_nav_multi_imu.log"
 LIDAR_LOG="/tmp/c331_nav_multi_lidar.log"
 LSM_LOG="/tmp/c331_nav_multi_lsm.log"
 NAV_LOG="/tmp/c331_nav_multi_nav.log"
+GATE_LOG="/tmp/c331_nav_multi_gate.log"
 FAN_LOG="/tmp/c331_nav_multi_fan.log"
 EDGE_LOG="/tmp/c331_nav_multi_edge.log"
 EDGE_URL="wss://api.hzhhds.top/edge/ros"
@@ -88,20 +89,23 @@ echo "[nav-multi] 启动 laser_scan_matcher"
 LSM_PID=$(launch_bg "$LSM_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/slam/laser_scan_matcher_406.launch')
 wait_for_topic /odom_lsm 8 || { echo "[nav-multi] ERROR: /odom_lsm 未就绪"; exit 1; }
 
-#echo "[nav-multi] 启动导航"
-#NAV_PID=$(launch_bg "$NAV_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1.launch')
-#wait_for_topic /amcl_pose 8 || { echo "[nav-multi] ERROR: /amcl_pose 未就绪"; exit 1; }
-#wait_for_topic /move_base/status 8 || { echo "[nav-multi] ERROR: /move_base/status 未就绪"; exit 1; }
+echo "[nav-multi] 启动 cmd_vel 安全门控"
+GATE_PID=$(launch_bg "$GATE_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_base_bridge/launch/cmd_vel_safety_gate.launch input_topic:=/cmd_vel_nav output_topic:=/cmd_vel')
+
+echo "[nav-multi] 启动导航"
+NAV_PID=$(launch_bg "$NAV_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1.launch cmd_vel_topic:=/cmd_vel_nav odom_frame_id:=odom_lsm')
+wait_for_topic /amcl_pose 8 || { echo "[nav-multi] ERROR: /amcl_pose 未就绪"; exit 1; }
+wait_for_topic /move_base/status 8 || { echo "[nav-multi] ERROR: /move_base/status 未就绪"; exit 1; }
 
 echo "[nav-multi] 启动风机多功能桥"
 FAN_PID=$(launch_bg "$FAN_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_fan_bridge/launch/fan_dual_lid_bridge.launch')
 
-echo "[nav-multi] 启动 edge-relay（仅用于风机/多功能，不用于导航控制）"
-EDGE_PID=$(launch_bg "$EDGE_LOG" "source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch enabled:=true url:=\"$EDGE_URL\" fallback_url:=\"$EDGE_FALLBACK_URL\" primary_failures_before_fallback:=\"$EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK\" device_id:=\"$EDGE_DEVICE_ID\" device_token:=\"$EDGE_DEVICE_TOKEN\" toggle_motion_enabled:=false allow_manual_control:=false allow_fan_control:=true")
+echo "[nav-multi] 启动 edge-relay（允许后端控制风机和手动运动，与导航共存）"
+EDGE_PID=$(launch_bg "$EDGE_LOG" "source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch enabled:=true url:=\"$EDGE_URL\" fallback_url:=\"$EDGE_FALLBACK_URL\" primary_failures_before_fallback:=\"$EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK\" device_id:=\"$EDGE_DEVICE_ID\" device_token:=\"$EDGE_DEVICE_TOKEN\" toggle_motion_enabled:=false allow_manual_control:=true publish_cmd_vel:=true cmd_vel_topic:=/cmd_vel_nav allow_fan_control:=true odom_topic:=/odom_lsm")
 
 echo "[nav-multi] 联合演示链已就绪"
-echo "[nav-multi] 导航: 仍由虚拟机 / 上位机 RViz 控制"
-echo "[nav-multi] 风机: 仍由后端经 edge-relay 控制"
+echo "[nav-multi] 导航: 可由 RViz 发 2D Nav Goal"
+echo "[nav-multi] 后端: 可经 edge-relay 手动控制运动与风机"
 echo "[nav-multi] logs:"
 echo "  roscore: $ROSCORE_LOG"
 echo "  rf1:     $RF1_LOG"
@@ -109,5 +113,6 @@ echo "  imu:     $IMU_LOG"
 echo "  lidar:   $LIDAR_LOG"
 echo "  lsm:     $LSM_LOG"
 echo "  nav:     $NAV_LOG"
+echo "  gate:    $GATE_LOG"
 echo "  fan:     $FAN_LOG"
 echo "  edge:    $EDGE_LOG"

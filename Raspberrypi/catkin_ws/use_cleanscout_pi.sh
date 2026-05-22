@@ -1,27 +1,24 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
-IP="$(hostname -I | awk '{print $1}')"
+# ===== CleanScout Pi ROS network config =====
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PI_IP="10.140.112.84"
 
 source /opt/ros/noetic/setup.bash
 
-if [ -f "$ROOT/devel/setup.bash" ]; then
-  source "$ROOT/devel/setup.bash"
-else
-  if [ -f "/home/clbrobot/catkin_ws/devel/setup.bash" ]; then
-    source "/home/clbrobot/catkin_ws/devel/setup.bash"
-  fi
-  export ROS_PACKAGE_PATH="$ROOT/src:/home/clbrobot/catkin_ws/src:/opt/ros/noetic/share"
+if [ -f "${SCRIPT_DIR}/devel/setup.bash" ]; then
+  source "${SCRIPT_DIR}/devel/setup.bash"
 fi
 
-export ROS_IP="$IP"
-export ROS_HOSTNAME="$IP"
-export ROS_MASTER_URI="http://$IP:11311"
+export ROS_MASTER_URI="http://${PI_IP}:11311"
+export ROS_IP="${PI_IP}"
+unset ROS_HOSTNAME
+unset ROS_IPV6
+
 export CLBBASE="mecanum"
 export CLBLIDAR="rplidar"
 
 echo "CleanScout Pi environment loaded"
-echo "ROS_MASTER_URI=$ROS_MASTER_URI"
-echo "ROS_IP=$ROS_IP"
-echo "ROS_HOSTNAME=$ROS_HOSTNAME"
+echo "ROS_MASTER_URI=${ROS_MASTER_URI}"
+echo "ROS_IP=${ROS_IP}"

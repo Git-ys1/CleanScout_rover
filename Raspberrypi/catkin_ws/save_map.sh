@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-source "$ROOT/use_cleanscout_pi.sh"
+if [ -z "${ROS_MASTER_URI:-}" ] || [ -z "${ROS_IP:-}" ]; then
+  if [ -f "$ROOT/use_cleanscout_pc.sh" ]; then
+    source "$ROOT/use_cleanscout_pc.sh"
+  else
+    source "$ROOT/use_cleanscout_pi.sh"
+  fi
+fi
 
 OUT_DIR="$(rospack find clbrobot)/maps"
-MAP_NAME="${1:-406}"
+DEFAULT_MAP_NAME="407-$(date +%-m.%-d-%H%M)"
+MAP_NAME="${1:-$DEFAULT_MAP_NAME}"
 
 mkdir -p "$OUT_DIR"
 

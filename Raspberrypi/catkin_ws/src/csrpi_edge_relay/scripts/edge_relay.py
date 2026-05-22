@@ -83,6 +83,7 @@ class EdgeRelay:
         self.cmd_message = Twist()
         self.toggle_motion_active = False
         self.stop_requested = False
+        self.stop_publish_pending = False
 
         self.cmd_pub = None
         if self.publish_cmd_vel:
@@ -335,6 +336,7 @@ class EdgeRelay:
             if not self.publish_cmd_vel or self.cmd_pub is None:
                 return
             self.stop_requested = True
+            self.stop_publish_pending = True
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
             self.toggle_motion_active = False
@@ -368,6 +370,7 @@ class EdgeRelay:
     def handle_toggle_motion(self, vx, vy, wz):
         if self.toggle_motion_active and self.same_motion(vx, vy, wz):
             self.stop_requested = True
+            self.stop_publish_pending = True
             self.toggle_motion_active = False
             self.cmd_hold_until = 0.0
             self.cmd_message = Twist()
@@ -448,10 +451,14 @@ class EdgeRelay:
             return
 
         now = time.time()
-        msg = Twist()
         if not self.stop_requested and (self.toggle_motion_active or now < self.cmd_hold_until):
-            msg = self.cmd_message
-        self.cmd_pub.publish(msg)
+            self.cmd_pub.publish(self.cmd_message)
+            return
+
+        if self.stop_publish_pending:
+            self.cmd_pub.publish(Twist())
+            self.stop_publish_pending = False
+            self.stop_requested = False
 
     def telemetry_tick(self):
         if not self.hello_acked:

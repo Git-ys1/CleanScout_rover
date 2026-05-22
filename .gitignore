@@ -2,6 +2,13 @@
 __pycache__/
 *.pyc
 
+# Catkin generated artifacts
+Raspberrypi/catkin_ws/build/
+Raspberrypi/catkin_ws/devel/
+Raspberrypi/catkin_ws/.catkin_workspace
+Raspberrypi/catkin_ws/frames.gv
+Raspberrypi/catkin_ws/frames.pdf
+
 # Local large/reference packages and generated artifacts that are not published.
 *.img.xz
 *.torrent

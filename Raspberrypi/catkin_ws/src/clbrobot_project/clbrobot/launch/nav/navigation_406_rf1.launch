@@ -1,8 +1,15 @@
 <launch>
-  <arg name="map_file" default="$(find clbrobot)/maps/407map.yaml" />
+  <arg name="map_file" default="$(find clbrobot)/maps/407-5.22-2120.yaml" />
+  <arg name="cmd_vel_topic" default="/cmd_vel" />
+  <arg name="odom_frame_id" default="odom_lsm" />
 
   <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen" />
 
-  <include file="$(find clbrobot)/launch/amcl.launch" />
-  <include file="$(find clbrobot)/param/navigation/move_base.xml" />
+  <include file="$(find clbrobot)/launch/amcl.launch">
+    <arg name="odom_frame_id" value="$(arg odom_frame_id)" />
+  </include>
+  <include file="$(find clbrobot)/param/navigation/move_base.xml">
+    <arg name="cmd_vel_topic" value="$(arg cmd_vel_topic)" />
+    <arg name="local_odom_frame" value="$(arg odom_frame_id)" />
+  </include>
 </launch>

@@ -1,0 +1,19 @@
+<launch>
+  <arg name="input_topic" default="/cmd_vel_nav" />
+  <arg name="output_topic" default="/cmd_vel" />
+  <arg name="timeout" default="0.4" />
+  <arg name="rate" default="30" />
+  <arg name="max_vx" default="0.20" />
+  <arg name="max_vy" default="0.15" />
+  <arg name="max_wz" default="0.35" />
+
+  <node pkg="csrpi_base_bridge" type="cmd_vel_safety_gate.py" name="cmd_vel_safety_gate" output="screen">
+    <param name="input_topic" value="$(arg input_topic)" />
+    <param name="output_topic" value="$(arg output_topic)" />
+    <param name="timeout" value="$(arg timeout)" />
+    <param name="rate" value="$(arg rate)" />
+    <param name="max_vx" value="$(arg max_vx)" />
+    <param name="max_vy" value="$(arg max_vy)" />
+    <param name="max_wz" value="$(arg max_wz)" />
+  </node>
+</launch>

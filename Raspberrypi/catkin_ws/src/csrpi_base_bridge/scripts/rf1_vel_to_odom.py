@@ -12,16 +12,20 @@ from tf2_ros import TransformBroadcaster
 
 class Rf1VelToOdom:
     def __init__(self):
-        self.k_m = float(rospy.get_param("~k_m", 0.18525))
+        self.k_m = float(rospy.get_param("~k_m", 0.129675))
         self.odom_frame = rospy.get_param("~odom_frame", "odom")
         self.base_frame = rospy.get_param("~base_frame", "base_link")
         self.publish_tf = bool(rospy.get_param("~publish_tf", False))
         self.base_yaw_offset = float(rospy.get_param("~base_yaw_offset", 0.0))
+        self.publish_rate_hz = float(rospy.get_param("~publish_rate_hz", 30.0))
 
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
         self.last_time = None
+        self.last_vx = 0.0
+        self.last_vy = 0.0
+        self.last_wz = 0.0
 
         self.odom_pub = rospy.Publisher("/odom", Odometry, queue_size=20)
         self.tf_pub = TransformBroadcaster() if self.publish_tf else None
@@ -32,12 +36,22 @@ class Rf1VelToOdom:
         if len(data) < 4:
             return
 
+        # /rf1/vel wheel order is [LR, LF, RR, RF].
         v1, v2, v3, v4 = data[:4]
         vx = (v1 + v2 + v3 + v4) / 4.0
-        vy = (-v1 + v2 + v3 - v4) / 4.0
-        wz = (-v1 + v2 - v3 + v4) / (4.0 * self.k_m) if self.k_m else 0.0
+        vy = (v1 - v2 - v3 + v4) / 4.0
+        wz = (-v1 - v2 + v3 + v4) / (4.0 * self.k_m) if self.k_m else 0.0
 
+        self.last_vx = vx
+        self.last_vy = vy
+        self.last_wz = wz
+
+    def step(self):
         now = rospy.Time.now()
+        vx = self.last_vx
+        vy = self.last_vy
+        wz = self.last_wz
+
         if self.last_time is None:
             self.last_time = now
             self.publish_odom(now, vx, vy, wz)
@@ -85,8 +99,11 @@ class Rf1VelToOdom:
 
 def main():
     rospy.init_node("rf1_vel_to_odom")
-    Rf1VelToOdom()
-    rospy.spin()
+    node = Rf1VelToOdom()
+    rate = rospy.Rate(node.publish_rate_hz)
+    while not rospy.is_shutdown():
+        node.step()
+        rate.sleep()
 
 
 if __name__ == "__main__":

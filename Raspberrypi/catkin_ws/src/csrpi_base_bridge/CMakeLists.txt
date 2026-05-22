@@ -18,6 +18,7 @@ catkin_install_python(PROGRAMS
   scripts/enc_to_raw_vel.py
   scripts/rf1_serial_bridge.py
   scripts/cmdvel_to_rf1.py
+  scripts/cmd_vel_safety_gate.py
   scripts/rf1_vel_to_odom.py
   scripts/scan_contract_stub.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
