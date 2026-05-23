@@ -51,10 +51,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 wait_for_topic "${SCAN_TOPIC}"
-wait_for_topic "${IMU_TOPIC}"
 wait_for_topic "${VEL_TOPIC}"
 
 if [ "${USE_LASER_SCAN_MATCHER}" = "1" ]; then
+  wait_for_topic "${IMU_TOPIC}"
   roslaunch clbrobot laser_scan_matcher_406.launch \
     scan_topic:="${SCAN_TOPIC}" \
     imu_topic:="${IMU_TOPIC}" \

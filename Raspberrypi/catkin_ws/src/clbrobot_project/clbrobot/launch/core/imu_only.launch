@@ -1,4 +1,5 @@
 <launch>
+  <arg name="publish_static_tf" default="false" />
   <node pkg="mpu6050_i2c_bridge"
         type="mpu6050_node.py"
         name="mpu6050_i2c_node"
@@ -40,7 +41,7 @@
     <remap from="imu/data" to="/imu/data" />
   </node>
 
-  <node pkg="tf2_ros"
+  <node if="$(arg publish_static_tf)" pkg="tf2_ros"
         type="static_transform_publisher"
         name="base_link_to_imu_link"
         args="0 0 0 0 0 0 base_link imu_link" />

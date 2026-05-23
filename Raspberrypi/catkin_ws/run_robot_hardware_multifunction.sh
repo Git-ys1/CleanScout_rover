@@ -78,15 +78,18 @@ ROSCORE_PID=$!
 wait_for_master
 sleep 1
 
+roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/robot_state_publisher.launch" &
+RSP_PID=$!
+
 roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.launch" &
 BRINGUP_PID=$!
 wait_for_topic "/rf1/vel"
 
-roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/core/imu_only.launch" &
+roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/core/imu_only.launch" publish_static_tf:=false &
 IMU_PID=$!
 wait_for_topic "/imu/data"
 
-roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch" &
+roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch" publish_static_tf:=false &
 LIDAR_PID=$!
 wait_for_topic "/scan"
 

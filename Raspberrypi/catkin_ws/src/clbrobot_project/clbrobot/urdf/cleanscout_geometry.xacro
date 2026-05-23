@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cleanscout">
+
+  <!-- Base geometry uses the current navigation convention:
+       base_link is the center of the four-wheel rectangle. -->
+  <xacro:property name="base_length" value="0.353" />
+  <xacro:property name="base_width" value="0.217" />
+  <xacro:property name="base_height" value="0.024" />
+
+  <xacro:property name="wheel_diameter" value="0.08" />
+  <xacro:property name="wheel_radius" value="0.04" />
+  <xacro:property name="wheel_thickness" value="0.03" />
+
+  <xacro:property name="imu_length" value="0.02" />
+  <xacro:property name="imu_width" value="0.015" />
+  <xacro:property name="imu_height" value="0.001" />
+
+  <xacro:property name="laser_radius" value="0.04" />
+  <xacro:property name="laser_height" value="0.04" />
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0.0415 0 ${base_height / 2.0}" rpy="0 0 0" />
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}" />
+      </geometry>
+      <material name="dark_gray">
+        <color rgba="0.25 0.25 0.28 1.0" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0415 0 ${base_height / 2.0}" rpy="0 0 0" />
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="laser">
+    <visual>
+      <geometry>
+        <cylinder radius="${laser_radius}" length="${laser_height}" />
+      </geometry>
+      <material name="blue">
+        <color rgba="0.2 0.4 0.9 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_link_to_laser_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="laser" />
+    <origin xyz="0.0745 0.0065 0.592" rpy="0 0 0" />
+  </joint>
+
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="${imu_length} ${imu_width} ${imu_height}" />
+      </geometry>
+      <material name="green">
+        <color rgba="0.2 0.8 0.3 1.0" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="base_link_to_imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0.093 0.072 0.0725" rpy="0 0 0" />
+  </joint>
+
+  <xacro:macro name="wheel_link" params="name x y">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_thickness}" />
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1.0" />
+        </material>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="${name}" />
+      <origin xyz="${x} ${y} ${wheel_radius}" rpy="0 0 0" />
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel_link name="wheel_lr" x="-0.135" y="0.1085" />
+  <xacro:wheel_link name="wheel_lf" x="0.135" y="0.1085" />
+  <xacro:wheel_link name="wheel_rr" x="-0.135" y="-0.1085" />
+  <xacro:wheel_link name="wheel_rf" x="0.135" y="-0.1085" />
+
+</robot>

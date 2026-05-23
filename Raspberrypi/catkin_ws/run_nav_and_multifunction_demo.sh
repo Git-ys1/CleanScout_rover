@@ -16,6 +16,7 @@ EDGE_FALLBACK_URL="ws://10.156.250.190:3000/edge/ros"
 EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK="3"
 EDGE_DEVICE_ID="csrpi-001"
 EDGE_DEVICE_TOKEN="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2"
+RSP_LOG="/tmp/c331_nav_multi_rsp.log"
 
 source "$ROOT/use_cleanscout_pi.sh"
 
@@ -73,16 +74,19 @@ if ! wait_for_master 8; then
   exit 1
 fi
 
+echo "[nav-multi] 启动 robot_state_publisher"
+RSP_PID=$(launch_bg "$RSP_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/robot_state_publisher.launch')
+
 echo "[nav-multi] 启动底盘最小链"
 RF1_PID=$(launch_bg "$RF1_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.launch')
 wait_for_topic /rf1/vel 8 || { echo "[nav-multi] ERROR: /rf1/vel 未就绪"; exit 1; }
 
 echo "[nav-multi] 启动 IMU"
-IMU_PID=$(launch_bg "$IMU_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch')
+IMU_PID=$(launch_bg "$IMU_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch publish_static_tf:=false')
 wait_for_topic /imu/data 8 || { echo "[nav-multi] ERROR: /imu/data 未就绪"; exit 1; }
 
 echo "[nav-multi] 启动雷达"
-LIDAR_PID=$(launch_bg "$LIDAR_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch')
+LIDAR_PID=$(launch_bg "$LIDAR_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch publish_static_tf:=false')
 wait_for_topic /scan 8 || { echo "[nav-multi] ERROR: /scan 未就绪"; exit 1; }
 
 echo "[nav-multi] 启动 laser_scan_matcher"
@@ -108,6 +112,7 @@ echo "[nav-multi] 导航: 可由 RViz 发 2D Nav Goal"
 echo "[nav-multi] 后端: 可经 edge-relay 手动控制运动与风机"
 echo "[nav-multi] logs:"
 echo "  roscore: $ROSCORE_LOG"
+echo "  rsp:     $RSP_LOG"
 echo "  rf1:     $RF1_LOG"
 echo "  imu:     $IMU_LOG"
 echo "  lidar:   $LIDAR_LOG"

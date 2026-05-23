@@ -2,17 +2,17 @@ TrajectoryPlannerROS:
   holonomic_robot: false
   y_vels: [0.0]
 
-  max_vel_x: 0.20
+  max_vel_x: 0.15
   min_vel_x: -0.15
 
-  max_vel_theta: 0.4
+  max_vel_theta: 0.3
   min_in_place_vel_theta: 0.3
 
   acc_lim_x: 0.2
   acc_lim_y: 0.0
-  acc_lim_theta: 0.50
+  acc_lim_theta: 0.35
 
-  xy_goal_tolerance: 0.15
+  xy_goal_tolerance: 0.25
   yaw_goal_tolerance: 0.4
   latch_xy_goal_tolerance: true
 
@@ -20,8 +20,8 @@ TrajectoryPlannerROS:
   sim_granularity: 0.05
   angular_sim_granularity: 0.05
 
-  path_distance_bias: 24.0
-  goal_distance_bias: 18.0
+  path_distance_bias: 28.0
+  goal_distance_bias: 16.0
   occdist_scale: 0.08
 
   vx_samples: 15
