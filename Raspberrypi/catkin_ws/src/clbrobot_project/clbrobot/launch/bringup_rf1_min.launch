@@ -18,7 +18,7 @@
     <param name="max_vx" value="0.20" />
     <param name="max_vy" value="0.15" />
     <param name="max_wz" value="0.35" />
-    <param name="min_wheel_ms" value="0.12" />
+    <param name="min_wheel_ms" value="0.03" />
     <param name="max_wheel_ms" value="0.30" />
   </node>
 

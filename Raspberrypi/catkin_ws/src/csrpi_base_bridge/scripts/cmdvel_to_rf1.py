@@ -17,7 +17,7 @@ class CmdvelToRf1:
         self.max_vy = float(rospy.get_param("~max_vy", 0.15))
         self.max_wz = float(rospy.get_param("~max_wz", 0.35))
 
-        self.min_wheel_ms = float(rospy.get_param("~min_wheel_ms", 0.12))
+        self.min_wheel_ms = float(rospy.get_param("~min_wheel_ms", 0.03))
         self.max_wheel_ms = float(rospy.get_param("~max_wheel_ms", 0.35))
 
         self.last_cmd = Twist()
