@@ -30,5 +30,6 @@ void csr_proto_send_enc(csr_channel_t channel, int32_t count, int32_t delta);
 void csr_proto_send_dbg(csr_channel_t channel, uint8_t phase_a, uint8_t phase_b, uint16_t timer_count, int32_t count, int32_t delta);
 void csr_proto_send_vel(const float *rt, const float *tg);
 void csr_proto_send_pwm(const int16_t *pwm);
+void csr_proto_send_navdbg(const float *cmd, const float *ramp, const float *rt, const float *ff, const float *corr, const int16_t *out, const uint8_t *sat);
 
 #endif

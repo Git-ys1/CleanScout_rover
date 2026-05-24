@@ -23,6 +23,9 @@ static float g_measured_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_debug_ff_pwm[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_debug_pid_correction[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static uint8_t g_debug_saturated[CSR_CHANNEL_COUNT] = {0U, 0U, 0U, 0U};
 
 /*
  * C-3.3.1A channel order is fixed as:
@@ -130,6 +133,9 @@ static void csr_clear_pi_state(void)
         g_prev_error[index] = 0.0f;
         g_filtered_vel[index] = 0.0f;
         g_measured_vel[index] = 0.0f;
+        g_debug_ff_pwm[index] = 0.0f;
+        g_debug_pid_correction[index] = 0.0f;
+        g_debug_saturated[index] = 0U;
     }
 }
 
@@ -247,6 +253,9 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     {
         g_integral_state[channel] = 0.0f;
         g_prev_error[channel] = 0.0f;
+        g_debug_ff_pwm[channel] = 0.0f;
+        g_debug_pid_correction[channel] = 0.0f;
+        g_debug_saturated[channel] = 0U;
         return 0;
     }
 
@@ -276,7 +285,12 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
 
     g_prev_error[channel] = error;
 
+    g_debug_ff_pwm[channel] = ff_output;
+    g_debug_pid_correction[channel] = correction;
+
     semantic_output = ff_output + correction;
+    g_debug_saturated[channel] = ((semantic_output > (float)CSR_INPUT_PWM_MAX) ||
+                                  (semantic_output < -(float)CSR_INPUT_PWM_MAX)) ? 1U : 0U;
     semantic_output = csr_clampf(semantic_output, -(float)CSR_INPUT_PWM_MAX, (float)CSR_INPUT_PWM_MAX);
 
     effective_output = semantic_output * (float)g_csr_motor_dir_sign[channel];
@@ -328,6 +342,15 @@ static void csr_send_telemetry(void)
 {
     csr_proto_send_vel(g_measured_vel, g_target_vel_cmd);
     csr_proto_send_pwm(g_output_pwm);
+    csr_proto_send_navdbg(
+        g_target_vel_cmd,
+        g_target_vel_ramp,
+        g_measured_vel,
+        g_debug_ff_pwm,
+        g_debug_pid_correction,
+        g_output_pwm,
+        g_debug_saturated
+    );
 }
 
 static void csr_handle_command(const csr_proto_command_t *command)
