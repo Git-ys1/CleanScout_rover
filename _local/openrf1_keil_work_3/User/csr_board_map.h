@@ -32,7 +32,8 @@ typedef enum
 #define CSR_TELEMETRY_PERIOD_MS         100UL
 
 #define CSR_CONTROL_HZ                  50.0f
-#define CSR_MAX_ACCEL_MPS2              0.5f
+#define CSR_WHEEL_ACC_LIMIT_MPS2        0.20f
+#define CSR_WHEEL_DV_PER_TICK           (CSR_WHEEL_ACC_LIMIT_MPS2 * ((float)CSR_CONTROL_PERIOD_MS / 1000.0f))
 #define CSR_WHEEL_RESOLUTION            1560.0f
 #define CSR_WHEEL_DIAMETER_M            0.08f
 #define CSR_PI_CONST                    3.14159265358979f

@@ -17,8 +17,8 @@ static uint32_t g_last_telemetry_ms = 0;
 static int16_t g_raw_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 static int16_t g_output_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 
-static float g_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-static float g_smooth_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_target_vel_cmd[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_target_vel_ramp[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_measured_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -121,8 +121,8 @@ static void csr_clear_velocity_targets(void)
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
-        g_target_vel[index] = 0.0f;
-        g_smooth_target_vel[index] = 0.0f;
+        g_target_vel_cmd[index] = 0.0f;
+        g_target_vel_ramp[index] = 0.0f;
     }
 }
 
@@ -172,15 +172,11 @@ static float csr_measure_speed_mps(csr_channel_t channel)
     return (float)delta * CSR_WHEEL_SPEED_SCALE;
 }
 
-static uint8_t csr_target_sign_changed(float previous, float next)
+static uint8_t csr_target_sign_reversed(float previous, float next)
 {
-    if ((csr_absf(previous) < 0.0005f) && (csr_absf(next) < 0.0005f))
-    {
-        return 0U;
-    }
     if ((csr_absf(previous) < 0.0005f) || (csr_absf(next) < 0.0005f))
     {
-        return 1U;
+        return 0U;
     }
     return ((previous > 0.0f) != (next > 0.0f)) ? 1U : 0U;
 }
@@ -256,14 +252,14 @@ static void csr_control_tick(void)
     float raw_velocity;
     float step_limit;
 
-    step_limit = CSR_MAX_ACCEL_MPS2 * ((float)CSR_CONTROL_PERIOD_MS / 1000.0f);
+    step_limit = CSR_WHEEL_DV_PER_TICK;
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         raw_velocity = csr_measure_speed_mps((csr_channel_t)index);
         g_filtered_vel[index] = (CSR_VEL_FILTER_ALPHA * g_filtered_vel[index]) + ((1.0f - CSR_VEL_FILTER_ALPHA) * raw_velocity);
         g_measured_vel[index] = g_filtered_vel[index];
-        g_smooth_target_vel[index] = csr_ramp_target(g_smooth_target_vel[index], g_target_vel[index], step_limit);
+        g_target_vel_ramp[index] = csr_ramp_target(g_target_vel_ramp[index], g_target_vel_cmd[index], step_limit);
     }
 
     if (g_control_mode == CSR_MODE_RAW)
@@ -283,7 +279,7 @@ static void csr_control_tick(void)
 
         next_pwm = csr_compute_closed_loop_pwm(
             (csr_channel_t)index,
-            g_smooth_target_vel[index],
+            g_target_vel_ramp[index],
             g_measured_vel[index]
         );
         g_output_pwm[index] = next_pwm;
@@ -293,7 +289,7 @@ static void csr_control_tick(void)
 
 static void csr_send_telemetry(void)
 {
-    csr_proto_send_vel(g_measured_vel, g_target_vel);
+    csr_proto_send_vel(g_measured_vel, g_target_vel_cmd);
     csr_proto_send_pwm(g_output_pwm);
 }
 
@@ -313,18 +309,18 @@ static void csr_handle_command(const csr_proto_command_t *command)
     case CSR_CMD_W:
         if (g_control_mode != CSR_MODE_CLOSED_LOOP)
         {
+            csr_clear_velocity_targets();
             csr_clear_pi_state();
             csr_clear_raw_targets();
         }
 
         for (index = 0; index < CSR_CHANNEL_COUNT; index++)
         {
-            if (csr_target_sign_changed(g_target_vel[index], command->target_vel[index]) ||
-                (csr_absf(command->target_vel[index] - g_target_vel[index]) > 0.08f))
+            if (csr_target_sign_reversed(g_target_vel_cmd[index], command->target_vel[index]))
             {
                 csr_reset_channel_pi_state((csr_channel_t)index);
             }
-            g_target_vel[index] = command->target_vel[index];
+            g_target_vel_cmd[index] = command->target_vel[index];
         }
 
         g_control_mode = CSR_MODE_CLOSED_LOOP;
@@ -434,3 +430,5 @@ int main(void)
         csr_check_watchdog(now_ms);
     }
 }
+
+
