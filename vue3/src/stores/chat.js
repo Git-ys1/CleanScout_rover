@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
-import { requestChatHistory, requestSendChatMessage } from '../api/chat.js'
-import { requestOpenClawStatus } from '../api/integrations.js'
+import { requestChatHistory } from '../api/chat.js'
+import { requestOpenClawAgentStatus, requestSendOpenClawMessage } from '../api/openclaw.js'
 import { formatStatusText } from '../utils/status-display.js'
 
 let streamingRunId = 0
+const DEFAULT_DEVICE_ID = 'cleanscout-001'
+const DEFAULT_AGENT_ID = 'pc-yusu-main'
 
 function getDefaultTransport() {
   return {
@@ -13,6 +15,10 @@ function getDefaultTransport() {
     message: '当前默认使用模拟链路。',
     model: 'openclaw/default',
     apiMode: 'chat',
+    deviceId: DEFAULT_DEVICE_ID,
+    agentId: DEFAULT_AGENT_ID,
+    pcWorkerOnline: false,
+    openclawReachable: false,
   }
 }
 
@@ -89,7 +95,7 @@ export const useChatStore = defineStore('chat', {
       this.messages = [...this.messages, createSystemMessage(content, code)]
     },
     async syncTransportStatus({ appendNotice = true } = {}) {
-      const status = await requestOpenClawStatus()
+      const status = await requestOpenClawAgentStatus(DEFAULT_DEVICE_ID)
 
       this.setTransport({
         mode: status?.activeTransport || 'mock',
@@ -98,6 +104,11 @@ export const useChatStore = defineStore('chat', {
         message: status?.message || getDefaultTransport().message,
         model: status?.model || getDefaultTransport().model,
         apiMode: status?.apiMode || getDefaultTransport().apiMode,
+        deviceId: status?.deviceId || DEFAULT_DEVICE_ID,
+        agentId: status?.agentId || DEFAULT_AGENT_ID,
+        pcWorkerOnline: Boolean(status?.pcWorkerOnline),
+        openclawReachable: Boolean(status?.openclawReachable),
+        lastHeartbeatAt: status?.lastHeartbeatAt || '',
       })
 
       if (appendNotice) {
@@ -172,7 +183,12 @@ export const useChatStore = defineStore('chat', {
       ]
 
       try {
-        const result = await requestSendChatMessage(content)
+        const result = await requestSendOpenClawMessage({
+          deviceId: DEFAULT_DEVICE_ID,
+          conversationId: 'conv-cleanscout-001',
+          message: content,
+          mode: 'chat',
+        })
 
         this.replaceMessage(tempUserId, createMessageViewModel(result.userMessage))
         this.replaceMessage(

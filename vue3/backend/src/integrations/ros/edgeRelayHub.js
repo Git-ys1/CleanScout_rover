@@ -429,7 +429,6 @@ export function createEdgeRelayHub(config, cache) {
       const pathname = new URL(request.url || '/', 'http://127.0.0.1').pathname
 
       if (pathname !== config.edgeRelayPath) {
-        socket.destroy()
         return
       }
 
