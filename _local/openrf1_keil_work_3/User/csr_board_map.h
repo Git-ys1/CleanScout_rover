@@ -42,6 +42,7 @@ typedef enum
 #define CSR_INPUT_PWM_MAX               1000
 #define CSR_EFFECTIVE_PWM_MAX           700
 #define CSR_TIM8_PWM_TOP                2000U
+#define CSR_PWM_STEP_LIMIT_NAV          10
 
 #define CSR_FEEDFORWARD_PWM_AT_0_10_MPS 260.0f
 #define CSR_PI_CORRECTION_LIMIT         800.0f

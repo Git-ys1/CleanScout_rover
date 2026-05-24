@@ -82,6 +82,24 @@ static float csr_clampf(float value, float min_value, float max_value)
     return value;
 }
 
+static int16_t csr_slew_i16(int16_t current, int16_t target, int16_t step)
+{
+    if (step < 1)
+    {
+        step = 1;
+    }
+
+    if (target > (int16_t)(current + step))
+    {
+        return (int16_t)(current + step);
+    }
+    if (target < (int16_t)(current - step))
+    {
+        return (int16_t)(current - step);
+    }
+    return target;
+}
+
 static int16_t csr_float_to_pwm(float value)
 {
     if (value >= 0.0f)
@@ -215,6 +233,13 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     float error;
     float correction;
     float base_pwm;
+    float ff_output;
+    float p_term;
+    float i_term;
+    float d_term;
+    float candidate_integral;
+    float candidate_correction;
+    float candidate_output;
     float semantic_output;
     float effective_output;
 
@@ -226,20 +251,32 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     }
 
     error = target - measured;
-    g_integral_state[channel] += error * (CSR_CONTROL_PERIOD_MS / 1000.0f);
-    g_integral_state[channel] = csr_clampf(g_integral_state[channel], -CSR_PI_INTEGRAL_LIMIT, CSR_PI_INTEGRAL_LIMIT);
+    base_pwm = (csr_absf(target) / 0.10f) * CSR_FEEDFORWARD_PWM_AT_0_10_MPS;
+    base_pwm = csr_clampf(base_pwm, 0.0f, (float)CSR_EFFECTIVE_PWM_MAX);
+    ff_output = (target > 0.0f) ? base_pwm : -base_pwm;
 
-    correction = g_kp[channel] * error;
-    correction += g_ki[channel] * g_integral_state[channel];
-    correction += g_kd[channel] * ((error - g_prev_error[channel]) / (CSR_CONTROL_PERIOD_MS / 1000.0f));
+    p_term = g_kp[channel] * error;
+    d_term = g_kd[channel] * ((error - g_prev_error[channel]) / (CSR_CONTROL_PERIOD_MS / 1000.0f));
+
+    candidate_integral = g_integral_state[channel] + (error * (CSR_CONTROL_PERIOD_MS / 1000.0f));
+    candidate_integral = csr_clampf(candidate_integral, -CSR_PI_INTEGRAL_LIMIT, CSR_PI_INTEGRAL_LIMIT);
+    candidate_correction = p_term + (g_ki[channel] * candidate_integral) + d_term;
+    candidate_correction = csr_clampf(candidate_correction, -CSR_PI_CORRECTION_LIMIT, CSR_PI_CORRECTION_LIMIT);
+    candidate_output = ff_output + candidate_correction;
+
+    if (!((candidate_output >= (float)CSR_INPUT_PWM_MAX && error > 0.0f) ||
+          (candidate_output <= -(float)CSR_INPUT_PWM_MAX && error < 0.0f)))
+    {
+        g_integral_state[channel] = candidate_integral;
+    }
+
+    i_term = g_ki[channel] * g_integral_state[channel];
+    correction = p_term + i_term + d_term;
     correction = csr_clampf(correction, -CSR_PI_CORRECTION_LIMIT, CSR_PI_CORRECTION_LIMIT);
 
     g_prev_error[channel] = error;
 
-    base_pwm = (csr_absf(target) / 0.10f) * CSR_FEEDFORWARD_PWM_AT_0_10_MPS;
-    base_pwm = csr_clampf(base_pwm, 0.0f, (float)CSR_EFFECTIVE_PWM_MAX);
-
-    semantic_output = ((target > 0.0f) ? base_pwm : -base_pwm) + correction;
+    semantic_output = ff_output + correction;
     semantic_output = csr_clampf(semantic_output, -(float)CSR_INPUT_PWM_MAX, (float)CSR_INPUT_PWM_MAX);
 
     effective_output = semantic_output * (float)g_csr_motor_dir_sign[channel];
@@ -282,7 +319,7 @@ static void csr_control_tick(void)
             g_target_vel_ramp[index],
             g_measured_vel[index]
         );
-        g_output_pwm[index] = next_pwm;
+        g_output_pwm[index] = csr_slew_i16(g_output_pwm[index], next_pwm, CSR_PWM_STEP_LIMIT_NAV);
         csr_motor_set((csr_channel_t)index, g_output_pwm[index]);
     }
 }
