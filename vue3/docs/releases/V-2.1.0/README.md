@@ -66,6 +66,50 @@ OPENCLAW_CHAT_TIMEOUT_MS=60000
 - `OPENCLAW_GATEWAY_TOKEN` 不进云端 backend，不写入前端。
 - 云端 backend 不直接访问 `127.0.0.1:18789`，只通过在线 worker 转发。
 
+## 云端 backend 部署操作
+
+云端后端更新代码仍使用既有脚本：
+
+```bash
+cd /opt/CleanScout_rover/vue3
+sudo bash scripts/update-backend.sh
+```
+
+如果服务器源码目录不是 `/opt/CleanScout_rover/vue3`，先用下面命令确认：
+
+```bash
+sudo find /opt -path '*/vue3/scripts/update-backend.sh' -print
+```
+
+云端 `/etc/vline-backend.env` 只填写 worker 接入 token，不填写 OpenClaw Gateway token：
+
+```bash
+sudo cp /etc/vline-backend.env /etc/vline-backend.env.bak.$(date +%Y%m%d%H%M%S)
+sudo nano /etc/vline-backend.env
+```
+
+需要确认存在：
+
+```text
+APP_PROFILE=public-edge
+AGENT_WS_ENABLED=true
+AGENT_WS_PATH=/ws/agents
+AGENT_SHARED_SECRET=<现场生成的 worker 接入 token>
+AGENT_HEARTBEAT_TIMEOUT_MS=30000
+OPENCLAW_ROUTE_MODE=pc-worker
+OPENCLAW_CHAT_TIMEOUT_MS=60000
+```
+
+改完后重启并检查：
+
+```bash
+sudo systemctl restart vline-backend
+sudo systemctl status vline-backend --no-pager
+curl -sS https://api.hzhhds.top/api/system/health
+```
+
+注意：`AGENT_SHARED_SECRET` 必须和 PC worker 的 `CLOUD_AGENT_TOKEN` 完全一致。
+
 ## PC worker
 
 目录：
@@ -95,6 +139,23 @@ cd tools/pc-openclaw-worker
 npm ci
 npm run start
 ```
+
+Ubuntu PC 本机建议先跑 probe，再连接云端：
+
+```bash
+cd tools/pc-openclaw-worker
+npm ci
+npm run probe
+npm run start
+```
+
+probe 只验证本机 `OpenClaw Gateway`，不会连接云端。`npm run start` 才会连接 `wss://api.hzhhds.top/ws/agents`。
+
+PC worker `.env` 中：
+
+- `CLOUD_AGENT_TOKEN` 填云端 backend 的 `AGENT_SHARED_SECRET`。
+- `OPENCLAW_GATEWAY_TOKEN` 填 Ubuntu PC 本机 OpenClaw Gateway token。
+- 这两个 token 都不提交到公开仓库。
 
 ## Nginx
 
