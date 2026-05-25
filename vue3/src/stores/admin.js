@@ -16,6 +16,11 @@ function getDefaultOpenClawStatus() {
     apiMode: 'chat',
     model: 'openclaw/default',
     lastProbeAt: '',
+    lastHeartbeatAt: '',
+    pcWorkerOnline: false,
+    openclawReachable: false,
+    agentId: '',
+    deviceId: 'cleanscout-001',
     message: 'OpenClaw backend adapter 尚未探测。',
   }
 }
@@ -48,6 +53,7 @@ export const useAdminStore = defineStore('admin', {
       this.openclawStatus = {
         ...getDefaultOpenClawStatus(),
         ...(status || {}),
+        lastProbeAt: status?.lastProbeAt || status?.lastHeartbeatAt || '',
       }
     },
     async loadOpenClawStatus() {

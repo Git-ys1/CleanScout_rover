@@ -1,8 +1,8 @@
 import { API_BASE_URL } from './config.js'
 import { get } from './http.js'
 
-export function requestOpenClawStatus() {
-  return get('/integrations/openclaw/status', { auth: true })
+export function requestOpenClawStatus(deviceId = 'cleanscout-001') {
+  return get(`/openclaw/status?deviceId=${encodeURIComponent(deviceId)}`, { auth: true })
 }
 
 export function requestAsrStatus() {
