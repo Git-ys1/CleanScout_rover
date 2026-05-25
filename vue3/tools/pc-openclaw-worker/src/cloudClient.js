@@ -36,6 +36,8 @@ export function createCloudClient(config, openclawClient) {
   let socket = null
   let heartbeatTimer = null
   let reconnectTimer = null
+  let registered = false
+  let heartbeatCount = 0
   let lastProbe = {
     reachable: false,
   }
@@ -77,6 +79,7 @@ export function createCloudClient(config, openclawClient) {
 
   async function sendHeartbeat() {
     const probe = await refreshProbe()
+    heartbeatCount += 1
 
     sendJson(socket, {
       type: 'AGENT_HEARTBEAT',
@@ -87,10 +90,19 @@ export function createCloudClient(config, openclawClient) {
       model: config.openclawModel,
       ts: nowTs(),
     })
+
+    if (heartbeatCount === 1 || heartbeatCount % 6 === 0) {
+      console.log(
+        `[pc-openclaw-worker] heartbeat sent count=${heartbeatCount} openclawReachable=${probe.reachable} waitingFor=OPENCLAW_CHAT_REQUEST`
+      )
+    }
   }
 
   async function handleChatRequest(payload) {
     const startedAt = Date.now()
+    console.log(
+      `[pc-openclaw-worker] chat request received requestId=${payload.requestId || ''} conversationId=${payload.conversationId || ''}`
+    )
 
     try {
       const result = await openclawClient.chat({
@@ -108,6 +120,9 @@ export function createCloudClient(config, openclawClient) {
         openclawReachable: true,
         latencyMs: Date.now() - startedAt,
       })
+      console.log(
+        `[pc-openclaw-worker] chat result sent requestId=${payload.requestId || ''} ok=true latencyMs=${Date.now() - startedAt}`
+      )
     } catch (error) {
       sendJson(socket, {
         type: 'OPENCLAW_CHAT_RESULT',
@@ -119,6 +134,9 @@ export function createCloudClient(config, openclawClient) {
         openclawReachable: false,
         latencyMs: Date.now() - startedAt,
       })
+      console.warn(
+        `[pc-openclaw-worker] chat result sent requestId=${payload.requestId || ''} ok=false code=${error.code || 'OPENCLAW_REQUEST_FAILED'} latencyMs=${Date.now() - startedAt}`
+      )
     }
   }
 
@@ -137,7 +155,9 @@ export function createCloudClient(config, openclawClient) {
     }
 
     if (payload.type === 'AGENT_REGISTER_ACK') {
+      registered = true
       console.log(`[pc-openclaw-worker] registered device=${payload.deviceId} agent=${payload.agentId}`)
+      console.log('[pc-openclaw-worker] token accepted; websocket session is authenticated and waiting for requests')
       return
     }
 
@@ -155,6 +175,8 @@ export function createCloudClient(config, openclawClient) {
 
   function connect() {
     clearTimers()
+    registered = false
+    heartbeatCount = 0
 
     socket = new WebSocket(config.cloudWsUrl, {
       headers: config.cloudAgentToken
@@ -179,7 +201,7 @@ export function createCloudClient(config, openclawClient) {
     socket.on('message', handleMessage)
 
     socket.on('close', (code, reason) => {
-      console.warn(`[pc-openclaw-worker] disconnected code=${code} reason=${String(reason || '')}`)
+      console.warn(`[pc-openclaw-worker] disconnected registered=${registered} code=${code} reason=${String(reason || '')}`)
       scheduleReconnect()
     })
 

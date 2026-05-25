@@ -8,7 +8,7 @@ function createRequestError({ message, status = 0, code = 'REQUEST_FAILED' }) {
   return error
 }
 
-export function request({ url, method = 'GET', data, auth = false, header = {} }) {
+export function request({ url, method = 'GET', data, auth = false, header = {}, timeout = REQUEST_TIMEOUT }) {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync(AUTH_TOKEN_STORAGE_KEY) || ''
 
@@ -16,7 +16,7 @@ export function request({ url, method = 'GET', data, auth = false, header = {} }
       url: `${API_BASE_URL}${url}`,
       method,
       data,
-      timeout: REQUEST_TIMEOUT,
+      timeout,
       header: {
         'Content-Type': 'application/json',
         ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),

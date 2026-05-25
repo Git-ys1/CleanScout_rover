@@ -1,6 +1,7 @@
 import { get, post } from './http.js'
 
 const DEFAULT_DEVICE_ID = 'cleanscout-001'
+const OPENCLAW_CHAT_REQUEST_TIMEOUT = 70000
 
 export function requestOpenClawAgentStatus(deviceId = DEFAULT_DEVICE_ID) {
   return get(`/openclaw/status?deviceId=${encodeURIComponent(deviceId)}`, { auth: true })
@@ -20,6 +21,9 @@ export function requestSendOpenClawMessage({
       message,
       mode,
     },
-    { auth: true }
+    {
+      auth: true,
+      timeout: OPENCLAW_CHAT_REQUEST_TIMEOUT,
+    }
   )
 }
