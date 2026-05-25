@@ -14,6 +14,11 @@
       <view class="transport-banner" :class="{ warn: transport.fallback, error: transport.status === 'error' }">
         <text class="transport-label">{{ transportBannerText }}</text>
       </view>
+      <view class="agent-meta">
+        <text>设备：{{ transport.deviceId || 'cleanscout-001' }}</text>
+        <text>Worker：{{ transport.agentId || 'pc-yusu-main' }}</text>
+        <text>{{ transport.pcWorkerOnline ? 'Worker 在线' : 'Worker 离线' }}</text>
+      </view>
     </view>
 
     <scroll-view
@@ -429,6 +434,15 @@ function formatDuration(value) {
   font-size: 22rpx;
   line-height: 1.6;
   color: var(--v-text-secondary);
+}
+
+.agent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 14rpx;
+  color: var(--v-text-muted);
+  font-size: 20rpx;
 }
 
 .chat-list {
