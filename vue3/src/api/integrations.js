@@ -25,3 +25,12 @@ export function buildOpenMvSnapshotUrl(token, cacheBust = Date.now()) {
 
   return `${API_BASE_URL}/integrations/openmv/snapshot?${query}`
 }
+
+export function buildOpenMvStreamUrl(token, cacheBust = Date.now()) {
+  const query = [
+    `token=${encodeURIComponent(String(token || '').trim())}`,
+    `ts=${encodeURIComponent(String(cacheBust))}`,
+  ].join('&')
+
+  return `${API_BASE_URL}/integrations/openmv/stream?${query}`
+}

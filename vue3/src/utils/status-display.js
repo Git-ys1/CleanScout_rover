@@ -4,6 +4,7 @@ const STATUS_META_MAP = {
   rosbridge: { text: 'ROS 桥接', tone: 'brand' },
   'edge-relay': { text: '边缘中继', tone: 'brand' },
   mjpeg: { text: 'MJPEG 图传', tone: 'brand' },
+  'mjpeg-stream-relay': { text: '云端 MJPEG', tone: 'brand' },
   snapshot: { text: '单帧快照', tone: 'neutral' },
   healthy: { text: '正常', tone: 'success' },
   degraded: { text: '降级', tone: 'warn' },

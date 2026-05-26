@@ -1,0 +1,16 @@
+{
+  "name": "pc-camera-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CleanScout UbuntuPC ESP32-CAM MJPEG relay worker",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "mock": "node src/index.js --mock",
+    "check": "node --check src/index.js && node --check src/config.js && node --check src/cloudCameraClient.js && node --check src/esp32camClient.js && node --check src/mjpegParser.js && node --check src/diagnostics.js"
+  },
+  "dependencies": {
+    "ws": "^8.20.0"
+  }
+}

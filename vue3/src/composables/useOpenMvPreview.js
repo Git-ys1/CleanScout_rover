@@ -1,5 +1,5 @@
 import { computed, onUnmounted, ref } from 'vue'
-import { buildOpenMvSnapshotUrl, requestOpenMvStatus } from '../api/integrations.js'
+import { buildOpenMvSnapshotUrl, buildOpenMvStreamUrl, requestOpenMvStatus } from '../api/integrations.js'
 
 function getDefaultStatus() {
   return {
@@ -17,12 +17,29 @@ function getDefaultStatus() {
 export function useOpenMvPreview(getToken) {
   const status = ref(getDefaultStatus())
   const previewTick = ref(Date.now())
+  const streamTick = ref(Date.now())
+  const streamFailed = ref(false)
+  const previewActive = ref(true)
   let previewTimer = null
+
+  const useStream = computed(() => {
+    return previewActive.value && status.value.status === 'healthy' && status.value.mode === 'mjpeg-stream-relay' && !streamFailed.value
+  })
+
+  const streamUrl = computed(() => {
+    const token = typeof getToken === 'function' ? getToken() : ''
+
+    if (!useStream.value || !token) {
+      return ''
+    }
+
+    return buildOpenMvStreamUrl(token, streamTick.value)
+  })
 
   const snapshotUrl = computed(() => {
     const token = typeof getToken === 'function' ? getToken() : ''
 
-    if (status.value.status !== 'healthy' || !token) {
+    if (!previewActive.value || status.value.status !== 'healthy' || !token) {
       return ''
     }
 
@@ -35,6 +52,7 @@ export function useOpenMvPreview(getToken) {
         ...status.value,
         ...(await requestOpenMvStatus()),
       }
+      streamFailed.value = false
       restartPreviewLoop()
       return status.value
     } catch (error) {
@@ -50,9 +68,14 @@ export function useOpenMvPreview(getToken) {
 
   function restartPreviewLoop() {
     stopPreviewLoop()
+    previewActive.value = true
 
     if (status.value.status !== 'healthy') {
       return
+    }
+
+    if (status.value.mode === 'mjpeg-stream-relay' && !streamFailed.value) {
+      streamTick.value = Date.now()
     }
 
     previewTick.value = Date.now()
@@ -66,9 +89,20 @@ export function useOpenMvPreview(getToken) {
       clearInterval(previewTimer)
       previewTimer = null
     }
+    previewActive.value = false
   }
 
   function handlePreviewError() {
+    if (status.value.mode === 'mjpeg-stream-relay' && !streamFailed.value) {
+      streamFailed.value = true
+      status.value = {
+        ...status.value,
+        message: 'MJPEG stream 加载失败，已切换到 snapshot 兜底预览。',
+      }
+      restartPreviewLoop()
+      return
+    }
+
     stopPreviewLoop()
     status.value = {
       ...status.value,
@@ -81,6 +115,9 @@ export function useOpenMvPreview(getToken) {
     stopPreviewLoop()
     status.value = getDefaultStatus()
     previewTick.value = Date.now()
+    streamTick.value = Date.now()
+    streamFailed.value = false
+    previewActive.value = true
   }
 
   onUnmounted(() => {
@@ -90,6 +127,8 @@ export function useOpenMvPreview(getToken) {
   return {
     status,
     snapshotUrl,
+    streamUrl,
+    useStream,
     loadStatus,
     restartPreviewLoop,
     stopPreviewLoop,

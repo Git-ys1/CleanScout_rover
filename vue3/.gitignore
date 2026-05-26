@@ -17,6 +17,7 @@ dist
 __pycache__
 *.pyc
 services/funasr-asr/.venv
+tools/pc-camera-worker/.env
 
 # Editor directories and files
 .idea

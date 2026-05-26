@@ -24,6 +24,18 @@ JWT_EXPIRES_IN=7d
 CORS_ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173
 OPENCLAW_ENABLED=false
 ASR_ENABLED=false
+OPENMV_ENABLED=true
+OPENMV_INPUT_MODE=push-stream
+CAMERA_INGEST_ENABLED=true
+CAMERA_INGEST_PATH=/edge/camera
+CAMERA_INGEST_TOKEN=local-camera-token-change-me
+CAMERA_ALLOWED_DEVICE_IDS=pc-001
+CAMERA_ALLOWED_CAMERA_IDS=openmv-arm-cam-001
+CAMERA_FRAME_STALE_MS=3000
+CAMERA_MAX_FRAME_BYTES=300000
+CAMERA_STREAM_BOUNDARY=cleanscout-openmv
+CAMERA_STREAM_HEARTBEAT_MS=1000
+CAMERA_MAX_VIEWERS=3
 ROS_ENABLED=true
 ROS_TRANSPORT=edge-relay
 ROS_CMD_REPEAT_HZ=10
@@ -55,7 +67,8 @@ Start-Process powershell -ArgumentList @(
 Write-Host "backend: http://127.0.0.1:3000"
 Write-Host "H5:      http://localhost:5173"
 
-if ($ip) {
-  Write-Host "LAN API: http://$ip`:3000/api"
-  Write-Host "edge:    ws://$ip`:3000/edge/ros"
-}
+  if ($ip) {
+    Write-Host "LAN API: http://$ip`:3000/api"
+    Write-Host "edge:    ws://$ip`:3000/edge/ros"
+    Write-Host "camera:  ws://$ip`:3000/edge/camera?token=local-camera-token-change-me&deviceId=pc-001&cameraId=openmv-arm-cam-001"
+  }

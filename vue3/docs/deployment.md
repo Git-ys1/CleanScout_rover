@@ -14,12 +14,15 @@
 - `edge_device_token`
 - `OPENCLAW_BEARER_TOKEN`
 - `JWT_SECRET`
+- `CAMERA_INGEST_TOKEN`
+- `CAMERA_CLOUD_TOKEN`
 
 当前只在本文档记录字段名、用途、存放位置和交接方式。需要复制明文时，到对应运行环境读取：
 
 - 本地 edge-relay：树莓派启动命令里的 `edge_device_token`，以及本机 backend 使用的临时 env / SQLite seed 状态。
 - 云端 edge-relay：VPS `/etc/vline-backend.env` 里的 `EDGE_DEVICE_BOOTSTRAP_TOKEN`，seed 后数据库只保存 bcrypt hash。
 - OpenClaw：树莓派 OpenClaw handoff 文档里的 `OPENCLAW_BEARER_TOKEN`，VPS 或本地 backend env 中只写 `OPENCLAW_BEARER_TOKEN`。
+- ESP32-CAM 图传：VPS `/etc/vline-backend.env` 里的 `CAMERA_INGEST_TOKEN` 与 UbuntuPC `.env` 里的 `CAMERA_CLOUD_TOKEN` 必须一致。
 
 当前固定设备标识：
 
@@ -137,6 +140,51 @@ cmd /c npm.cmd run dev:h5
 
 ```text
 http://localhost:5173
+```
+
+## V-2.2.0 ESP32-CAM / MJPEG 图传联调
+
+正式图传链路：
+
+```text
+ESP32-CAM -> UbuntuPC pc-camera-worker -> wss://api.hzhhds.top/edge/camera -> backend -> /api/integrations/openmv/stream -> H5
+```
+
+云端 backend env 需要启用：
+
+```text
+OPENMV_ENABLED=true
+OPENMV_INPUT_MODE=push-stream
+CAMERA_INGEST_ENABLED=true
+CAMERA_INGEST_PATH=/edge/camera
+CAMERA_INGEST_TOKEN=<与 UbuntuPC CAMERA_CLOUD_TOKEN 相同>
+CAMERA_ALLOWED_DEVICE_IDS=pc-001
+CAMERA_ALLOWED_CAMERA_IDS=openmv-arm-cam-001
+CAMERA_MAX_VIEWERS=3
+```
+
+UbuntuPC worker 启动：
+
+```bash
+cd vue3/tools/pc-camera-worker
+npm install
+cp .env.example .env
+nano .env
+npm run start
+```
+
+无真实 ESP32-CAM 时先跑：
+
+```bash
+npm run mock
+```
+
+前端正式展示端为 H5；小程序 / App 若不稳定支持 MJPEG multipart，则继续使用 `/snapshot` 兜底。
+
+完整说明见：
+
+```text
+docs/camera-mjpeg-stream.md
 ```
 
 ### 手动启动本地后端

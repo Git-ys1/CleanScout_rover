@@ -236,16 +236,18 @@ backend
 - WLAN 官方文档：https://docs.openmv.io/library/network.WLAN.html
 - WiFi MJPEG 示例：https://book.openmv.cc/example/14-WiFi-Shield/mjpeg-streamer.html
 
-当前接法冻结为：
+当前接法从 `V-2.2.0` 起升级为 ESP32-CAM / MJPEG 云端图传：
 
-- `前端 -> backend -> OpenMV WiFi 图传`
-- 前端当前不长期直连 OpenMV 图传地址
-- backend 负责 OpenMV 探测与单帧代理：`/api/integrations/openmv/status`、`/api/integrations/openmv/snapshot`
-- 首页当前以“单帧周期刷新”的方式显示前视画面，先保证多端可用和链路稳定
+- 正式链路：`ESP32-CAM -> UbuntuPC camera-worker -> WSS /edge/camera -> backend -> /api/integrations/openmv/stream -> H5`
+- 前端不直连 ESP32-CAM 内网地址
+- 云端 backend 不主动访问手机热点内网 IP
+- backend 负责接收最新 JPEG 帧、输出 MJPEG stream，并保留 `/api/integrations/openmv/snapshot` 作为兜底
+- 小程序 / App 若不稳定支持 MJPEG multipart，继续走 snapshot 兜底
 
 具体 env 与接线说明见：
 
 - `docs/openmv-wifi-adapter.md`
+- `docs/camera-mjpeg-stream.md`
 
 ### ROS 接入依据
 

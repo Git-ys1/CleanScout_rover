@@ -12,20 +12,35 @@
     </view>
 
     <view class="frame-card">
+      <!-- #ifdef H5 -->
+      <img
+        v-if="openmvStreamUrl"
+        class="detail-frame native-mjpeg"
+        :src="openmvStreamUrl"
+        alt="OpenMV 前视详情"
+        @error="handlePreviewError"
+      />
+      <image v-else-if="openmvSnapshotUrl" class="detail-frame" :src="openmvSnapshotUrl" mode="aspectFit" @error="handlePreviewError" />
+      <view v-else class="empty-panel">
+        <text class="empty-text">{{ openmvStatus.message }}</text>
+      </view>
+      <!-- #endif -->
+      <!-- #ifndef H5 -->
       <image v-if="openmvSnapshotUrl" class="detail-frame" :src="openmvSnapshotUrl" mode="aspectFit" @error="handlePreviewError" />
       <view v-else class="empty-panel">
         <text class="empty-text">{{ openmvStatus.message }}</text>
       </view>
+      <!-- #endif -->
     </view>
 
     <view class="meta-grid">
       <view class="meta-card">
         <text class="meta-label">图传地址</text>
-        <text class="meta-value compact">{{ openmvStatus.baseUrl || '--' }}</text>
+        <text class="meta-value compact">{{ openmvStatus.sourceUrl || openmvStatus.baseUrl || '--' }}</text>
       </view>
       <view class="meta-card">
-        <text class="meta-label">刷新周期</text>
-        <text class="meta-value">{{ openmvStatus.previewRefreshMs || '--' }} ms</text>
+        <text class="meta-label">图传模式</text>
+        <text class="meta-value">{{ openmvStatus.mode === 'mjpeg-stream-relay' ? 'MJPEG 连续流' : `${openmvStatus.previewRefreshMs || '--'} ms` }}</text>
       </view>
       <view class="meta-card">
         <text class="meta-label">Stream 路径</text>
@@ -60,6 +75,7 @@ const { token } = storeToRefs(authStore)
 const {
   status: openmvStatus,
   snapshotUrl: openmvSnapshotUrl,
+  streamUrl: openmvStreamUrl,
   loadStatus: loadOpenMvStatus,
   stopPreviewLoop,
   handlePreviewError,
@@ -143,6 +159,10 @@ function formatDate(value) {
   height: 560rpx;
   display: block;
   background: #0f1720;
+}
+
+.native-mjpeg {
+  object-fit: contain;
 }
 
 .empty-panel {

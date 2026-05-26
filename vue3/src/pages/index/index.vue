@@ -24,15 +24,27 @@
           </view>
           <text class="line-icon">VIEW</text>
         </view>
-        <view class="preview-frame-shell" v-if="openmvSnapshotUrl">
+        <view class="preview-frame-shell" v-if="openmvStreamUrl || openmvSnapshotUrl">
+          <!-- #ifdef H5 -->
+          <img
+            v-if="openmvStreamUrl"
+            class="preview-frame native-mjpeg"
+            :src="openmvStreamUrl"
+            alt="OpenMV 前视画面"
+            @error="handlePreviewError"
+          />
+          <image v-else class="preview-frame" :src="openmvSnapshotUrl" mode="aspectFill" @error="handlePreviewError" />
+          <!-- #endif -->
+          <!-- #ifndef H5 -->
           <image class="preview-frame" :src="openmvSnapshotUrl" mode="aspectFill" @error="handlePreviewError" />
+          <!-- #endif -->
         </view>
         <view class="preview-empty" v-else>
           <text class="preview-empty-text">{{ openmvStatus.message }}</text>
         </view>
         <view class="compact-status-row">
           <StatusBadge :value="openmvStatus.status" />
-          <text class="minor-note">{{ openmvStatus.previewRefreshMs || '--' }} ms 刷新</text>
+          <text class="minor-note">{{ openmvStreamUrl ? 'MJPEG 连续图传' : `${openmvStatus.previewRefreshMs || '--'} ms 刷新` }}</text>
         </view>
       </view>
 
@@ -279,6 +291,7 @@ const {
 const {
   status: openmvStatus,
   snapshotUrl: openmvSnapshotUrl,
+  streamUrl: openmvStreamUrl,
   loadStatus: loadOpenMvStatus,
   stopPreviewLoop,
   handlePreviewError,
@@ -685,6 +698,10 @@ function formatDate(value) {
   height: 100%;
   min-height: 200rpx;
   display: block;
+}
+
+.native-mjpeg {
+  object-fit: cover;
 }
 
 .preview-empty {

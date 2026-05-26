@@ -2,7 +2,15 @@
 
 ## 当前结论
 
-当前 V 线可以把 `OpenMV` 的前视图像接到现有前端里，但当前落地方式冻结为：
+`V-2.2.0` 起，正式展示链路已经升级为 `ESP32-CAM + UbuntuPC camera-worker + backend MJPEG relay`。本文保留早期 OpenMV WiFi 单帧代理口径，作为 snapshot 兜底和历史说明。
+
+当前成品链路为：
+
+```text
+ESP32-CAM -> UbuntuPC camera-worker -> WSS /edge/camera -> backend -> /api/integrations/openmv/stream -> H5
+```
+
+早期 V 线可以把 `OpenMV` 的前视图像接到现有前端里，落地方式为：
 
 ```text
 前端 -> backend -> OpenMV WiFi 图传

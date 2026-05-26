@@ -67,4 +67,7 @@ export function printRuntimeProfile() {
   console.log(`[runtime] EDGE_RELAY_ENABLED=${process.env.EDGE_RELAY_ENABLED || ''}`)
   console.log(`[runtime] EDGE_RELAY_PATH=${process.env.EDGE_RELAY_PATH || ''}`)
   console.log(`[runtime] OPENCLAW_ENABLED=${process.env.OPENCLAW_ENABLED || ''}`)
+  console.log(`[runtime] OPENMV_INPUT_MODE=${process.env.OPENMV_INPUT_MODE || ''}`)
+  console.log(`[runtime] CAMERA_INGEST_ENABLED=${process.env.CAMERA_INGEST_ENABLED || ''}`)
+  console.log(`[runtime] CAMERA_INGEST_PATH=${process.env.CAMERA_INGEST_PATH || ''}`)
 }
