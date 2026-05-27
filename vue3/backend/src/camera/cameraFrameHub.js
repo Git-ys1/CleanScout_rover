@@ -198,6 +198,7 @@ class CameraFrameHub {
       fps,
       viewerCount: this.viewerCount,
       staleMs: config.staleMs,
+      streamIntervalMs: config.streamIntervalMs,
       maxViewers: config.maxViewers,
       cameraReachable: this.cameraReachable,
       uplinkReady: this.uplinkReady,

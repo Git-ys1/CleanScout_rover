@@ -36,6 +36,7 @@ export function streamLatestMjpeg(req, res, hub, config) {
 
   let closed = false
   let lastSeq = 0
+  let lastKeepAliveAt = Date.now()
 
   function cleanup() {
     if (closed) {
@@ -68,13 +69,19 @@ export function streamLatestMjpeg(req, res, hub, config) {
     const frame = hub.getLatestFrame()
 
     if (!frame || frame.seq === lastSeq || !hub.isFrameFresh(config.staleMs)) {
-      res.write('\r\n')
+      const now = Date.now()
+
+      if (now - lastKeepAliveAt >= config.streamHeartbeatMs) {
+        lastKeepAliveAt = now
+        res.write('\r\n')
+      }
       return
     }
 
     lastSeq = frame.seq
+    lastKeepAliveAt = Date.now()
     writeFrame(res, config.streamBoundary, frame)
-  }, config.streamHeartbeatMs)
+  }, config.streamIntervalMs)
 
   lastSeq = initialFrame.seq
   writeFrame(res, config.streamBoundary, initialFrame)

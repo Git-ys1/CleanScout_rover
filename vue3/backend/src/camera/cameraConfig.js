@@ -37,6 +37,7 @@ export function getCameraConfig() {
     maxFrameBytes: parseNumber(process.env.CAMERA_MAX_FRAME_BYTES, 300000, 1024),
     streamBoundary: String(process.env.CAMERA_STREAM_BOUNDARY || 'cleanscout-openmv').trim() || 'cleanscout-openmv',
     streamHeartbeatMs: parseNumber(process.env.CAMERA_STREAM_HEARTBEAT_MS, 1000, 250),
+    streamIntervalMs: parseNumber(process.env.CAMERA_STREAM_INTERVAL_MS, 50, 16),
     maxViewers: parseNumber(process.env.CAMERA_MAX_VIEWERS, 3, 0),
   }
 }

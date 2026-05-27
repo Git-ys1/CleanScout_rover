@@ -5,7 +5,7 @@ UbuntuPC 侧 ESP32-CAM 图传转发工具。
 职责固定为：
 
 - 从手机热点内网拉取 ESP32-CAM MJPEG：`CAMERA_SOURCE_URL`
-- 解析 JPEG 帧并按 `CAMERA_TARGET_FPS` 限流
+- 解析 JPEG 帧并按 `CAMERA_TARGET_FPS` 限流，默认 20fps
 - 主动连接云端 backend：`CAMERA_CLOUD_WS`
 - 注册、心跳、推送二进制 JPEG 帧
 
@@ -33,6 +33,8 @@ npm run mock
 DEVICE_ID=pc-001
 CAMERA_ID=openmv-arm-cam-001
 CAMERA_SOURCE_URL=http://ESP32-CAM-IP:81/stream
+CAMERA_TARGET_FPS=20
+CAMERA_MAX_FRAME_BYTES=500000
 CAMERA_CLOUD_WS=wss://api.hzhhds.top/edge/camera
 CAMERA_CLOUD_TOKEN=<与 backend CAMERA_INGEST_TOKEN 相同>
 ```
