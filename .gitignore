@@ -36,7 +36,9 @@ _local/openrf1_keil_work_2/Project/RVMDK（uv5）/JLinkLog.txt
 # Local worker runtime files
 tools/*/.env
 tools/*/.env.local
+tools/*/.runtime/
 tools/*/node_modules/
 vue3/tools/*/.env
 vue3/tools/*/.env.local
+vue3/tools/*/.runtime/
 vue3/tools/*/node_modules/
