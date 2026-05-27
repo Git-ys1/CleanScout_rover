@@ -238,10 +238,10 @@ backend
 
 当前接法从 `V-2.2.0` 起升级为 ESP32-CAM / MJPEG 云端图传：
 
-- 正式链路：`ESP32-CAM -> UbuntuPC camera-worker -> WSS /edge/camera -> backend -> /api/integrations/openmv/stream -> H5`
+- 正式链路：`ESP32-CAM -> UbuntuPC camera-worker raw-mjpeg -> WSS /edge/camera -> backend raw relay -> /api/integrations/openmv/stream -> H5`
 - 前端不直连 ESP32-CAM 内网地址
 - 云端 backend 不主动访问手机热点内网 IP
-- backend 负责接收最新 JPEG 帧、输出 MJPEG stream，并保留 `/api/integrations/openmv/snapshot` 作为兜底
+- backend 在 raw 模式下原样转发 ESP32-CAM multipart stream，并从 raw chunk 中提取最新 JPEG 供 `/api/integrations/openmv/snapshot` 兜底
 - 小程序 / App 若不稳定支持 MJPEG multipart，继续走 snapshot 兜底
 
 具体 env 与接线说明见：

@@ -1,7 +1,7 @@
 import { CloudCameraClient } from './cloudCameraClient.js'
 import { loadConfig } from './config.js'
 import { printDiagnostics } from './diagnostics.js'
-import { readEsp32CamFrames } from './esp32camClient.js'
+import { openEsp32CamStream, readEsp32CamFrames } from './esp32camClient.js'
 
 const MOCK_JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAAB9A//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QE//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QE//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QE//Z',
@@ -38,6 +38,11 @@ async function* createMockFrames(config) {
 async function runOnce(config) {
   const cloud = new CloudCameraClient(config)
   await cloud.connect()
+
+  if (!config.mock && config.uplinkMode === 'raw-mjpeg') {
+    await runRawMjpegTunnel(config, cloud)
+    return
+  }
 
   const frameSource = config.mock ? createMockFrames(config) : readEsp32CamFrames(config)
   const minFrameIntervalMs = Math.floor(1000 / config.targetFps)
@@ -77,6 +82,57 @@ async function runOnce(config) {
       }
     }
   } finally {
+    cloud.close()
+  }
+}
+
+async function runRawMjpegTunnel(config, cloud) {
+  const stream = await openEsp32CamStream(config)
+  const contentType = stream.contentType || 'multipart/x-mixed-replace'
+  const chunkTimes = []
+  let seq = 0
+  let lastBytes = 0
+  let lastLogAt = Date.now()
+  let lastChunkAt = Date.now()
+
+  cloud.startRawStream({
+    contentType,
+  })
+
+  try {
+    for await (const chunkLike of stream.body) {
+      const chunk = Buffer.isBuffer(chunkLike) ? chunkLike : Buffer.from(chunkLike)
+      const now = Date.now()
+
+      if (!cloud.sendFrame(chunk)) {
+        throw new Error(cloud.lastError || 'cloud websocket is not open')
+      }
+
+      seq += 1
+      lastBytes = chunk.length
+      lastChunkAt = now
+      chunkTimes.push(now)
+
+      while (chunkTimes.length > 120) {
+        chunkTimes.shift()
+      }
+
+      if (now - lastLogAt >= 5000) {
+        const chunkRate = calculateFps(chunkTimes)
+        cloud.heartbeat({
+          fps: chunkRate,
+          cameraReachable: true,
+        })
+        console.log(`[camera-raw] chunks=${seq} chunkRate=${chunkRate}/s bytes=${lastBytes} cloud=ok contentType="${contentType}"`)
+        lastLogAt = now
+      }
+    }
+  } finally {
+    cloud.heartbeat({
+      fps: calculateFps(chunkTimes),
+      lastChunkAgeMs: Date.now() - lastChunkAt,
+      cameraReachable: false,
+    })
     cloud.close()
   }
 }

@@ -53,6 +53,13 @@ class CameraFrameHub {
     this.uplinkReady = false
     this.viewerCount = 0
     this.frameTimes = []
+    this.rawStreamActive = false
+    this.rawContentType = ''
+    this.rawLatestChunkAt = 0
+    this.rawChunkSeq = 0
+    this.rawBytesTotal = 0
+    this.rawSubscribers = new Set()
+    this.rawParseBuffer = Buffer.alloc(0)
   }
 
   register(connection, payload = {}) {
@@ -63,9 +70,29 @@ class CameraFrameHub {
     this.sourceUrl = String(payload.cameraUrl || '').trim()
     this.workerVersion = String(payload.workerVersion || '').trim()
     this.ingestConnected = true
+    this.rawStreamActive = String(payload.mode || '').trim().toLowerCase() === 'raw-mjpeg'
+    this.rawContentType = String(payload.contentType || '').trim()
+    this.rawLatestChunkAt = 0
+    this.rawChunkSeq = 0
+    this.rawBytesTotal = 0
+    this.rawParseBuffer = Buffer.alloc(0)
     this.lastRegisterAt = now()
     this.lastHeartbeatAt = this.lastRegisterAt
     this.lastRelayError = ''
+  }
+
+  startRawStream(connection, payload = {}) {
+    if (connection !== this.connection) {
+      const error = new Error('raw stream belongs to an inactive connection')
+      error.code = 'CAMERA_INACTIVE_CONNECTION'
+      throw error
+    }
+
+    this.rawStreamActive = true
+    this.rawContentType = String(payload.contentType || this.rawContentType || 'multipart/x-mixed-replace').trim()
+    this.rawLatestChunkAt = now()
+    this.cameraReachable = true
+    this.uplinkReady = true
   }
 
   heartbeat(connection, payload = {}) {
@@ -79,6 +106,45 @@ class CameraFrameHub {
     this.cameraReachable = Boolean(payload.cameraReachable)
     this.uplinkReady = Boolean(payload.uplinkReady)
     this.lastRelayError = String(payload.lastError || '')
+  }
+
+  acceptRawChunk(connection, payload, maxChunkBytes, maxFrameBytes) {
+    if (connection !== this.connection) {
+      const error = new Error('camera chunk belongs to an inactive connection')
+      error.code = 'CAMERA_INACTIVE_CONNECTION'
+      throw error
+    }
+
+    if (!this.rawStreamActive) {
+      const error = new Error('raw MJPEG chunk received before CAMERA_STREAM_START')
+      error.code = 'CAMERA_RAW_STREAM_NOT_STARTED'
+      throw error
+    }
+
+    const chunk = Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
+
+    if (chunk.length > maxChunkBytes) {
+      const error = new Error(`camera raw chunk exceeds limit: ${chunk.length} > ${maxChunkBytes}`)
+      error.code = 'CAMERA_RAW_CHUNK_TOO_LARGE'
+      throw error
+    }
+
+    const at = now()
+    this.rawLatestChunkAt = at
+    this.rawChunkSeq += 1
+    this.rawBytesTotal += chunk.length
+    this.latestFrameBytes = chunk.length
+    this.cameraReachable = true
+    this.uplinkReady = true
+
+    this.extractLatestFramesFromRawChunk(chunk, maxFrameBytes, at)
+    this.writeRawChunkToSubscribers(chunk)
+
+    return {
+      seq: this.rawChunkSeq,
+      bytes: chunk.length,
+      at,
+    }
   }
 
   acceptFrame(connection, payload, maxFrameBytes) {
@@ -118,6 +184,54 @@ class CameraFrameHub {
     return this.getLatestFrame()
   }
 
+  extractLatestFramesFromRawChunk(chunk, maxFrameBytes, at) {
+    this.rawParseBuffer = Buffer.concat([this.rawParseBuffer, chunk])
+
+    const maxBufferBytes = Math.max(maxFrameBytes * 2, 1024 * 1024)
+
+    while (this.rawParseBuffer.length > maxBufferBytes) {
+      const start = this.rawParseBuffer.indexOf(JPEG_START, this.rawParseBuffer.length - maxFrameBytes)
+      this.rawParseBuffer = start >= 0 ? this.rawParseBuffer.subarray(start) : this.rawParseBuffer.subarray(-2)
+    }
+
+    let guard = 0
+
+    while (guard < 8) {
+      guard += 1
+      const start = this.rawParseBuffer.indexOf(JPEG_START)
+
+      if (start < 0) {
+        this.rawParseBuffer = this.rawParseBuffer.subarray(-1)
+        return
+      }
+
+      const end = this.rawParseBuffer.indexOf(JPEG_END, start + 2)
+
+      if (end < 0) {
+        this.rawParseBuffer = this.rawParseBuffer.subarray(start)
+        return
+      }
+
+      const frame = this.rawParseBuffer.subarray(start, end + 2)
+      this.rawParseBuffer = this.rawParseBuffer.subarray(end + 2)
+
+      if (frame.length > maxFrameBytes) {
+        this.lastRelayError = `raw MJPEG JPEG frame exceeds limit: ${frame.length} > ${maxFrameBytes}`
+        continue
+      }
+
+      this.latestFrame = Buffer.from(frame)
+      this.latestFrameAt = at
+      this.latestFrameBytes = frame.length
+      this.latestFrameSeq += 1
+      this.frameTimes.push(at)
+
+      while (this.frameTimes.length > 30) {
+        this.frameTimes.shift()
+      }
+    }
+  }
+
   disconnect(connection) {
     if (connection !== this.connection) {
       return
@@ -125,6 +239,7 @@ class CameraFrameHub {
 
     this.connection = null
     this.ingestConnected = false
+    this.rawStreamActive = false
     this.lastDisconnectAt = now()
     this.cameraReachable = false
     this.uplinkReady = false
@@ -146,6 +261,55 @@ class CameraFrameHub {
 
   getViewerCount() {
     return this.viewerCount
+  }
+
+  addRawSubscriber(res, maxBufferedBytes) {
+    const subscriber = {
+      res,
+      maxBufferedBytes,
+    }
+
+    this.rawSubscribers.add(subscriber)
+    this.addViewer()
+
+    return () => {
+      if (this.rawSubscribers.delete(subscriber)) {
+        this.removeViewer()
+      }
+    }
+  }
+
+  writeRawChunkToSubscribers(chunk) {
+    for (const subscriber of [...this.rawSubscribers]) {
+      const { res, maxBufferedBytes } = subscriber
+
+      if (res.destroyed || res.writableEnded) {
+        this.rawSubscribers.delete(subscriber)
+        this.removeViewer()
+        continue
+      }
+
+      if (res.writableLength > maxBufferedBytes) {
+        res.destroy(new Error('camera stream subscriber is too slow'))
+        this.rawSubscribers.delete(subscriber)
+        this.removeViewer()
+        continue
+      }
+
+      res.write(chunk)
+    }
+  }
+
+  isRawStreamAvailable(config) {
+    return Boolean(this.ingestConnected && this.rawStreamActive && this.rawLatestChunkAt && now() - this.rawLatestChunkAt <= config.staleMs)
+  }
+
+  canOpenRawStream() {
+    return Boolean(this.ingestConnected && this.rawStreamActive)
+  }
+
+  getRawContentType(config) {
+    return this.rawContentType || `multipart/x-mixed-replace; boundary=${config.streamBoundary}`
   }
 
   getActiveConnection() {
@@ -172,9 +336,11 @@ class CameraFrameHub {
   getStatus(config) {
     const current = now()
     const lastFrameAgeMs = this.latestFrameAt ? current - this.latestFrameAt : null
+    const rawLatestChunkAgeMs = this.rawLatestChunkAt ? current - this.rawLatestChunkAt : null
     const lastHeartbeatAgeMs = this.lastHeartbeatAt ? current - this.lastHeartbeatAt : null
     const frameFresh = this.isFrameFresh(config.staleMs)
-    const cameraOnline = Boolean(this.ingestConnected && frameFresh)
+    const rawFresh = this.isRawStreamAvailable(config)
+    const cameraOnline = Boolean(this.ingestConnected && (frameFresh || rawFresh))
     const fps = this.heartbeatFps || calculateFps(this.frameTimes)
 
     return {
@@ -199,6 +365,13 @@ class CameraFrameHub {
       viewerCount: this.viewerCount,
       staleMs: config.staleMs,
       streamIntervalMs: config.streamIntervalMs,
+      streamRelayMode: this.rawStreamActive ? 'raw-mjpeg' : 'jpeg-frame',
+      rawStreamActive: this.rawStreamActive,
+      rawContentType: this.rawContentType,
+      rawLatestChunkAt: toIso(this.rawLatestChunkAt),
+      rawLatestChunkAgeMs,
+      rawChunkSeq: this.rawChunkSeq,
+      rawBytesTotal: this.rawBytesTotal,
       maxViewers: config.maxViewers,
       cameraReachable: this.cameraReachable,
       uplinkReady: this.uplinkReady,

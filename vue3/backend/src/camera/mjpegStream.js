@@ -19,7 +19,63 @@ function writeFrame(res, boundary, frame) {
   res.write('\r\n')
 }
 
+function writeStreamHeaders(res, contentType) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', contentType)
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders()
+  }
+}
+
+function streamRawMjpeg(req, res, hub, config) {
+  if (!hub.canOpenRawStream()) {
+    writeJsonError(res, 503, 'CAMERA_RAW_STREAM_UNAVAILABLE', '当前没有可用的 ESP32-CAM 原始 MJPEG 上行连接。')
+    return
+  }
+
+  if (config.maxViewers > 0 && hub.getViewerCount() >= config.maxViewers) {
+    writeJsonError(res, 429, 'CAMERA_VIEWER_LIMIT', '当前图传观看人数已达到限制。')
+    return
+  }
+
+  let closed = false
+  const removeSubscriber = hub.addRawSubscriber(res, config.rawSubscriberBufferBytes)
+
+  function cleanup() {
+    if (closed) {
+      return
+    }
+
+    closed = true
+    removeSubscriber()
+    clearInterval(timer)
+  }
+
+  writeStreamHeaders(res, hub.getRawContentType(config))
+
+  const timer = setInterval(() => {
+    if (closed || res.destroyed || req.destroyed) {
+      cleanup()
+    }
+  }, config.streamHeartbeatMs)
+
+  req.on('close', cleanup)
+  res.on('close', cleanup)
+  res.on('error', cleanup)
+}
+
 export function streamLatestMjpeg(req, res, hub, config) {
+  if (hub.rawStreamActive) {
+    streamRawMjpeg(req, res, hub, config)
+    return
+  }
+
   const initialFrame = hub.getLatestFrame()
 
   if (!initialFrame || !hub.isFrameFresh(config.staleMs)) {
@@ -48,17 +104,7 @@ export function streamLatestMjpeg(req, res, hub, config) {
     clearInterval(timer)
   }
 
-  res.statusCode = 200
-  res.setHeader('Content-Type', `multipart/x-mixed-replace; boundary=${config.streamBoundary}`)
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-  res.setHeader('Pragma', 'no-cache')
-  res.setHeader('Expires', '0')
-  res.setHeader('Connection', 'keep-alive')
-  res.setHeader('X-Accel-Buffering', 'no')
-
-  if (typeof res.flushHeaders === 'function') {
-    res.flushHeaders()
-  }
+  writeStreamHeaders(res, `multipart/x-mixed-replace; boundary=${config.streamBoundary}`)
 
   const timer = setInterval(() => {
     if (closed || res.destroyed || req.destroyed) {
