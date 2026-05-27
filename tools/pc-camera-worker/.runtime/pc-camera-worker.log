@@ -1,0 +1,1096 @@
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=12
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=31 fps=6.5 bytes=5391 cloud=ok source=esp32-cam
+[camera] seq=71 fps=6.1 bytes=5335 cloud=ok source=esp32-cam
+[camera] seq=108 fps=6.7 bytes=5373 cloud=ok source=esp32-cam
+[camera] seq=145 fps=8 bytes=5275 cloud=ok source=esp32-cam
+[camera] seq=173 fps=5.5 bytes=6432 cloud=ok source=esp32-cam
+[camera] seq=191 fps=3.9 bytes=6111 cloud=ok source=esp32-cam
+[camera] seq=213 fps=3.5 bytes=6127 cloud=ok source=esp32-cam
+[camera] seq=245 fps=7.5 bytes=7882 cloud=ok source=esp32-cam
+[camera] seq=283 fps=7.3 bytes=7853 cloud=ok source=esp32-cam
+[camera] seq=311 fps=4.8 bytes=7882 cloud=ok source=esp32-cam
+[camera] seq=343 fps=6.2 bytes=7889 cloud=ok source=esp32-cam
+[camera] seq=362 fps=3 bytes=7955 cloud=ok source=esp32-cam
+[camera] seq=381 fps=2.6 bytes=7894 cloud=ok source=esp32-cam
+[camera] seq=399 fps=3.3 bytes=7573 cloud=ok source=esp32-cam
+[camera] seq=414 fps=3.1 bytes=7835 cloud=ok source=esp32-cam
+[camera] seq=433 fps=3.1 bytes=7809 cloud=ok source=esp32-cam
+[camera] seq=447 fps=2.8 bytes=7793 cloud=ok source=esp32-cam
+[camera] seq=455 fps=2.2 bytes=7503 cloud=ok source=esp32-cam
+[camera] seq=463 fps=1.8 bytes=7169 cloud=ok source=esp32-cam
+[camera] seq=464 fps=1.4 bytes=7281 cloud=ok source=esp32-cam
+[camera] seq=485 fps=2 bytes=7193 cloud=ok source=esp32-cam
+[camera] seq=507 fps=4.2 bytes=7544 cloud=ok source=esp32-cam
+[pc-camera-worker] loop failed: CAMERA_STREAM_READ_TIMEOUT camera stream read timed out after 8000ms
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=33 fps=6.5 bytes=8224 cloud=ok source=esp32-cam
+[camera] seq=67 fps=6.7 bytes=8226 cloud=ok source=esp32-cam
+[camera] seq=100 fps=6.3 bytes=8228 cloud=ok source=esp32-cam
+[camera] seq=134 fps=6.6 bytes=8224 cloud=ok source=esp32-cam
+[camera] seq=168 fps=6.7 bytes=8227 cloud=ok source=esp32-cam
+[camera] seq=201 fps=6.5 bytes=8224 cloud=ok source=esp32-cam
+[camera] seq=235 fps=6.6 bytes=5012 cloud=ok source=esp32-cam
+[camera] seq=269 fps=6.8 bytes=5653 cloud=ok source=esp32-cam
+[camera] seq=303 fps=6.7 bytes=6024 cloud=ok source=esp32-cam
+[camera] seq=336 fps=6.6 bytes=6004 cloud=ok source=esp32-cam
+[camera] seq=369 fps=6.5 bytes=5977 cloud=ok source=esp32-cam
+[camera] seq=403 fps=6.7 bytes=5982 cloud=ok source=esp32-cam
+[camera] seq=430 fps=5.4 bytes=6003 cloud=ok source=esp32-cam
+[camera] seq=464 fps=6.6 bytes=6024 cloud=ok source=esp32-cam
+[camera] seq=498 fps=6.6 bytes=5994 cloud=ok source=esp32-cam
+[camera] seq=532 fps=6.7 bytes=5973 cloud=ok source=esp32-cam
+[camera] seq=565 fps=6.5 bytes=6196 cloud=ok source=esp32-cam
+[camera] seq=598 fps=6.5 bytes=6175 cloud=ok source=esp32-cam
+[camera] seq=632 fps=6.6 bytes=6162 cloud=ok source=esp32-cam
+[camera] seq=666 fps=6.7 bytes=6163 cloud=ok source=esp32-cam
+[camera] seq=700 fps=6.7 bytes=6164 cloud=ok source=esp32-cam
+[camera] seq=734 fps=6.7 bytes=6165 cloud=ok source=esp32-cam
+[camera] seq=768 fps=6.7 bytes=6145 cloud=ok source=esp32-cam
+[camera] seq=802 fps=6.7 bytes=6124 cloud=ok source=esp32-cam
+[camera] seq=836 fps=6.6 bytes=6101 cloud=ok source=esp32-cam
+[camera] seq=869 fps=6.4 bytes=7620 cloud=ok source=esp32-cam
+[camera] seq=902 fps=6.6 bytes=8054 cloud=ok source=esp32-cam
+[camera] seq=937 fps=6.8 bytes=8215 cloud=ok source=esp32-cam
+[camera] seq=972 fps=6.8 bytes=8354 cloud=ok source=esp32-cam
+[camera] seq=1007 fps=6.9 bytes=8227 cloud=ok source=esp32-cam
+[camera] seq=1041 fps=6.7 bytes=8243 cloud=ok source=esp32-cam
+[camera] seq=1075 fps=6.6 bytes=8161 cloud=ok source=esp32-cam
+[camera] seq=1109 fps=6.6 bytes=8236 cloud=ok source=esp32-cam
+[camera] seq=1142 fps=6.6 bytes=8007 cloud=ok source=esp32-cam
+[camera] seq=1176 fps=6.7 bytes=8125 cloud=ok source=esp32-cam
+[camera] seq=1210 fps=6.6 bytes=7985 cloud=ok source=esp32-cam
+[camera] seq=1244 fps=6.7 bytes=7927 cloud=ok source=esp32-cam
+[camera] seq=1277 fps=6.5 bytes=7869 cloud=ok source=esp32-cam
+[camera] seq=1311 fps=6.7 bytes=7884 cloud=ok source=esp32-cam
+[camera] seq=1345 fps=6.6 bytes=7909 cloud=ok source=esp32-cam
+[camera] seq=1379 fps=6.7 bytes=8165 cloud=ok source=esp32-cam
+[camera] seq=1411 fps=6.4 bytes=8169 cloud=ok source=esp32-cam
+[camera] seq=1444 fps=6.4 bytes=8030 cloud=ok source=esp32-cam
+[camera] seq=1478 fps=6.7 bytes=8016 cloud=ok source=esp32-cam
+[camera] seq=1511 fps=6.6 bytes=8410 cloud=ok source=esp32-cam
+[camera] seq=1545 fps=6.7 bytes=8311 cloud=ok source=esp32-cam
+[camera] seq=1578 fps=6.6 bytes=8266 cloud=ok source=esp32-cam
+[camera] seq=1611 fps=6.4 bytes=8328 cloud=ok source=esp32-cam
+[camera] seq=1645 fps=6.5 bytes=8269 cloud=ok source=esp32-cam
+[camera] seq=1679 fps=6.7 bytes=8248 cloud=ok source=esp32-cam
+[camera] seq=1713 fps=6.7 bytes=8256 cloud=ok source=esp32-cam
+[camera] seq=1747 fps=6.7 bytes=8243 cloud=ok source=esp32-cam
+[camera] seq=1782 fps=7 bytes=8234 cloud=ok source=esp32-cam
+[camera] seq=1816 fps=6.8 bytes=8281 cloud=ok source=esp32-cam
+[pc-camera-worker] loop failed: CAMERA_STREAM_READ_TIMEOUT camera stream read timed out after 8000ms
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: CAMERA_WORKER_ERROR fetch failed
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 20 This operation was aborted
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=29 fps=5.6 bytes=5712 cloud=ok source=esp32-cam
+[camera] seq=62 fps=6.7 bytes=5491 cloud=ok source=esp32-cam
+[camera] seq=94 fps=6.3 bytes=5466 cloud=ok source=esp32-cam
+[camera] seq=128 fps=6.5 bytes=4901 cloud=ok source=esp32-cam
+[camera] seq=160 fps=6.3 bytes=5443 cloud=ok source=esp32-cam
+[camera] seq=193 fps=6.4 bytes=5500 cloud=ok source=esp32-cam
+[camera] seq=225 fps=6.3 bytes=5531 cloud=ok source=esp32-cam
+[camera] seq=256 fps=6.1 bytes=5266 cloud=ok source=esp32-cam
+[camera] seq=289 fps=6.5 bytes=5515 cloud=ok source=esp32-cam
+[camera] seq=323 fps=6.7 bytes=5344 cloud=ok source=esp32-cam
+[camera] seq=357 fps=6.7 bytes=5165 cloud=ok source=esp32-cam
+[camera] seq=390 fps=6.6 bytes=5018 cloud=ok source=esp32-cam
+[camera] seq=424 fps=6.7 bytes=5557 cloud=ok source=esp32-cam
+[camera] seq=456 fps=6.4 bytes=5641 cloud=ok source=esp32-cam
+[camera] seq=490 fps=6.6 bytes=5904 cloud=ok source=esp32-cam
+[camera] seq=523 fps=6.5 bytes=5710 cloud=ok source=esp32-cam
+[camera] seq=554 fps=6.1 bytes=6025 cloud=ok source=esp32-cam
+[camera] seq=587 fps=6.5 bytes=6116 cloud=ok source=esp32-cam
+[camera] seq=620 fps=6.6 bytes=6077 cloud=ok source=esp32-cam
+[camera] seq=654 fps=6.7 bytes=5931 cloud=ok source=esp32-cam
+[camera] seq=687 fps=6.5 bytes=6412 cloud=ok source=esp32-cam
+[camera] seq=721 fps=6.6 bytes=6142 cloud=ok source=esp32-cam
+[camera] seq=755 fps=6.7 bytes=5215 cloud=ok source=esp32-cam
+[camera] seq=788 fps=6.4 bytes=7096 cloud=ok source=esp32-cam
+[camera] seq=823 fps=6.8 bytes=4698 cloud=ok source=esp32-cam
+[camera] seq=850 fps=5.3 bytes=5992 cloud=ok source=esp32-cam
+[camera] seq=876 fps=4.5 bytes=5381 cloud=ok source=esp32-cam
+[camera] seq=909 fps=6.6 bytes=5331 cloud=ok source=esp32-cam
+[camera] seq=939 fps=5 bytes=8154 cloud=ok source=esp32-cam
+[camera] seq=964 fps=4.1 bytes=8378 cloud=ok source=esp32-cam
+[camera] seq=998 fps=6.7 bytes=5996 cloud=ok source=esp32-cam
+[camera] seq=1032 fps=6.8 bytes=7751 cloud=ok source=esp32-cam
+[camera] seq=1066 fps=6.8 bytes=7800 cloud=ok source=esp32-cam
+[camera] seq=1099 fps=6.5 bytes=7811 cloud=ok source=esp32-cam
+[camera] seq=1133 fps=6.6 bytes=7734 cloud=ok source=esp32-cam
+[camera] seq=1166 fps=6.7 bytes=7818 cloud=ok source=esp32-cam
+[camera] seq=1201 fps=7 bytes=7779 cloud=ok source=esp32-cam
+[camera] seq=1234 fps=6.6 bytes=7812 cloud=ok source=esp32-cam
+[camera] seq=1267 fps=6.5 bytes=7798 cloud=ok source=esp32-cam
+[camera] seq=1301 fps=6.7 bytes=7836 cloud=ok source=esp32-cam
+[camera] seq=1334 fps=6.6 bytes=7818 cloud=ok source=esp32-cam
+[camera] seq=1369 fps=6.9 bytes=7790 cloud=ok source=esp32-cam
+[camera] seq=1402 fps=6.7 bytes=7842 cloud=ok source=esp32-cam
+[camera] seq=1436 fps=6.7 bytes=7847 cloud=ok source=esp32-cam
+[camera] seq=1471 fps=6.8 bytes=7831 cloud=ok source=esp32-cam
+[camera] seq=1504 fps=6.6 bytes=7838 cloud=ok source=esp32-cam
+[camera] seq=1538 fps=6.5 bytes=7820 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera vflip 1
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=30 fps=5.1 bytes=7870 cloud=ok source=esp32-cam
+[camera] seq=64 fps=6.8 bytes=7822 cloud=ok source=esp32-cam
+[camera] seq=98 fps=6.7 bytes=8146 cloud=ok source=esp32-cam
+[camera] seq=130 fps=6.4 bytes=8213 cloud=ok source=esp32-cam
+[camera] seq=163 fps=6.6 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=196 fps=6.5 bytes=7948 cloud=ok source=esp32-cam
+[camera] seq=229 fps=6.5 bytes=7961 cloud=ok source=esp32-cam
+[camera] seq=263 fps=6.7 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=296 fps=6.5 bytes=7956 cloud=ok source=esp32-cam
+[camera] seq=330 fps=6.5 bytes=7979 cloud=ok source=esp32-cam
+[camera] seq=363 fps=6.5 bytes=7969 cloud=ok source=esp32-cam
+[camera] seq=397 fps=6.6 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=431 fps=6.6 bytes=7971 cloud=ok source=esp32-cam
+[camera] seq=465 fps=6.7 bytes=8192 cloud=ok source=esp32-cam
+[camera] seq=499 fps=6.7 bytes=8014 cloud=ok source=esp32-cam
+[camera] seq=533 fps=6.6 bytes=7990 cloud=ok source=esp32-cam
+[camera] seq=567 fps=6.6 bytes=8028 cloud=ok source=esp32-cam
+[camera] seq=601 fps=6.6 bytes=7974 cloud=ok source=esp32-cam
+[camera] seq=635 fps=6.7 bytes=7974 cloud=ok source=esp32-cam
+[camera] seq=669 fps=6.8 bytes=8021 cloud=ok source=esp32-cam
+[camera] seq=703 fps=6.9 bytes=7984 cloud=ok source=esp32-cam
+[camera] seq=737 fps=6.6 bytes=7993 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera vflip 1
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=31 fps=6.2 bytes=8016 cloud=ok source=esp32-cam
+[camera] seq=64 fps=6.5 bytes=8013 cloud=ok source=esp32-cam
+[camera] seq=98 fps=6.6 bytes=8060 cloud=ok source=esp32-cam
+[camera] seq=132 fps=6.8 bytes=8005 cloud=ok source=esp32-cam
+[camera] seq=166 fps=6.7 bytes=7987 cloud=ok source=esp32-cam
+[camera] seq=200 fps=6.7 bytes=7956 cloud=ok source=esp32-cam
+[camera] seq=233 fps=6.4 bytes=8046 cloud=ok source=esp32-cam
+[camera] seq=266 fps=6.5 bytes=7984 cloud=ok source=esp32-cam
+[camera] seq=300 fps=6.5 bytes=7987 cloud=ok source=esp32-cam
+[camera] seq=334 fps=6.7 bytes=7980 cloud=ok source=esp32-cam
+[camera] seq=368 fps=6.8 bytes=8014 cloud=ok source=esp32-cam
+[camera] seq=401 fps=6.6 bytes=8026 cloud=ok source=esp32-cam
+[camera] seq=435 fps=6.7 bytes=8015 cloud=ok source=esp32-cam
+[camera] seq=469 fps=6.7 bytes=8036 cloud=ok source=esp32-cam
+[camera] seq=502 fps=6.5 bytes=7996 cloud=ok source=esp32-cam
+[camera] seq=535 fps=6.6 bytes=7974 cloud=ok source=esp32-cam
+[camera] seq=569 fps=6.7 bytes=8000 cloud=ok source=esp32-cam
+[camera] seq=603 fps=6.7 bytes=7988 cloud=ok source=esp32-cam
+[camera] seq=637 fps=6.7 bytes=8040 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 1
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=35 fps=6.9 bytes=8050 cloud=ok source=esp32-cam
+[camera] seq=69 fps=6.6 bytes=8047 cloud=ok source=esp32-cam
+[camera] seq=103 fps=6.8 bytes=8073 cloud=ok source=esp32-cam
+[camera] seq=137 fps=6.8 bytes=8070 cloud=ok source=esp32-cam
+[camera] seq=171 fps=6.6 bytes=8068 cloud=ok source=esp32-cam
+[camera] seq=205 fps=6.6 bytes=8052 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 1
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=34 fps=6.8 bytes=8104 cloud=ok source=esp32-cam
+[camera] seq=68 fps=6.6 bytes=8032 cloud=ok source=esp32-cam
+[camera] seq=101 fps=6.6 bytes=8047 cloud=ok source=esp32-cam
+[camera] seq=135 fps=6.7 bytes=8050 cloud=ok source=esp32-cam
+[camera] seq=169 fps=6.7 bytes=8075 cloud=ok source=esp32-cam
+[camera] seq=203 fps=6.7 bytes=8075 cloud=ok source=esp32-cam
+[camera] seq=237 fps=6.8 bytes=8066 cloud=ok source=esp32-cam
+[camera] seq=271 fps=6.6 bytes=8061 cloud=ok source=esp32-cam
+[camera] seq=305 fps=6.7 bytes=8077 cloud=ok source=esp32-cam
+[camera] seq=339 fps=6.6 bytes=8061 cloud=ok source=esp32-cam
+[camera] seq=373 fps=6.6 bytes=8054 cloud=ok source=esp32-cam
+[camera] seq=406 fps=6.7 bytes=8038 cloud=ok source=esp32-cam
+[camera] seq=439 fps=6.5 bytes=8347 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=8
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=33 fps=6.6 bytes=8116 cloud=ok source=esp32-cam
+[camera] seq=67 fps=6.7 bytes=8100 cloud=ok source=esp32-cam
+[camera] seq=101 fps=6.6 bytes=8154 cloud=ok source=esp32-cam
+[camera] seq=135 fps=6.7 bytes=8168 cloud=ok source=esp32-cam
+[camera] seq=169 fps=6.6 bytes=8184 cloud=ok source=esp32-cam
+[camera] seq=203 fps=6.6 bytes=8242 cloud=ok source=esp32-cam
+[camera] seq=236 fps=6.7 bytes=8240 cloud=ok source=esp32-cam
+[camera] seq=270 fps=6.6 bytes=8231 cloud=ok source=esp32-cam
+[camera] seq=303 fps=6.5 bytes=8220 cloud=ok source=esp32-cam
+[camera] seq=337 fps=6.6 bytes=8251 cloud=ok source=esp32-cam
+[camera] seq=370 fps=6.7 bytes=8234 cloud=ok source=esp32-cam
+[camera] seq=404 fps=6.7 bytes=8219 cloud=ok source=esp32-cam
+[camera] seq=438 fps=6.8 bytes=8251 cloud=ok source=esp32-cam
+[camera] seq=471 fps=6.5 bytes=8277 cloud=ok source=esp32-cam
+[camera] seq=504 fps=6.6 bytes=8240 cloud=ok source=esp32-cam
+[camera] seq=538 fps=6.6 bytes=8282 cloud=ok source=esp32-cam
+[camera] seq=572 fps=6.7 bytes=8193 cloud=ok source=esp32-cam
+[camera] seq=607 fps=6.7 bytes=8274 cloud=ok source=esp32-cam
+[camera] seq=640 fps=6.4 bytes=8208 cloud=ok source=esp32-cam
+[camera] seq=670 fps=6 bytes=8263 cloud=ok source=esp32-cam
+[camera] seq=704 fps=6.7 bytes=8219 cloud=ok source=esp32-cam
+[camera] seq=736 fps=6.2 bytes=8254 cloud=ok source=esp32-cam
+[camera] seq=770 fps=6.8 bytes=8222 cloud=ok source=esp32-cam
+[camera] seq=803 fps=6.5 bytes=8228 cloud=ok source=esp32-cam
+[camera] seq=838 fps=7 bytes=8224 cloud=ok source=esp32-cam
+[camera] seq=870 fps=6.4 bytes=8252 cloud=ok source=esp32-cam
+[camera] seq=904 fps=6.6 bytes=8232 cloud=ok source=esp32-cam
+[camera] seq=938 fps=6.7 bytes=8249 cloud=ok source=esp32-cam
+[camera] seq=972 fps=6.7 bytes=8252 cloud=ok source=esp32-cam
+[camera] seq=1006 fps=6.6 bytes=8253 cloud=ok source=esp32-cam
+[camera] seq=1040 fps=6.8 bytes=8230 cloud=ok source=esp32-cam
+[camera] seq=1074 fps=6.6 bytes=8272 cloud=ok source=esp32-cam
+[camera] seq=1108 fps=6.8 bytes=8269 cloud=ok source=esp32-cam
+[camera] seq=1142 fps=6.8 bytes=8273 cloud=ok source=esp32-cam
+[camera] seq=1176 fps=6.7 bytes=8229 cloud=ok source=esp32-cam
+[camera] seq=1210 fps=6.7 bytes=7972 cloud=ok source=esp32-cam
+[camera] seq=1244 fps=6.6 bytes=7885 cloud=ok source=esp32-cam
+[camera] seq=1278 fps=6.7 bytes=7925 cloud=ok source=esp32-cam
+[camera] seq=1312 fps=6.6 bytes=8386 cloud=ok source=esp32-cam
+[camera] seq=1336 fps=5 bytes=7899 cloud=ok source=esp32-cam
+[camera] seq=1370 fps=6.7 bytes=7872 cloud=ok source=esp32-cam
+[camera] seq=1404 fps=6.6 bytes=7923 cloud=ok source=esp32-cam
+[camera] seq=1438 fps=6.6 bytes=7898 cloud=ok source=esp32-cam
+[camera] seq=1472 fps=6.6 bytes=7898 cloud=ok source=esp32-cam
+[camera] seq=1507 fps=6.8 bytes=7905 cloud=ok source=esp32-cam
+[camera] seq=1540 fps=6.5 bytes=7895 cloud=ok source=esp32-cam
+[camera] seq=1573 fps=6.5 bytes=7897 cloud=ok source=esp32-cam
+[camera] seq=1606 fps=6.7 bytes=7913 cloud=ok source=esp32-cam
+[camera] seq=1640 fps=6.7 bytes=7899 cloud=ok source=esp32-cam
+[camera] seq=1675 fps=6.9 bytes=7901 cloud=ok source=esp32-cam
+[camera] seq=1709 fps=6.6 bytes=7916 cloud=ok source=esp32-cam
+[camera] seq=1741 fps=6.3 bytes=7860 cloud=ok source=esp32-cam
+[camera] seq=1764 fps=4.7 bytes=7901 cloud=ok source=esp32-cam
+[camera] seq=1794 fps=6 bytes=7882 cloud=ok source=esp32-cam
+[camera] seq=1828 fps=6.7 bytes=7887 cloud=ok source=esp32-cam
+[camera] seq=1851 fps=4.9 bytes=7910 cloud=ok source=esp32-cam
+[camera] seq=1884 fps=6.5 bytes=7951 cloud=ok source=esp32-cam
+[camera] seq=1918 fps=6.7 bytes=7940 cloud=ok source=esp32-cam
+[camera] seq=1950 fps=6.4 bytes=7925 cloud=ok source=esp32-cam
+[camera] seq=1980 fps=5.8 bytes=7868 cloud=ok source=esp32-cam
+[camera] seq=2013 fps=6.4 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=2047 fps=6.8 bytes=7942 cloud=ok source=esp32-cam
+[camera] seq=2080 fps=6.4 bytes=7900 cloud=ok source=esp32-cam
+[camera] seq=2113 fps=6.6 bytes=7896 cloud=ok source=esp32-cam
+[camera] seq=2137 fps=4.9 bytes=7856 cloud=ok source=esp32-cam
+[camera] seq=2170 fps=6.6 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=2204 fps=6.7 bytes=7917 cloud=ok source=esp32-cam
+[camera] seq=2238 fps=6.7 bytes=7906 cloud=ok source=esp32-cam
+[camera] seq=2272 fps=6.7 bytes=7897 cloud=ok source=esp32-cam
+[camera] seq=2306 fps=6.7 bytes=7942 cloud=ok source=esp32-cam
+[camera] seq=2340 fps=6.7 bytes=7902 cloud=ok source=esp32-cam
+[camera] seq=2373 fps=6.5 bytes=7917 cloud=ok source=esp32-cam
+[camera] seq=2407 fps=6.7 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=2441 fps=6.7 bytes=7876 cloud=ok source=esp32-cam
+[camera] seq=2476 fps=6.8 bytes=7917 cloud=ok source=esp32-cam
+[camera] seq=2506 fps=5.5 bytes=7932 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=10
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=40 fps=8.1 bytes=7988 cloud=ok source=esp32-cam
+[camera] seq=62 fps=4.8 bytes=8012 cloud=ok source=esp32-cam
+[camera] seq=102 fps=7.6 bytes=7980 cloud=ok source=esp32-cam
+[camera] seq=142 fps=8.1 bytes=7988 cloud=ok source=esp32-cam
+[camera] seq=182 fps=7.8 bytes=7972 cloud=ok source=esp32-cam
+[camera] seq=224 fps=8.3 bytes=8233 cloud=ok source=esp32-cam
+[camera] seq=264 fps=7.9 bytes=7995 cloud=ok source=esp32-cam
+[camera] seq=307 fps=8.5 bytes=7993 cloud=ok source=esp32-cam
+[camera] seq=349 fps=8.3 bytes=8056 cloud=ok source=esp32-cam
+[camera] seq=389 fps=7.8 bytes=8068 cloud=ok source=esp32-cam
+[camera] seq=430 fps=8.4 bytes=8070 cloud=ok source=esp32-cam
+[camera] seq=471 fps=8.1 bytes=8027 cloud=ok source=esp32-cam
+[camera] seq=510 fps=7.7 bytes=8037 cloud=ok source=esp32-cam
+[camera] seq=550 fps=7.9 bytes=8097 cloud=ok source=esp32-cam
+[camera] seq=592 fps=8.3 bytes=8070 cloud=ok source=esp32-cam
+[camera] seq=631 fps=7.7 bytes=8020 cloud=ok source=esp32-cam
+[camera] seq=673 fps=8.3 bytes=8095 cloud=ok source=esp32-cam
+[camera] seq=713 fps=8 bytes=8107 cloud=ok source=esp32-cam
+[camera] seq=755 fps=8.4 bytes=8131 cloud=ok source=esp32-cam
+[camera] seq=797 fps=8.4 bytes=8158 cloud=ok source=esp32-cam
+[camera] seq=837 fps=7.8 bytes=8166 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=12
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=46 fps=9.2 bytes=7977 cloud=ok source=esp32-cam
+[camera] seq=93 fps=9.1 bytes=7941 cloud=ok source=esp32-cam
+[camera] seq=138 fps=9.1 bytes=7880 cloud=ok source=esp32-cam
+[camera] seq=183 fps=9 bytes=7924 cloud=ok source=esp32-cam
+[camera] seq=229 fps=9.2 bytes=7886 cloud=ok source=esp32-cam
+[camera] seq=275 fps=9.6 bytes=7880 cloud=ok source=esp32-cam
+[camera] seq=320 fps=9.3 bytes=7905 cloud=ok source=esp32-cam
+[camera] seq=366 fps=9.1 bytes=7924 cloud=ok source=esp32-cam
+[camera] seq=411 fps=8.8 bytes=7894 cloud=ok source=esp32-cam
+[camera] seq=456 fps=8.7 bytes=7877 cloud=ok source=esp32-cam
+[camera] seq=500 fps=8.7 bytes=7961 cloud=ok source=esp32-cam
+[camera] seq=546 fps=9.3 bytes=7892 cloud=ok source=esp32-cam
+[camera] seq=593 fps=9.1 bytes=7937 cloud=ok source=esp32-cam
+[camera] seq=637 fps=9 bytes=7932 cloud=ok source=esp32-cam
+[camera] seq=681 fps=8.7 bytes=7937 cloud=ok source=esp32-cam
+[camera] seq=721 fps=7.8 bytes=7891 cloud=ok source=esp32-cam
+[camera] seq=755 fps=6.9 bytes=7925 cloud=ok source=esp32-cam
+[camera] seq=801 fps=9.5 bytes=7923 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=30
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=80 fps=15 bytes=7756 cloud=ok source=esp32-cam
+[camera] seq=162 fps=15.8 bytes=7967 cloud=ok source=esp32-cam
+[camera] seq=243 fps=15.8 bytes=7979 cloud=ok source=esp32-cam
+[camera] seq=330 fps=17.9 bytes=7962 cloud=ok source=esp32-cam
+[camera] seq=411 fps=16.1 bytes=7923 cloud=ok source=esp32-cam
+[camera] seq=495 fps=17.1 bytes=7991 cloud=ok source=esp32-cam
+[camera] seq=574 fps=15 bytes=7967 cloud=ok source=esp32-cam
+[camera] seq=656 fps=16.8 bytes=7936 cloud=ok source=esp32-cam
+[camera] seq=741 fps=16.4 bytes=7983 cloud=ok source=esp32-cam
+[camera] seq=825 fps=17 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=903 fps=16.7 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=987 fps=16.3 bytes=7932 cloud=ok source=esp32-cam
+[camera] seq=1064 fps=16.1 bytes=6766 cloud=ok source=esp32-cam
+[camera] seq=1151 fps=17.5 bytes=7948 cloud=ok source=esp32-cam
+[camera] seq=1236 fps=17 bytes=7969 cloud=ok source=esp32-cam
+[camera] seq=1312 fps=14.6 bytes=7977 cloud=ok source=esp32-cam
+[camera] seq=1396 fps=15.8 bytes=7981 cloud=ok source=esp32-cam
+[camera] seq=1477 fps=16.7 bytes=7988 cloud=ok source=esp32-cam
+[camera] seq=1560 fps=15.4 bytes=8003 cloud=ok source=esp32-cam
+[camera] seq=1600 fps=6.4 bytes=7973 cloud=ok source=esp32-cam
+[camera] seq=1665 fps=14.1 bytes=7999 cloud=ok source=esp32-cam
+[camera] seq=1743 fps=17.6 bytes=7980 cloud=ok source=esp32-cam
+[camera] seq=1826 fps=16.1 bytes=7935 cloud=ok source=esp32-cam
+[camera] seq=1911 fps=17.6 bytes=7976 cloud=ok source=esp32-cam
+[camera] seq=1972 fps=8.8 bytes=7979 cloud=ok source=esp32-cam
+[camera] seq=2025 fps=16.3 bytes=8295 cloud=ok source=esp32-cam
+[camera] seq=2108 fps=15.3 bytes=8342 cloud=ok source=esp32-cam
+[camera] seq=2189 fps=14.5 bytes=7939 cloud=ok source=esp32-cam
+[camera] seq=2270 fps=16.2 bytes=7917 cloud=ok source=esp32-cam
+[camera] seq=2346 fps=15.5 bytes=7963 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=15
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=50 fps=10.2 bytes=7929 cloud=ok source=esp32-cam
+[camera] seq=104 fps=11.1 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=158 fps=10.9 bytes=7918 cloud=ok source=esp32-cam
+[camera] seq=214 fps=11.1 bytes=7942 cloud=ok source=esp32-cam
+[camera] seq=268 fps=10.3 bytes=7937 cloud=ok source=esp32-cam
+[camera] seq=321 fps=10.8 bytes=7925 cloud=ok source=esp32-cam
+[camera] seq=367 fps=9 bytes=7935 cloud=ok source=esp32-cam
+[camera] seq=422 fps=11 bytes=7966 cloud=ok source=esp32-cam
+[camera] seq=478 fps=11.1 bytes=7934 cloud=ok source=esp32-cam
+[camera] seq=533 fps=10.4 bytes=7955 cloud=ok source=esp32-cam
+[camera] seq=588 fps=10.6 bytes=7966 cloud=ok source=esp32-cam
+[camera] seq=641 fps=10.7 bytes=7927 cloud=ok source=esp32-cam
+[camera] seq=694 fps=10.4 bytes=7976 cloud=ok source=esp32-cam
+[camera] seq=744 fps=10.2 bytes=7958 cloud=ok source=esp32-cam
+[camera] seq=800 fps=10.8 bytes=8062 cloud=ok source=esp32-cam
+[camera] seq=858 fps=11.7 bytes=7977 cloud=ok source=esp32-cam
+[camera] seq=914 fps=10.9 bytes=7987 cloud=ok source=esp32-cam
+[camera] seq=967 fps=10.4 bytes=7978 cloud=ok source=esp32-cam
+[camera] seq=1025 fps=11.7 bytes=8283 cloud=ok source=esp32-cam
+[camera] seq=1082 fps=11.5 bytes=8097 cloud=ok source=esp32-cam
+[camera] seq=1138 fps=11 bytes=7924 cloud=ok source=esp32-cam
+[camera] seq=1192 fps=10.9 bytes=7897 cloud=ok source=esp32-cam
+[camera] seq=1247 fps=11.2 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=1301 fps=10.8 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=1354 fps=10.8 bytes=7940 cloud=ok source=esp32-cam
+[camera] seq=1407 fps=10.3 bytes=7961 cloud=ok source=esp32-cam
+[camera] seq=1462 fps=10.6 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=1512 fps=9.1 bytes=7970 cloud=ok source=esp32-cam
+[camera] seq=1565 fps=10.5 bytes=7951 cloud=ok source=esp32-cam
+[camera] seq=1619 fps=9.9 bytes=7946 cloud=ok source=esp32-cam
+[camera] seq=1657 fps=11.1 bytes=7950 cloud=ok source=esp32-cam
+[camera] seq=1710 fps=9.8 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=1767 fps=11.2 bytes=7914 cloud=ok source=esp32-cam
+[camera] seq=1824 fps=11.4 bytes=7971 cloud=ok source=esp32-cam
+[camera] seq=1878 fps=10.8 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=1934 fps=10.7 bytes=7915 cloud=ok source=esp32-cam
+[camera] seq=1989 fps=11.3 bytes=7946 cloud=ok source=esp32-cam
+[camera] seq=2047 fps=11.6 bytes=7937 cloud=ok source=esp32-cam
+[camera] seq=2100 fps=10.6 bytes=7961 cloud=ok source=esp32-cam
+[camera] seq=2156 fps=10.5 bytes=7929 cloud=ok source=esp32-cam
+[camera] seq=2213 fps=11.5 bytes=7961 cloud=ok source=esp32-cam
+[camera] seq=2264 fps=9.8 bytes=7932 cloud=ok source=esp32-cam
+[camera] seq=2320 fps=10.8 bytes=7915 cloud=ok source=esp32-cam
+[camera] seq=2371 fps=10.1 bytes=7970 cloud=ok source=esp32-cam
+[camera] seq=2423 fps=9.9 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=2477 fps=10.8 bytes=7967 cloud=ok source=esp32-cam
+[camera] seq=2532 fps=11.7 bytes=7964 cloud=ok source=esp32-cam
+[camera] seq=2586 fps=10.7 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=2638 fps=10.3 bytes=7948 cloud=ok source=esp32-cam
+[camera] seq=2695 fps=11.8 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=2752 fps=10.9 bytes=7927 cloud=ok source=esp32-cam
+[camera] seq=2806 fps=10.7 bytes=7929 cloud=ok source=esp32-cam
+[camera] seq=2861 fps=10.7 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=2915 fps=10.8 bytes=7978 cloud=ok source=esp32-cam
+[camera] seq=2971 fps=11 bytes=7934 cloud=ok source=esp32-cam
+[camera] seq=3023 fps=9.6 bytes=7942 cloud=ok source=esp32-cam
+[camera] seq=3081 fps=11.7 bytes=7908 cloud=ok source=esp32-cam
+[camera] seq=3136 fps=10.5 bytes=7901 cloud=ok source=esp32-cam
+[camera] seq=3192 fps=10.9 bytes=7926 cloud=ok source=esp32-cam
+[camera] seq=3249 fps=11.3 bytes=7943 cloud=ok source=esp32-cam
+[camera] seq=3306 fps=11.4 bytes=7932 cloud=ok source=esp32-cam
+[camera] seq=3350 fps=6.2 bytes=7924 cloud=ok source=esp32-cam
+[camera] seq=3398 fps=9.4 bytes=7893 cloud=ok source=esp32-cam
+[camera] seq=3448 fps=9.4 bytes=7918 cloud=ok source=esp32-cam
+[camera] seq=3500 fps=10.9 bytes=7926 cloud=ok source=esp32-cam
+[camera] seq=3549 fps=9.7 bytes=7909 cloud=ok source=esp32-cam
+[camera] seq=3600 fps=9.9 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=3647 fps=9.2 bytes=7904 cloud=ok source=esp32-cam
+[camera] seq=3696 fps=10 bytes=7903 cloud=ok source=esp32-cam
+[camera] seq=3745 fps=9.6 bytes=7907 cloud=ok source=esp32-cam
+[camera] seq=3797 fps=10.9 bytes=7907 cloud=ok source=esp32-cam
+[camera] seq=3847 fps=10.2 bytes=7914 cloud=ok source=esp32-cam
+[camera] seq=3898 fps=10.2 bytes=7923 cloud=ok source=esp32-cam
+[camera] seq=3948 fps=9.9 bytes=7945 cloud=ok source=esp32-cam
+[camera] seq=3998 fps=10.4 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=4048 fps=9.4 bytes=7965 cloud=ok source=esp32-cam
+[camera] seq=4099 fps=10.3 bytes=7945 cloud=ok source=esp32-cam
+[camera] seq=4148 fps=9.7 bytes=7973 cloud=ok source=esp32-cam
+[camera] seq=4197 fps=10.1 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=4247 fps=9.8 bytes=7943 cloud=ok source=esp32-cam
+[camera] seq=4293 fps=8.9 bytes=7970 cloud=ok source=esp32-cam
+[camera] seq=4345 fps=10.2 bytes=7903 cloud=ok source=esp32-cam
+[camera] seq=4397 fps=10.1 bytes=7934 cloud=ok source=esp32-cam
+[camera] seq=4448 fps=9.9 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=4495 fps=8.8 bytes=7918 cloud=ok source=esp32-cam
+[camera] seq=4553 fps=11.4 bytes=7947 cloud=ok source=esp32-cam
+[camera] seq=4596 fps=8.1 bytes=7923 cloud=ok source=esp32-cam
+[camera] seq=4652 fps=11.1 bytes=7902 cloud=ok source=esp32-cam
+[camera] seq=4706 fps=10.6 bytes=7906 cloud=ok source=esp32-cam
+[camera] seq=4757 fps=11.1 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=4813 fps=10.8 bytes=7946 cloud=ok source=esp32-cam
+[camera] seq=4867 fps=11 bytes=7926 cloud=ok source=esp32-cam
+[camera] seq=4923 fps=10.5 bytes=7898 cloud=ok source=esp32-cam
+[camera] seq=4978 fps=11.2 bytes=7966 cloud=ok source=esp32-cam
+[camera] seq=5032 fps=10.9 bytes=7960 cloud=ok source=esp32-cam
+[camera] seq=5088 fps=10.9 bytes=7918 cloud=ok source=esp32-cam
+[camera] seq=5144 fps=10.7 bytes=7881 cloud=ok source=esp32-cam
+[camera] seq=5199 fps=10.5 bytes=7940 cloud=ok source=esp32-cam
+[camera] seq=5255 fps=10.7 bytes=7907 cloud=ok source=esp32-cam
+[camera] seq=5311 fps=11.1 bytes=7901 cloud=ok source=esp32-cam
+[camera] seq=5368 fps=11.2 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=5423 fps=10.8 bytes=7943 cloud=ok source=esp32-cam
+[camera] seq=5477 fps=10.6 bytes=7953 cloud=ok source=esp32-cam
+[camera] seq=5533 fps=10.7 bytes=7893 cloud=ok source=esp32-cam
+[camera] seq=5589 fps=11.2 bytes=7897 cloud=ok source=esp32-cam
+[camera] seq=5640 fps=9.9 bytes=7945 cloud=ok source=esp32-cam
+[camera] seq=5695 fps=10.4 bytes=7928 cloud=ok source=esp32-cam
+[camera] seq=5749 fps=11.2 bytes=7951 cloud=ok source=esp32-cam
+[camera] seq=5803 fps=11 bytes=7911 cloud=ok source=esp32-cam
+[camera] seq=5861 fps=11.7 bytes=7944 cloud=ok source=esp32-cam
+[camera] seq=5917 fps=10.5 bytes=7923 cloud=ok source=esp32-cam
+[camera] seq=5972 fps=10.7 bytes=7932 cloud=ok source=esp32-cam
+[camera] seq=6025 fps=9.9 bytes=7883 cloud=ok source=esp32-cam
+[camera] seq=6080 fps=11.2 bytes=7935 cloud=ok source=esp32-cam
+[camera] seq=6133 fps=10.3 bytes=7908 cloud=ok source=esp32-cam
+[camera] seq=6188 fps=10.9 bytes=7902 cloud=ok source=esp32-cam
+[camera] seq=6240 fps=10.7 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=6293 fps=11 bytes=8205 cloud=ok source=esp32-cam
+[camera] seq=6342 fps=9.7 bytes=8074 cloud=ok source=esp32-cam
+[camera] seq=6396 fps=10.4 bytes=7965 cloud=ok source=esp32-cam
+[camera] seq=6448 fps=10.9 bytes=8210 cloud=ok source=esp32-cam
+[camera] seq=6501 fps=10 bytes=7928 cloud=ok source=esp32-cam
+[camera] seq=6553 fps=10 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=6606 fps=10.5 bytes=7913 cloud=ok source=esp32-cam
+[camera] seq=6660 fps=10.5 bytes=7889 cloud=ok source=esp32-cam
+[camera] seq=6710 fps=10.4 bytes=7941 cloud=ok source=esp32-cam
+[camera] seq=6765 fps=11 bytes=7983 cloud=ok source=esp32-cam
+[camera] seq=6820 fps=11.2 bytes=8464 cloud=ok source=esp32-cam
+[camera] seq=6872 fps=10.6 bytes=7914 cloud=ok source=esp32-cam
+[camera] seq=6925 fps=10.3 bytes=8155 cloud=ok source=esp32-cam
+[camera] seq=6981 fps=11 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=7034 fps=10.1 bytes=7912 cloud=ok source=esp32-cam
+[camera] seq=7089 fps=10.7 bytes=7902 cloud=ok source=esp32-cam
+[camera] seq=7141 fps=10.5 bytes=7952 cloud=ok source=esp32-cam
+[camera] seq=7191 fps=9.5 bytes=7922 cloud=ok source=esp32-cam
+[camera] seq=7243 fps=9.6 bytes=7951 cloud=ok source=esp32-cam
+[camera] seq=7299 fps=11 bytes=7852 cloud=ok source=esp32-cam
+[camera] seq=7355 fps=11.1 bytes=7928 cloud=ok source=esp32-cam
+[camera] seq=7406 fps=9.7 bytes=7895 cloud=ok source=esp32-cam
+[camera] seq=7456 fps=9 bytes=7882 cloud=ok source=esp32-cam
+[camera] seq=7508 fps=9.9 bytes=7866 cloud=ok source=esp32-cam
+[camera] seq=7566 fps=11.7 bytes=7940 cloud=ok source=esp32-cam
+[camera] seq=7618 fps=11 bytes=7911 cloud=ok source=esp32-cam
+[camera] seq=7671 fps=10.9 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=7726 fps=11.4 bytes=7912 cloud=ok source=esp32-cam
+[camera] seq=7783 fps=11.2 bytes=7943 cloud=ok source=esp32-cam
+[camera] seq=7836 fps=10.8 bytes=7888 cloud=ok source=esp32-cam
+[camera] seq=7890 fps=10.5 bytes=7938 cloud=ok source=esp32-cam
+[camera] seq=7945 fps=11.2 bytes=7913 cloud=ok source=esp32-cam
+[camera] seq=7995 fps=10 bytes=7960 cloud=ok source=esp32-cam
+[camera] seq=8046 fps=9.9 bytes=7898 cloud=ok source=esp32-cam
+[camera] seq=8098 fps=10.3 bytes=7913 cloud=ok source=esp32-cam
+[camera] seq=8153 fps=11.1 bytes=7910 cloud=ok source=esp32-cam
+[camera] seq=8206 fps=10.2 bytes=7939 cloud=ok source=esp32-cam
+[camera] seq=8259 fps=10.1 bytes=7850 cloud=ok source=esp32-cam
+[camera] seq=8312 fps=10.5 bytes=7937 cloud=ok source=esp32-cam
+[camera] seq=8363 fps=9.9 bytes=7908 cloud=ok source=esp32-cam
+[camera] seq=8415 fps=10 bytes=7943 cloud=ok source=esp32-cam
+[camera] seq=8468 fps=10.4 bytes=7972 cloud=ok source=esp32-cam
+[camera] seq=8515 fps=6.9 bytes=7909 cloud=ok source=esp32-cam
+[camera] seq=8567 fps=10.6 bytes=7946 cloud=ok source=esp32-cam
+[camera] seq=8620 fps=10.3 bytes=7927 cloud=ok source=esp32-cam
+[camera] seq=8672 fps=10.6 bytes=7942 cloud=ok source=esp32-cam
+[camera] seq=8727 fps=11 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=8781 fps=10.7 bytes=7927 cloud=ok source=esp32-cam
+[camera] seq=8834 fps=10.5 bytes=7940 cloud=ok source=esp32-cam
+[camera] seq=8884 fps=10.1 bytes=7982 cloud=ok source=esp32-cam
+[camera] seq=8936 fps=10 bytes=7916 cloud=ok source=esp32-cam
+[camera] seq=8991 fps=10.6 bytes=7925 cloud=ok source=esp32-cam
+[camera] seq=9047 fps=10.4 bytes=7919 cloud=ok source=esp32-cam
+[camera] seq=9097 fps=10.1 bytes=7897 cloud=ok source=esp32-cam
+[camera] seq=9152 fps=10.9 bytes=7917 cloud=ok source=esp32-cam
+[camera] seq=9204 fps=10 bytes=7892 cloud=ok source=esp32-cam
+[camera] seq=9255 fps=10.1 bytes=7904 cloud=ok source=esp32-cam
+[camera] seq=9306 fps=10.2 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=9357 fps=9.8 bytes=7939 cloud=ok source=esp32-cam
+[camera] seq=9411 fps=10.3 bytes=7928 cloud=ok source=esp32-cam
+[camera] seq=9465 fps=9.9 bytes=7906 cloud=ok source=esp32-cam
+[camera] seq=9519 fps=10.4 bytes=7939 cloud=ok source=esp32-cam
+[camera] seq=9570 fps=10.6 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=9623 fps=10.3 bytes=7871 cloud=ok source=esp32-cam
+[camera] seq=9676 fps=11.2 bytes=7949 cloud=ok source=esp32-cam
+[camera] seq=9730 fps=10.7 bytes=7928 cloud=ok source=esp32-cam
+[camera] seq=9781 fps=10.1 bytes=7970 cloud=ok source=esp32-cam
+[camera] seq=9831 fps=10.5 bytes=7954 cloud=ok source=esp32-cam
+[camera] seq=9884 fps=11.4 bytes=7959 cloud=ok source=esp32-cam
+[camera] seq=9938 fps=11.1 bytes=7920 cloud=ok source=esp32-cam
+[camera] seq=9990 fps=10.3 bytes=7960 cloud=ok source=esp32-cam
+[camera] seq=10042 fps=10.5 bytes=7926 cloud=ok source=esp32-cam
+[camera] seq=10094 fps=10.2 bytes=7950 cloud=ok source=esp32-cam
+[camera] seq=10146 fps=11.1 bytes=7880 cloud=ok source=esp32-cam
+[camera] seq=10196 fps=10.2 bytes=7894 cloud=ok source=esp32-cam
+[camera] seq=10249 fps=10.9 bytes=7922 cloud=ok source=esp32-cam
+[camera] seq=10303 fps=11.6 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=10357 fps=10.1 bytes=7933 cloud=ok source=esp32-cam
+[camera] seq=10411 fps=11.4 bytes=7922 cloud=ok source=esp32-cam
+[camera] seq=10461 fps=10.1 bytes=7945 cloud=ok source=esp32-cam
+[camera] seq=10509 fps=9.5 bytes=23639 cloud=ok source=esp32-cam
+[camera] seq=10555 fps=9.5 bytes=23584 cloud=ok source=esp32-cam
+[camera] seq=10595 fps=8 bytes=23606 cloud=ok source=esp32-cam
+[camera] seq=10639 fps=8.4 bytes=23674 cloud=ok source=esp32-cam
+[camera] seq=10678 fps=7.5 bytes=23665 cloud=ok source=esp32-cam
+[camera] seq=10722 fps=8.6 bytes=23605 cloud=ok source=esp32-cam
+[camera] seq=10757 fps=6.8 bytes=23534 cloud=ok source=esp32-cam
+[camera] seq=10790 fps=7.5 bytes=23459 cloud=ok source=esp32-cam
+[camera] seq=10828 fps=8.1 bytes=23592 cloud=ok source=esp32-cam
+[camera] seq=10870 fps=8 bytes=23587 cloud=ok source=esp32-cam
+[camera] seq=10915 fps=9 bytes=23595 cloud=ok source=esp32-cam
+[camera] seq=10952 fps=7.4 bytes=23644 cloud=ok source=esp32-cam
+[camera] seq=10987 fps=6.6 bytes=23663 cloud=ok source=esp32-cam
+[camera] seq=11027 fps=7.9 bytes=23764 cloud=ok source=esp32-cam
+[camera] seq=11070 fps=8.6 bytes=23588 cloud=ok source=esp32-cam
+[camera] seq=11114 fps=8.4 bytes=23672 cloud=ok source=esp32-cam
+[camera] seq=11153 fps=9 bytes=20073 cloud=ok source=esp32-cam
+[camera] seq=11201 fps=9.7 bytes=19442 cloud=ok source=esp32-cam
+[camera] seq=11251 fps=9.4 bytes=14452 cloud=ok source=esp32-cam
+[camera] seq=11297 fps=9 bytes=14271 cloud=ok source=esp32-cam
+[camera] seq=11345 fps=9.8 bytes=13666 cloud=ok source=esp32-cam
+[camera] seq=11400 fps=11 bytes=13487 cloud=ok source=esp32-cam
+[camera] seq=11458 fps=11.5 bytes=13251 cloud=ok source=esp32-cam
+[camera] seq=11508 fps=9.2 bytes=13482 cloud=ok source=esp32-cam
+[camera] seq=11560 fps=9.8 bytes=13607 cloud=ok source=esp32-cam
+[camera] seq=11617 fps=11.6 bytes=13718 cloud=ok source=esp32-cam
+[camera] seq=11668 fps=9.8 bytes=13685 cloud=ok source=esp32-cam
+[camera] seq=11722 fps=10.5 bytes=13747 cloud=ok source=esp32-cam
+[camera] seq=11774 fps=10.3 bytes=13759 cloud=ok source=esp32-cam
+[camera] seq=11827 fps=10.2 bytes=13801 cloud=ok source=esp32-cam
+[camera] seq=11873 fps=8.5 bytes=13850 cloud=ok source=esp32-cam
+[camera] seq=11922 fps=9.5 bytes=13775 cloud=ok source=esp32-cam
+[camera] seq=11966 fps=9 bytes=13793 cloud=ok source=esp32-cam
+[camera] seq=12009 fps=9.4 bytes=13761 cloud=ok source=esp32-cam
+[camera] seq=12066 fps=11.4 bytes=13705 cloud=ok source=esp32-cam
+[camera] seq=12116 fps=9.4 bytes=13054 cloud=ok source=esp32-cam
+[camera] seq=12165 fps=10.3 bytes=14585 cloud=ok source=esp32-cam
+[camera] seq=12215 fps=10 bytes=18269 cloud=ok source=esp32-cam
+[camera] seq=12263 fps=9.8 bytes=13641 cloud=ok source=esp32-cam
+[camera] seq=12314 fps=10.1 bytes=13472 cloud=ok source=esp32-cam
+[camera] seq=12364 fps=10.4 bytes=13543 cloud=ok source=esp32-cam
+[camera] seq=12414 fps=9.4 bytes=13405 cloud=ok source=esp32-cam
+[camera] seq=12462 fps=9.2 bytes=13360 cloud=ok source=esp32-cam
+[camera] seq=12502 fps=8.5 bytes=13999 cloud=ok source=esp32-cam
+[camera] seq=12554 fps=11 bytes=13814 cloud=ok source=esp32-cam
+[camera] seq=12605 fps=11.1 bytes=13877 cloud=ok source=esp32-cam
+[camera] seq=12656 fps=9.5 bytes=13981 cloud=ok source=esp32-cam
+[camera] seq=12706 fps=10 bytes=14027 cloud=ok source=esp32-cam
+[diag] local ip list wlo1=10.93.190.108
+[diag] camera url http://10.93.190.91:81/stream
+[diag] camera framesize 7
+[diag] camera hmirror 1
+[diag] camera vflip 0
+[diag] cloud ws url wss://api.hzhhds.top/edge/camera
+[diag] device=pc-001 camera=openmv-arm-cam-001 targetFps=15
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[camera] seq=52 fps=10.3 bytes=5787 cloud=ok source=esp32-cam
+[camera] seq=107 fps=10.4 bytes=5818 cloud=ok source=esp32-cam
+[camera] seq=161 fps=10.4 bytes=5882 cloud=ok source=esp32-cam
+[camera] seq=216 fps=10.9 bytes=5515 cloud=ok source=esp32-cam
+[camera] seq=271 fps=10.3 bytes=5619 cloud=ok source=esp32-cam
+[camera] seq=327 fps=10.6 bytes=5865 cloud=ok source=esp32-cam
+[camera] seq=380 fps=10.2 bytes=5313 cloud=ok source=esp32-cam
+[camera] seq=431 fps=10.5 bytes=5317 cloud=ok source=esp32-cam
+[camera] seq=482 fps=11 bytes=5363 cloud=ok source=esp32-cam
+[camera] seq=535 fps=10.4 bytes=5222 cloud=ok source=esp32-cam
+[camera] seq=591 fps=11 bytes=5334 cloud=ok source=esp32-cam
+[camera] seq=645 fps=10 bytes=5381 cloud=ok source=esp32-cam
+[camera] seq=700 fps=11 bytes=5357 cloud=ok source=esp32-cam
+[camera] seq=756 fps=11.5 bytes=5350 cloud=ok source=esp32-cam
+[camera] seq=808 fps=10.3 bytes=5367 cloud=ok source=esp32-cam
+[camera] seq=863 fps=11.9 bytes=5378 cloud=ok source=esp32-cam
+[camera] seq=917 fps=10.6 bytes=5324 cloud=ok source=esp32-cam
+[camera] seq=970 fps=9.9 bytes=4653 cloud=ok source=esp32-cam
+[camera] seq=1004 fps=6.4 bytes=5141 cloud=ok source=esp32-cam
+[camera] seq=1059 fps=11.1 bytes=5331 cloud=ok source=esp32-cam
+[camera] seq=1111 fps=11.3 bytes=5297 cloud=ok source=esp32-cam
+[camera] seq=1147 fps=6.8 bytes=5302 cloud=ok source=esp32-cam
+[camera] seq=1188 fps=5.5 bytes=5277 cloud=ok source=esp32-cam
+[camera] seq=1238 fps=9.8 bytes=5362 cloud=ok source=esp32-cam
+[camera] seq=1275 fps=6.7 bytes=5365 cloud=ok source=esp32-cam
+[camera] seq=1331 fps=11.6 bytes=5382 cloud=ok source=esp32-cam
+[camera] seq=1384 fps=10.2 bytes=5272 cloud=ok source=esp32-cam
+[camera] seq=1437 fps=10.1 bytes=5275 cloud=ok source=esp32-cam
+[camera] seq=1491 fps=11 bytes=5273 cloud=ok source=esp32-cam
+[camera] seq=1545 fps=10.9 bytes=5241 cloud=ok source=esp32-cam
+[camera] seq=1601 fps=10.9 bytes=5243 cloud=ok source=esp32-cam
+[camera] seq=1657 fps=11.2 bytes=5267 cloud=ok source=esp32-cam
+[camera] seq=1711 fps=10.3 bytes=5257 cloud=ok source=esp32-cam
+[camera] seq=1763 fps=10.3 bytes=5258 cloud=ok source=esp32-cam
+[pc-camera-worker] loop failed: CAMERA_STREAM_READ_TIMEOUT camera stream read timed out after 8000ms
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud socket error: getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: EAI_AGAIN getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud socket error: getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: EAI_AGAIN getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud socket error: getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: EAI_AGAIN getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud socket error: getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: EAI_AGAIN getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud socket error: getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: EAI_AGAIN getaddrinfo EAI_AGAIN api.hzhhds.top
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] cloud disconnected code=1006 reason=
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001
+[pc-camera-worker] loop failed: 23 The operation was aborted due to timeout
+[pc-camera-worker] cloud disconnected code=1000 reason=worker shutdown
+[pc-camera-worker] reconnecting camera/cloud loop
+[pc-camera-worker] cloud connected wss://api.hzhhds.top/edge/camera
+[pc-camera-worker] registered device=pc-001 camera=openmv-arm-cam-001

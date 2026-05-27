@@ -32,3 +32,11 @@ _local/openrf1_keil_work_2/Listing/
 _local/openrf1_keil_work_2/.vscode/
 _local/openrf1_keil_work_2/Project/RVMDK（uv5）/BH-STM32.uvguix*
 _local/openrf1_keil_work_2/Project/RVMDK（uv5）/JLinkLog.txt
+
+# Local worker runtime files
+tools/*/.env
+tools/*/.env.local
+tools/*/node_modules/
+vue3/tools/*/.env
+vue3/tools/*/.env.local
+vue3/tools/*/node_modules/

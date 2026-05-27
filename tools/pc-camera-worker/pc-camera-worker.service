@@ -1,0 +1,15 @@
+[Unit]
+Description=CleanScout pc-camera-worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/yusu/Work/CleanScout_rover/tools/pc-camera-worker
+ExecStart=/usr/bin/node /home/yusu/Work/CleanScout_rover/tools/pc-camera-worker/src/index.js
+Restart=always
+RestartSec=2
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target
