@@ -18,6 +18,8 @@
         <text>设备：{{ transport.deviceId || 'cleanscout-001' }}</text>
         <text>Worker：{{ transport.agentId || 'pc-yusu-main' }}</text>
         <text>{{ transport.pcWorkerOnline ? 'Worker 在线' : 'Worker 离线' }}</text>
+        <text>{{ streamingModeText }}</text>
+        <text v-if="transport.pendingRequests">处理中：{{ transport.pendingRequests }}</text>
       </view>
     </view>
 
@@ -143,12 +145,27 @@ const composerSpacerHeight = computed(() => (isH5 ? '250rpx' : '220rpx'))
 const transportBannerText = computed(() => {
   const modeText = formatStatusText(transport.value.mode, '未知链路')
   const statusText = formatStatusText(transport.value.status, '未知状态')
+  const heartbeatText = formatHeartbeatAge(transport.value.lastHeartbeatAgeMs)
 
   if (transport.value.fallback) {
-    return `当前回复已回退到${modeText}，链路状态为${statusText}。`
+    return `当前回复已回退到${modeText}，链路状态为${statusText}。${heartbeatText}`
   }
 
-  return transport.value.message || `当前链路为${modeText}，状态为${statusText}。`
+  const baseText = transport.value.message || `当前链路为${modeText}，状态为${statusText}。`
+
+  return `${baseText}${heartbeatText}`
+})
+
+const streamingModeText = computed(() => {
+  if (transport.value.realtimeStreaming) {
+    return '真流式'
+  }
+
+  if (transport.value.displayStreaming === 'frontend-typewriter') {
+    return '伪流式展示'
+  }
+
+  return '一次性回复'
 })
 
 const asrReady = computed(() => asrStatus.value.enabled && asrStatus.value.status === 'healthy')
@@ -369,6 +386,20 @@ function formatDuration(value) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0')
   const seconds = String(totalSeconds % 60).padStart(2, '0')
   return `${minutes}:${seconds}`
+}
+
+function formatHeartbeatAge(value) {
+  if (value === null || value === undefined || value === '') {
+    return ''
+  }
+
+  const seconds = Math.max(0, Math.round(Number(value || 0) / 1000))
+
+  if (!Number.isFinite(seconds)) {
+    return ''
+  }
+
+  return ` 最近心跳 ${seconds}s 前。`
 }
 </script>
 

@@ -201,6 +201,11 @@ class AgentRegistry {
   getOpenClawStatus(deviceId) {
     const targetDeviceId = normalizeDeviceId(deviceId)
     const agent = this.findOpenClawAgent(targetDeviceId)
+    const lastHeartbeatAt = agent?.lastHeartbeatAt || ''
+    const lastHeartbeatTime = lastHeartbeatAt ? new Date(lastHeartbeatAt).getTime() : 0
+    const lastHeartbeatAgeMs = Number.isFinite(lastHeartbeatTime) && lastHeartbeatTime > 0
+      ? Date.now() - lastHeartbeatTime
+      : null
 
     return {
       ok: true,
@@ -211,8 +216,11 @@ class AgentRegistry {
       model: agent?.model || 'openclaw/default',
       agentId: agent?.agentId || '',
       agentType: agent?.agentType || 'pc-openclaw-worker',
+      version: agent?.version || '',
       capabilities: agent?.capabilities || [],
-      lastHeartbeatAt: agent?.lastHeartbeatAt || '',
+      registeredAt: agent?.registeredAt || '',
+      lastHeartbeatAt,
+      lastHeartbeatAgeMs,
       pendingRequests: agent?.pendingRequests?.size || 0,
     }
   }
