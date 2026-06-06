@@ -1,13 +1,28 @@
+# 局部代价地图：围绕机器人滚动，供 TEB/传统局部规划器实时避障。
 local_costmap:
+  # 启动文件会用 local_odom_frame 覆盖 global_frame，保持与实际里程计链一致。
   global_frame: odom
   robot_base_frame: base_link
+
+  # 单位 Hz。update 决定内部计算频率，publish 只影响 RViz/外部订阅显示。
   update_frequency: 4.0
   publish_frequency: 2.0
+
+  # 局部图不直接加载整张静态地图，而是围绕机器人滚动。
   static_map: false
   rolling_window: true
+
+  # 局部窗口尺寸与分辨率，单位分别为 m 和 m/cell。
+  # 2.5 m 窗口在当前室内速度下兼顾前视距离和 CPU/内存开销。
   width: 2.5
   height: 2.5
   resolution: 0.05
+
+  # 等待 odom/base_link/laser TF 的最大容差，单位 s。
   transform_tolerance: 0.8
-  cost_scaling_factor: 5.0
+
+  # C-4.1.4 局部贴障参数。
+  # 此处 0.05 m 是 costmap 膨胀层，不等同于 TEB 的 min_obstacle_dist=0.12 m。
+  # 两者共同决定实车离障碍物的最终距离，修改时必须成组回归。
   inflation_radius: 0.05
+  cost_scaling_factor: 5.0

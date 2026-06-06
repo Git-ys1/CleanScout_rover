@@ -159,7 +159,8 @@ cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
 8. `src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1.launch`
 9. `src/clbrobot_project/clbrobot/launch/nav/navigation_406_rf1_teb.launch`
 10. `src/clbrobot_project/clbrobot/param/navigation/teb_local_planner_params.yaml`
-11. `src/clbrobot_project/clbrobot/launch/slam/slam_406_lsm.launch`
+11. `src/clbrobot_project/clbrobot/param/navigation/README.md`
+12. `src/clbrobot_project/clbrobot/launch/slam/slam_406_lsm.launch`
 
 ## 五、当前发布说明
 
@@ -169,9 +170,11 @@ cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
 2. 不提交 `Raspberrypi/catkin_ws/devel/`
 3. 地图文件是否纳入版本库需要按阶段确认
 4. 正式汇报 / 可研报告时，应优先展示第二模式与建图第二模式成果
-5. 当前导航阶段基线为 `C-4.1.3`，PC 完整导航默认使用 TEB，记录见
-   `releases/C-4.1.3/C-4.1.3_teb_navigation_baseline.md`
+5. 当前导航阶段基线为 `C-4.1.4`，PC 完整导航默认使用 TEB 多拓扑规划，
+   记录见
+   `releases/C-4.1.4/C-4.1.4_navigation_tuning_and_parameter_cleanup.md`
 6. `C-4.1.2` 继续作为 RF1 转向几何与里程计标定基线。
+7. `C-4.1.3` 继续作为 TEB 首次正式引入基线。
 
 ## 六、参考文档
 

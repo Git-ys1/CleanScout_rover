@@ -1,19 +1,30 @@
 TebLocalPlannerROS:
 
   # =========================
-  # 基础输入
+  # 1. 基础输入与坐标系
   # =========================
-  # The navigation launch contract may override this together with ODOM_TOPIC.
+  # 启动文件会用 ODOM_TOPIC 覆盖本默认值，必须与发布 nav_msgs/Odometry 的话题一致。
   odom_topic: /odom
+
+  # 全局路径所在坐标系，应与 map_server 和 AMCL 的 global_frame_id 一致。
   map_frame: map
 
   # =========================
-  # 机器人速度/加速度限制
-  # 这里要和 safety_gate / cmdvel_to_rf1 限速一致或略低
+  # 2. 机器人速度/加速度限制
   # =========================
+  # 单位：线速度 m/s、角速度 rad/s、线加速度 m/s^2、角加速度 rad/s^2。
+  #
+  # 当前执行链还有两层限速：
+  #   TEB -> /cmd_vel_nav -> safety_gate -> /cmd_vel -> cmdvel_to_rf1
+  # safety_gate 当前 max_vx=0.20，因此 TEB 的 max_vel_x=0.25 是优化模型上限，
+  # 不是车轮最终一定能执行的速度。若统一两侧上限，需要重新做整条路线回归。
   max_vel_x: 0.25
   max_vel_x_backwards: 0.10
+
+  # 麦克纳姆横移速度上限；设为 0 会失去横移能力。
   max_vel_y: 0.10
+
+  # x/y 合成平移速度上限，防止斜向运动时合速度超过预期。
   max_vel_trans: 0.25
   max_vel_theta: 0.40
 
@@ -21,59 +32,93 @@ TebLocalPlannerROS:
   acc_lim_y: 0.15
   acc_lim_theta: 0.30
 
-  # 全向轮/麦轮不是阿克曼车，不需要转弯半径约束
+  # 麦克纳姆底盘不是阿克曼车，不施加最小转弯半径或方向盘角约束。
   min_turning_radius: 0.0
   wheelbase: 0.0
   cmd_angle_instead_rotvel: false
 
   # =========================
-  # 目标容差
+  # 3. 到点判定
   # =========================
+  # xy 单位 m，yaw 单位 rad。调小会提高到点精度，也更容易在终点反复修正。
   xy_goal_tolerance: 0.12
   yaw_goal_tolerance: 0.35
+
+  # 到点时要求速度收敛到停止，不允许带速度穿过终点。
   free_goal_vel: false
+
+  # true 表示必须考虑完整全局路径直至目标，不提前截断终点语义。
   complete_global_plan: true
 
   # =========================
-  # 轨迹采样
+  # 4. 时间离散与全局路径跟随
   # =========================
+  # 自动调整轨迹时间采样；dt_ref 是目标时间间隔，dt_hysteresis 防止频繁增删采样点。
   teb_autosize: true
   dt_ref: 0.30
   dt_hysteresis: 0.10
+
+  # 单条 TEB 轨迹允许的最少/最多采样点。max_samples 过大可能放大 CPU 峰值。
   min_samples: 3
   max_samples: 500
 
+  # 使用全局路径方向初始化 TEB，可减少路径方向与局部轨迹冲突。
   global_plan_overwrite_orientation: true
+
+  # TEB 每轮只看前方 1.5 m 的全局路径，适合当前室内低速与局部窗口尺寸。
   max_global_plan_lookahead_dist: 1.5
+
+  # 每隔 0.20 m 从全局路径提取途经点。越小越贴全局路径，但优化约束更多。
   global_plan_viapoint_sep: 0.20
+
+  # 新目标与当前目标相距超过 0.5 m 时重新初始化轨迹。
   force_reinit_new_goal_dist: 0.5
+
+  # 碰撞可行性检查向前检查的轨迹位姿数。
   feasibility_check_no_poses: 5
+
+  # 发布 teb_feedback 等调试信息，便于 RViz 和现场诊断。
   publish_feedback: true
 
   # =========================
-  # 障碍物
+  # 5. 障碍物距离与关联
   # =========================
+  # min_obstacle_dist 是机器人 footprint 外缘到障碍物的期望最小距离，单位 m。
+  # inflation_dist 是开始产生软惩罚的距离，应大于 min_obstacle_dist。
   min_obstacle_dist: 0.12
   inflation_dist: 0.22
+
+  # 从局部 costmap 直接提取障碍物，不额外依赖 costmap_converter 插件输出。
   include_costmap_obstacles: true
+
+  # 仍考虑机器人后方 0.60 m 内障碍，避免倒车或旋转时忽略后侧碰撞。
   costmap_obstacles_behind_robot_dist: 0.60
+
+  # 每个障碍物影响的相邻轨迹位姿数；越大越平滑，但优化边数量也越多。
   obstacle_poses_affected: 15
 
+  # 使用新障碍关联方式。
+  # 强制纳入距离 = min_obstacle_dist * force_inclusion_factor；
+  # 超过 min_obstacle_dist * cutoff_factor 的障碍不再关联到该轨迹。
   legacy_obstacle_association: false
   obstacle_association_force_inclusion_factor: 1.5
   obstacle_association_cutoff_factor: 5.0
 
   # =========================
-  # 优化权重
-  # 重点：weight_kinematics_nh 不要太大，否则会把横移压没
+  # 6. 数值优化迭代与权重
   # =========================
+  # 总优化量近似为 outer * inner。增大通常更精细，也会直接增加 CPU 开销。
   no_inner_iterations: 5
   no_outer_iterations: 4
   optimization_activate: true
+
+  # 仅调试求解器时打开，正常导航保持 false，避免大量日志影响实时性。
   optimization_verbose: false
 
+  # 软约束边界缓冲，避免恰好卡在速度/加速度硬上限。
   penalty_epsilon: 0.03
 
+  # 速度和加速度约束权重。数值越大，越严格服从对应上限。
   weight_max_vel_x: 2.0
   weight_max_vel_y: 2.0
   weight_max_vel_theta: 1.0
@@ -82,10 +127,21 @@ TebLocalPlannerROS:
   weight_acc_lim_y: 1.0
   weight_acc_lim_theta: 1.0
 
+  #
+  # 全向底盘关键项：
+  # weight_kinematics_nh 过大，会强行压制横移并把麦克纳姆当差速车。
+  # turning_radius 保持 0；forward_drive 较低，允许必要的倒车与侧移。
   weight_kinematics_nh: 1.0
   weight_kinematics_forward_drive: 0.3
   weight_kinematics_turning_radius: 0.0
 
+  #
+  # 时间、障碍物和途经点代价：
+  # - weight_optimaltime：倾向更短执行时间；
+  # - weight_obstacle：障碍硬距离惩罚；
+  # - weight_inflation：软膨胀区惩罚；
+  # - weight_viapoint：贴合全局路径途经点；
+  # - weight_adapt_factor：外层迭代逐轮放大关键权重。
   weight_optimaltime: 1.0
   weight_obstacle: 50.0
   weight_inflation: 0.2
@@ -93,23 +149,53 @@ TebLocalPlannerROS:
   weight_adapt_factor: 2.0
 
   # =========================
-  # 多拓扑规划
-  # 先关掉，降低调参复杂度和 CPU 压力
+  # 7. 多拓扑规划（C-4.1.4 正式启用）
   # =========================
-  enable_homotopy_class_planning: false
+  # 同时探索障碍物两侧等不同绕行拓扑；效果更强，但 CPU 开销高于单轨迹模式。
+  enable_homotopy_class_planning: true
+
+  # 多候选轨迹并行优化。PC 端启用；树莓派端未同步、未验证。
   enable_multithreading: true
-  max_number_classes: 2
 
+  # 最多保留 3 个拓扑类别；当前最佳类别内部最多尝试 2 条轨迹以跳出局部最优。
+  max_number_classes: 3
+  max_number_plans_in_current_class: 2
+
+  #
+  # 候选轨迹选择：
+  # - hysteresis=1.0：新轨迹必须真实更优才切换；
+  # - prefer_initial_plan 越小，越偏向全局规划器给出的初始路径；
+  # - obst_cost_scale 放大选路阶段的障碍代价，不改变单条轨迹内部 weight_obstacle；
+  # - alternative_time_cost 使用总过渡时间比较候选；
+  # - dropping_probability 以小概率丢弃非最优候选，避免长期黏住次优拓扑。
   selection_cost_hysteresis: 1.0
-  selection_prefer_initial_plan: 0.95
-  selection_obst_cost_scale: 1.0
-  selection_alternative_time_cost: false
+  selection_prefer_initial_plan: 0.75
+  selection_obst_cost_scale: 4.0
+  selection_viapoint_cost_scale: 1.0
+  selection_alternative_time_cost: true
+  selection_dropping_probability: 0.05
+
+  #
+  # 路网采样区域：
+  # 当前 vendored TEB 0.9.1 存在历史命名差异：
+  # - 启动读取代码使用 roadmap_graph_samples；
+  # - dynamic_reconfigure 使用 roadmap_graph_no_samples。
+  # 两个键必须保持同值，确保首次加载和运行时重配置都得到 12。
+  roadmap_graph_samples: 12
+  roadmap_graph_no_samples: 12
+
+  # 候选采样矩形宽度为 1.5 m，长度按起终点距离 1.0 倍缩放。
+  roadmap_graph_area_width: 1.5
+  roadmap_graph_area_length_scale: 1.0
 
   # =========================
-  # 恢复行为
+  # 8. TEB 内部恢复行为
   # =========================
+  # 连续不可行时临时缩短规划视野，至少维持 5 s。
   shrink_horizon_backup: true
   shrink_horizon_min_duration: 5.0
+
+  # 速度低于阈值并持续时触发振荡恢复，线速度单位 m/s、角速度单位 rad/s。
   oscillation_recovery: true
   oscillation_v_eps: 0.06
   oscillation_omega_eps: 0.06

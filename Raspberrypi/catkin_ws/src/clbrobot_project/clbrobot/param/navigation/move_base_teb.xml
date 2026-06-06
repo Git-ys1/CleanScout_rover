@@ -1,23 +1,34 @@
 <launch>
+  <!--
+    TEB 主导航的 move_base 装配入口。
+    参数加载顺序很重要：后加载文件或 <param> 会覆盖前面同名参数。
+  -->
+
+  <!-- 规划器输出先进入 /cmd_vel_nav，再由树莓派安全门转发到 /cmd_vel。 -->
   <arg name="cmd_vel_topic" default="/cmd_vel_nav" />
+
+  <!-- local costmap 使用的里程计坐标系与 TEB 订阅的里程计话题。 -->
   <arg name="local_odom_frame" default="odom" />
   <arg name="odom_topic" default="/odom" />
 
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-    <!-- Reuse the measured mecanum footprint and established costmap layers. -->
+    <!-- 先将共用 footprint、激光障碍源分别装入全局/局部代价地图命名空间。 -->
     <rosparam file="$(find clbrobot)/param/navigation/costmap_mecanum_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find clbrobot)/param/navigation/costmap_mecanum_params.yaml" command="load" ns="local_costmap" />
+
+    <!-- 再加载各自专用参数，覆盖共用文件中的频率、膨胀半径等同名键。 -->
     <rosparam file="$(find clbrobot)/param/navigation/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find clbrobot)/param/navigation/global_costmap_params.yaml" command="load" />
 
+    <!-- TEB 插件参数和 move_base 主循环/插件选择参数。 -->
     <rosparam file="$(find clbrobot)/param/navigation/teb_local_planner_params.yaml" command="load" />
     <rosparam file="$(find clbrobot)/param/navigation/move_base_teb_params.yaml" command="load" />
 
-    <!-- Keep frame and topic overrides aligned with the selected odometry chain. -->
+    <!-- 启动参数拥有最终优先级，使编码器 odom 和 LSM odom 能共用本文件。 -->
     <param name="local_costmap/global_frame" value="$(arg local_odom_frame)" />
     <param name="TebLocalPlannerROS/odom_topic" value="$(arg odom_topic)" />
 
-    <!-- move_base -> /cmd_vel_nav -> safety_gate -> /cmd_vel -->
+    <!-- 正式控制链：move_base -> /cmd_vel_nav -> safety_gate -> /cmd_vel。 -->
     <remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
   </node>
 </launch>

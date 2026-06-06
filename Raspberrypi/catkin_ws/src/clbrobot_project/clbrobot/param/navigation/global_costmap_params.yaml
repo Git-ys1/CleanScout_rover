@@ -1,9 +1,21 @@
+# 全局代价地图：在整张静态地图上为 GlobalPlanner 提供路径规划代价。
 global_costmap:
+  # map 是全局固定坐标系；机器人轮廓以 base_link 为中心。
   global_frame: map
   robot_base_frame: base_link
-  update_frequency: 5.0
-  publish_frequency: 2.0
+
+  # 单位 Hz。全局地图主要服务低频路径重规划，无需跟随控制周期高速刷新。
+  update_frequency: 1.0
+  publish_frequency: 0.5
+
+  # 使用 map_server 提供的静态地图，不启用滚动窗口。
   static_map: true
+
+  # 等待 map/odom/base_link TF 的最大容差，单位 s。
   transform_tolerance: 1.25
-  cost_scaling_factor: 10.0
-  inflation_radius: 0.05
+
+  # C-4.1.4 全局安全缓冲。
+  # inflation_radius 越大，全局路径越倾向远离墙面，也更可能判定窄道不可通行。
+  # cost_scaling_factor 越大，膨胀代价随距离衰减越快；越小则软缓冲影响更宽。
+  inflation_radius: 0.35
+  cost_scaling_factor: 5.5

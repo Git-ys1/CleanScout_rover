@@ -1,8 +1,18 @@
 <launch>
+  <!--
+    底盘最终速度安全门。
+    无论 TEB 还是传统规划器，都应先发布到 /cmd_vel_nav，再由本节点限幅、
+    超时归零后发布到 /cmd_vel。不要让导航规划器直接绕过本节点控制 RF1。
+  -->
+
   <arg name="input_topic" default="/cmd_vel_nav" />
   <arg name="output_topic" default="/cmd_vel" />
+
+  <!-- 超过 timeout 秒未收到新命令时主动输出零速；rate 为安全门发布频率 Hz。 -->
   <arg name="timeout" default="0.4" />
   <arg name="rate" default="30" />
+
+  <!-- 最终执行侧硬限幅：vx/vy 单位 m/s，wz 单位 rad/s。 -->
   <arg name="max_vx" default="0.20" />
   <arg name="max_vy" default="0.15" />
   <arg name="max_wz" default="0.5" />

@@ -1,14 +1,20 @@
 <launch>
+  <!-- 传统 TrajectoryPlannerROS 回退入口，不是 C-4.1.4 默认链。 -->
+
   <arg name="map_file" default="$(find clbrobot)/maps/407-5.22-2120.yaml" />
   <arg name="cmd_vel_topic" default="/cmd_vel" />
   <arg name="odom_frame_id" default="odom_lsm" />
   <arg name="odom_topic" default="/odom_lsm" />
 
+  <!-- 地图服务器。 -->
   <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen" />
 
+  <!-- 定位层与 TEB 主链共用同一套 AMCL 参数。 -->
   <include file="$(find clbrobot)/launch/amcl.launch">
     <arg name="odom_frame_id" value="$(arg odom_frame_id)" />
   </include>
+
+  <!-- 传统局部规划器装配入口。 -->
   <include file="$(find clbrobot)/param/navigation/move_base.xml">
     <arg name="cmd_vel_topic" value="$(arg cmd_vel_topic)" />
     <arg name="local_odom_frame" value="$(arg odom_frame_id)" />

@@ -1,22 +1,35 @@
+# 传统 TrajectoryPlannerROS 回退链的 move_base 主循环参数。
+# 默认 TEB 链使用 move_base_teb_params.yaml，本文件不会同时生效。
+
+# 插件类名必须能被 pluginlib 找到。
 base_global_planner: global_planner/GlobalPlanner
 base_local_planner: base_local_planner/TrajectoryPlannerROS
 
+# 空闲时保持代价地图运行，减少下一次目标的启动延迟。
 shutdown_costmaps: false
 
+# 控制频率和控制失败容忍时间，单位 Hz、s。
 controller_frequency: 5.0
 controller_patience: 2.0
 
+# 全局规划频率和规划失败容忍时间，单位 Hz、s。
 planner_frequency: 0.5
 planner_patience: 2.0
 
+# 在规定时间内移动不足指定距离时判定振荡，单位 s、m。
 oscillation_timeout: 6.0
 oscillation_distance: 0.10
 
+# 恢复清图时保留机器人周围的保守距离，单位 m。
 conservative_reset_dist: 1.0
 
+# 启用标准恢复行为并允许原地旋转清障。
 recovery_behavior_enabled: true
 clearing_rotation_allowed: true
 
+# GlobalPlanner 的历史代价参数。
+# 这些键仅在对应插件版本从 move_base 私有命名空间读取时有效；
+# 若后续正式调全局规划代价，应迁移到明确的 GlobalPlanner: 命名空间并回归。
 cost_factor: 1.0
 neutral_cost: 55
 lethal_cost: 253

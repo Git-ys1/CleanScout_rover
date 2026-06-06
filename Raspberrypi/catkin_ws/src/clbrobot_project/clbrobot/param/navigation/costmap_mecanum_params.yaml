@@ -1,14 +1,37 @@
+# 全局/局部代价地图共用的机器人几何与激光障碍源。
+# move_base_teb.xml 会分别把本文件加载到 global_costmap 和 local_costmap。
+
+# 只把机器人周围 2.5 m 内的激光命中标记为障碍，单位 m。
 obstacle_range: 2.5
+
+# 使用 3.0 m 内的自由激光射线清除旧障碍，通常应 >= obstacle_range。
 raytrace_range: 3.0
-footprint: [[-0.135, -0.1085], [-0.135, 0.1085], [0.218, 0.1085], [0.218, -0.1085]]
+
+#
+# 机器人二维轮廓，坐标相对 base_link，单位 m，点序为逆时针。
+# 当前 C-4.1.4 使用以 base_link 为中心的 0.270 x 0.217 m 矩形。
+# 修改轮廓必须同步核对：
+#   1. base_link 的真实定义；
+#   2. TEB min_obstacle_dist；
+#   3. 全局/局部 inflation_radius；
+#   4. 窄通道实车通过能力。
+footprint: [[-0.135, -0.1085], [-0.135, 0.1085], [0.135, 0.1085], [0.135, -0.1085]]
+
+# 共用默认膨胀半径。后加载的 global/local 文件会分别覆盖该值。
 inflation_radius: 0.2
+
+# 等待 TF 的最大容差，单位 s；过大可能掩盖 TF 延迟，过小会频繁丢数据。
 transform_tolerance: 0.3
 
+# 当前只使用 RPLIDAR 的 /scan 作为障碍观测源。
 observation_sources: scan
 scan:
   data_type: LaserScan
   topic: /scan
+
+  # marking=true：激光命中写入障碍；clearing=true：射线穿过区域清除障碍。
   marking: true
   clearing: true
 
+# 使用标准二维栅格代价地图。
 map_type: costmap

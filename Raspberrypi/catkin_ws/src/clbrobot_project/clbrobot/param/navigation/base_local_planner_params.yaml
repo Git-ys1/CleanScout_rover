@@ -1,42 +1,59 @@
+# 传统局部规划器 TrajectoryPlannerROS 参数。
+# C-4.1.4 默认导航不加载本规划器；仅在以下回退方式中生效：
+#   NAV_LAUNCH=navigation_406_rf1.launch ./start_pc_full_navigation.sh
+#
+# 保留本文件是为了现场快速排除 TEB 特有问题，不要把这里的调参结果误认为
+# TEB 参数。TEB 主配置位于 teb_local_planner_params.yaml。
 TrajectoryPlannerROS:
+  # 传统回退链按差速约束运行，不使用麦克纳姆横移能力。
   holonomic_robot: false
   y_vels: [0.0]
 
+  # 前进速度上下限，单位 m/s。最终仍受 safety_gate max_vx=0.20 限制。
   max_vel_x: 0.25
   min_vel_x: 0.05
 
+  # ROS 旧版命名，供历史配置兼容。
   max_rotational_vel: 0.40
   min_in_place_rotational_vel: 0.30
 
-  # Keep aliases for readability with older notes.
+  # Noetic 常用命名；与上面旧命名保持同值，避免不同插件版本读取不一致。
   max_vel_theta: 0.40
   min_in_place_vel_theta: 0.30
 
+  # 线/横向/角加速度限制，单位 m/s^2、m/s^2、rad/s^2。
   acc_lim_x: 0.35
   acc_lim_y: 0.0
   acc_lim_theta: 0.30
 
+  # 到点容差，xy 单位 m、yaw 单位 rad；锁定 xy 后只继续调整朝向。
   xy_goal_tolerance: 0.30
   yaw_goal_tolerance: 0.60
   latch_xy_goal_tolerance: true
 
+  # 前向轨迹仿真时域与采样粒度。时域更长看得更远，但计算量和保守性会上升。
   sim_time: 2.0
   sim_granularity: 0.05
   angular_sim_granularity: 0.05
 
+  # 路径、目标、障碍三类评分权重。
+  # meter_scoring=false 时 path/goal 评分按栅格单元计，不是直接按米计。
   path_distance_bias: 1.2
   goal_distance_bias: 0.4
   occdist_scale: 0.02
   meter_scoring: false
 
+  # x 方向和角速度方向的候选采样数量，越大越细致也越耗 CPU。
   vx_samples: 15
   vtheta_samples: 16
 
+  # 振荡与逃逸参数。escape_vel 为负表示允许低速倒车脱困。
   oscillation_reset_dist: 0.10
   escape_vel: -0.05
   escape_reset_dist: 0.10
   escape_reset_theta: 0.5
 
+  # 使用动态窗口法，裁剪已经走过的全局路径；当前不启用航向单独评分。
   dwa: true
   prune_plan: true
   heading_scoring: false

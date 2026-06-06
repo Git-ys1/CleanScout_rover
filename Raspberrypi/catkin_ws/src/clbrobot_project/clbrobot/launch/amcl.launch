@@ -1,35 +1,93 @@
 <launch>
+  <!--
+    AMCL 粒子滤波定位参数，C-4.1.4 实车基线。
+
+    输入：
+      /map             静态栅格地图
+      /scan            RPLIDAR 激光扫描
+      odom -> base_link 里程计 TF
+    输出：
+      map -> odom      全局定位修正 TF
+
+    中文仅存在于 XML 注释，不会写入 ROS 参数服务器。
+  -->
   <arg name="odom_frame_id" default="odom" />
+
   <node pkg="amcl" type="amcl" name="amcl" output="screen">
+    <!-- TF 坐标系。odom_frame_id 由导航入口传入，必须与实际里程计链一致。 -->
+    <param name="odom_frame_id" value="$(arg odom_frame_id)" />
+    <param name="global_frame_id" value="map" />
     <param name="base_frame_id" value="base_link" />
-    <param name="gui_publish_rate" value="10.0" />
+
+    <!-- 粒子云在 RViz 中的发布频率，降低该值可减少显示与网络开销。 -->
+    <param name="gui_publish_rate" value="5.0" />
+
+    <!--
+      KLD 自适应粒子数：
+      - 粒子越多，重定位能力越强，但 CPU 开销越高。
+      - kld_err 越小、kld_z 越大，通常会保留更多粒子。
+    -->
+    <param name="min_particles" value="500" />
+    <param name="max_particles" value="2500" />
     <param name="kld_err" value="0.05" />
     <param name="kld_z" value="0.99" />
-    <param name="laser_lambda_short" value="0.1" />
-    <param name="laser_likelihood_max_dist" value="2.0" />
-    <param name="laser_max_beams" value="90" />
+
+    <!--
+      激光似然场模型：
+      - laser_max_beams 是每帧参与计算的抽样束数，不是雷达原始束数。
+      - likelihood_max_dist 是障碍物似然场的最大作用距离，单位 m。
+      - sigma_hit 越小，越严格要求扫描端点贴近地图障碍。
+    -->
     <param name="laser_model_type" value="likelihood_field" />
+    <param name="laser_max_beams" value="60" />
+    <param name="laser_likelihood_max_dist" value="2.0" />
     <param name="laser_sigma_hit" value="0.2" />
-    <param name="laser_z_hit" value="0.5" />
-    <param name="laser_z_short" value="0.05" />
-    <param name="laser_z_max" value="0.05" />
-    <param name="laser_z_rand" value="0.5" />
-    <param name="max_particles" value="6000" />
-    <param name="min_particles" value="1000" />
-    <param name="odom_alpha1" value="0.3" />
-    <param name="odom_alpha2" value="0.2" />
-    <param name="odom_alpha3" value="0.2" />
-    <param name="odom_alpha4" value="0.2" />
-    <param name="odom_alpha5" value="0.15" />
-    <param name="odom_frame_id" value="$(arg odom_frame_id)" />
-    <param name="odom_model_type" value="diff" />
-    <param name="global_frame_id" value="map" />
-    <param name="recovery_alpha_slow" value="0.001" />
-    <param name="recovery_alpha_fast" value="0.1" />
-    <param name="resample_interval" value="1" />
-    <param name="transform_tolerance" value="1.25" />
-    <param name="update_min_a" value="0.1" />
-    <param name="update_min_d" value="0.1" />
+
+    <!--
+      量测混合权重。当前更信任地图命中，保留少量随机量测容错。
+      likelihood_field 模式下 short/max 分量保持为 0。
+    -->
+    <param name="laser_z_hit" value="0.85" />
+    <param name="laser_z_rand" value="0.15" />
+    <param name="laser_z_short" value="0.0" />
+    <param name="laser_z_max" value="0.0" />
+    <param name="laser_lambda_short" value="0.1" />
+
+    <!-- 麦克纳姆底盘必须使用全向里程计模型，alpha5 用于横向平移噪声。 -->
+    <param name="odom_model_type" value="omni-corrected" />
+
+    <!--
+      里程计运动噪声系数。数值越大，AMCL 越不信任里程计、粒子扩散越快。
+      alpha1/2 主要描述旋转误差，alpha3/4 描述平移误差，alpha5 描述横移误差。
+    -->
+    <param name="odom_alpha1" value="0.12" />
+    <param name="odom_alpha2" value="0.08" />
+    <param name="odom_alpha3" value="0.12" />
+    <param name="odom_alpha4" value="0.08" />
+    <param name="odom_alpha5" value="0.18" />
+
+    <!--
+      关闭随机粒子注入恢复。当前依赖手动 2D Pose Estimate 或正常粒子收敛；
+      若以后需要“绑架恢复”，必须连同粒子数和地图质量一起重新实测。
+    -->
+    <param name="recovery_alpha_slow" value="0.0" />
+    <param name="recovery_alpha_fast" value="0.0" />
+
+    <!-- 每接收 2 帧激光执行一次重采样，降低粒子滤波计算量。 -->
+    <param name="resample_interval" value="2" />
+
+    <!-- AMCL 发布 map->odom TF 时允许的前向时间容差，单位 s。 -->
+    <param name="transform_tolerance" value="0.5" />
+
+    <!--
+      触发滤波更新所需的最小运动量：
+      update_min_a 单位 rad，update_min_d 单位 m。
+      调小会更灵敏但更耗 CPU，调大可能让低速运动时定位更新显得滞后。
+    -->
+    <param name="update_min_a" value="0.20" />
+    <param name="update_min_d" value="0.15" />
+
+    <!-- AMCL 节点内部订阅名 scan 统一接到实车 /scan。 -->
     <remap from="scan" to="/scan" />
   </node>
 </launch>

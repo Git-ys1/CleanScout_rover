@@ -1,22 +1,42 @@
 <launch>
+  <!-- RF1 最小底盘链参数入口。这里的速度上限与几何参数会直接影响实车。 -->
+
+  <!-- 串口首选稳定 by-id 名称，找不到时回退到 /dev/ttyUSB1。 -->
   <arg name="rf1_port" default="/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0" />
   <arg name="rf1_fallback_port" default="/dev/ttyUSB1" />
   <arg name="rf1_baud" default="115200" />
+
+  <!-- 下发频率 Hz 与 cmd_vel 失联停车时间 s。 -->
   <arg name="send_rate_hz" default="50.0" />
   <arg name="cmd_vel_timeout" default="0.4" />
+
+  <!-- publish_odom_tf 仅供下方已停用的内置 odom 节点保留。 -->
   <arg name="publish_odom_tf" default="true" />
+
+  <!--
+    C-4.1.2 封存的等效转向几何杠杆臂，单位 m。
+    k_m 同时影响角速度到四轮目标速度的换算，不等同于单纯轮距。
+  -->
   <arg name="k_m" default="0.1987" />
+
+  <!-- 轮速死区补偿。当前 0.0 表示不强行抬高低速轮目标。 -->
   <arg name="min_wheel_ms" default="0.0" />
+
+  <!-- 历史预留的最小命令参数，当前 launch 未传给 cmdvel_to_rf1.py。 -->
   <arg name="min_abs_vx_cmd" default="0.08" />
   <arg name="min_abs_vy_cmd" default="0.0" />
   <arg name="min_abs_wz_cmd" default="0.12" />
 
+  <!-- 将 geometry_msgs/Twist 转换为 RF1 四轮目标速度。 -->
   <node pkg="csrpi_base_bridge" type="cmdvel_to_rf1.py" name="cmdvel_to_rf1" output="screen">
+    <!-- 实测机械轴距/轮距记录；实际 yaw 换算以 k_m 为准。 -->
     <param name="wb_m" value="0.1905" />
     <param name="tw_m" value="0.1800" />
     <param name="k_m" value="$(arg k_m)" />
     <param name="publish_rate_hz" value="$(arg send_rate_hz)" />
     <param name="cmd_vel_timeout" value="$(arg cmd_vel_timeout)" />
+
+    <!-- RF1 转换层硬限幅，应与 safety_gate 保持一致或更保守。 -->
     <param name="max_vx" value="0.20" />
     <param name="max_vy" value="0.15" />
     <param name="max_wz" value="0.5" />
@@ -24,6 +44,7 @@
     <param name="max_wheel_ms" value="0.30" />
   </node>
 
+  <!-- RF1 USB 串口收发、重连与启动排空。 -->
   <node pkg="csrpi_base_bridge" type="rf1_serial_bridge.py" name="rf1_serial_bridge" output="screen">
     <param name="port" value="$(arg rf1_port)" />
     <param name="fallback_port" value="$(arg rf1_fallback_port)" />
@@ -34,7 +55,11 @@
     <param name="reconnect_delay" value="1.0" />
   </node>
 
- <!-- <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
+  <!--
+    内置 odom 节点已停用：PC 导航由 start_pc_full_navigation.sh 单独启动
+    rf1_vel_to_odom.py，避免树莓派与 PC 同时发布 odom/TF。
+  -->
+  <!-- <node pkg="csrpi_base_bridge" type="rf1_vel_to_odom.py" name="rf1_vel_to_odom" output="screen">
     <param name="k_m" value="$(arg k_m)" />
     <param name="odom_frame" value="odom" />
     <param name="base_frame" value="base_link" />
