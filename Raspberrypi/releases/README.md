@@ -1,25 +1,37 @@
 # Raspberry Pi Releases
 
-本目录用于按轮次存放树莓派侧发布结果。
+本目录按阶段保存 Raspberrypi / ROS Noetic 线的发布结论、验证证据和已知问题。
 
-目录命名规则：
+## 当前基线
 
-- `R-版本号_主题`
-- 示例：`R-0.0.1_serial_bridge_bootstrap`
+| 版本 | 日期 | 主题 | 记录 |
+| --- | --- | --- | --- |
+| `C-4.1.5` | 2026-06-06 | Raspberrypi 仓库分层 README 与入口治理 | [`C-4.1.5_raspberrypi_repository_governance.md`](C-4.1.5/C-4.1.5_raspberrypi_repository_governance.md) |
+| `C-4.1.4` | 2026-06-06 | TEB/AMCL/costmap 实车调优与参数注释治理 | [`C-4.1.4_navigation_tuning_and_parameter_cleanup.md`](C-4.1.4/C-4.1.4_navigation_tuning_and_parameter_cleanup.md) |
+| `C-4.1.3` | 2026-06-06 | TEB 导航正式基线 | [`C-4.1.3_teb_navigation_baseline.md`](C-4.1.3/C-4.1.3_teb_navigation_baseline.md) |
+| `C-4.1.2` | 2026-06-06 | RF1 转向几何与补充合并发布 | [`C-4.1.2_supplemental_merge_release.md`](C-4.1.2/C-4.1.2_supplemental_merge_release.md) |
 
-每轮最低要求：
+## 历史发布
 
-- `README.md`
-- 变更文件或脚本
-- 验证记录
-- 已知问题
+| 版本 | 主题 | 记录 |
+| --- | --- | --- |
+| `C-3.3.0` | 建图/导航分阶段启动状态 | [`C-3.3.0_staged_mapping_nav_startup_status.md`](C-3.3.0/C-3.3.0_staged_mapping_nav_startup_status.md) |
+| `C-3.2.4` | edge relay 主发布 | [`C-3.2.4_edge_relay_main_release.md`](C-3.2.4/C-3.2.4_edge_relay_main_release.md) |
+| `C-3.2.2` | RF1 速度契约对齐 | [`C-3.2.2_rf1_v_contract_alignment.md`](C-3.2.2/C-3.2.2_rf1_v_contract_alignment.md) |
+| `C-3.2.1` | RF1 Web 栈验证 | [`C-3.2.1_rf1_web_stack_validation.md`](C-3.2.1/C-3.2.1_rf1_web_stack_validation.md) |
+| `C-3.2.0` | RF1 最小桥验证 | [`C-3.2.0_rf1_min_bridge_validation.md`](C-3.2.0/C-3.2.0_rf1_min_bridge_validation.md) |
+| `C-3.1.7` | OpenRF1 USB 烟测 | [`C-3.1.7_openrf1_usb_smoketest.md`](C-3.1.7/C-3.1.7_openrf1_usb_smoketest.md) |
+| `C-2.3.5` | 运行时真实状态 | [`C-2.3.5_runtime_truth.md`](C-2.3.5/C-2.3.5_runtime_truth.md) |
+| `C-2.3.3` | SLAM 前检查清单 | [`C-2.3.3_pre_slam_checklist.md`](C-2.3.3/C-2.3.3_pre_slam_checklist.md) |
 
-不允许只放零散脚本而没有说明文档。
+更早的串口、A3 雷达、MPU6050、台架和风机验证记录继续保留在对应版本目录中。
 
-当前已存在的正式发布目录：
+## 发布规则
 
-- `C-2.2.1_noetic_handover`
-- `C-2.2.4_upper_lower_control_truth`
-- `C-4.1.2`
-- `C-4.1.3`
-- `C-4.1.4`
+| 项目 | 最低要求 |
+| --- | --- |
+| 目录 | 使用正式版本号，如 `C-4.1.5/` |
+| 记录 | 说明前序基线、范围、验证、已知问题和同步状态 |
+| 代码 | 不把 `build/`、`devel/`、rosbag、日志作为发布内容 |
+| 实车 | 明确是否执行运动测试、是否同步树莓派 |
+| 索引 | 新版本必须更新本页和 `Raspberrypi/README.md` |
