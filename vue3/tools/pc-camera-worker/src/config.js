@@ -58,6 +58,11 @@ export function loadConfig(argv = process.argv.slice(2)) {
   loadDotEnv()
 
   const mock = argv.includes('--mock') || parseBoolean(process.env.CAMERA_MOCK)
+  const uplinkMode = String(process.env.CAMERA_UPLINK_MODE || 'raw-mjpeg').trim().toLowerCase()
+
+  if (!['raw-mjpeg', 'jpeg-frame'].includes(uplinkMode)) {
+    throw new Error(`CAMERA_UPLINK_MODE must be raw-mjpeg or jpeg-frame, got ${uplinkMode}`)
+  }
 
   return {
     enabled: parseBoolean(process.env.CAMERA_WORKER_ENABLED, true),
@@ -66,8 +71,10 @@ export function loadConfig(argv = process.argv.slice(2)) {
     cameraId: required(process.env.CAMERA_ID || 'openmv-arm-cam-001', 'CAMERA_ID'),
     cameraSourceUrl: mock ? 'mock://local' : required(process.env.CAMERA_SOURCE_URL, 'CAMERA_SOURCE_URL'),
     cameraMode: String(process.env.CAMERA_MODE || 'mjpeg').trim().toLowerCase(),
-    targetFps: parseNumber(process.env.CAMERA_TARGET_FPS, 8, 1),
-    maxFrameBytes: parseNumber(process.env.CAMERA_MAX_FRAME_BYTES, 200000, 1024),
+    uplinkMode: mock ? 'jpeg-frame' : uplinkMode,
+    targetFps: parseNumber(process.env.CAMERA_TARGET_FPS, 20, 1),
+    maxFrameBytes: parseNumber(process.env.CAMERA_MAX_FRAME_BYTES, 500000, 1024),
+    maxCloudBufferedBytes: parseNumber(process.env.CAMERA_MAX_CLOUD_BUFFERED_BYTES, 2097152, 65536),
     cameraConnectTimeoutMs: parseNumber(process.env.CAMERA_CONNECT_TIMEOUT_MS, 3000, 500),
     cameraReadTimeoutMs: parseNumber(process.env.CAMERA_READ_TIMEOUT_MS, 8000, 1000),
     cloudWsUrl: required(process.env.CAMERA_CLOUD_WS, 'CAMERA_CLOUD_WS'),

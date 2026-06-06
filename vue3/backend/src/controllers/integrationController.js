@@ -3,6 +3,7 @@ import { getAsrStatus } from '../integrations/asr/service.js'
 import { getOpenClawStatus } from '../integrations/openclaw/service.js'
 import { getOpenMvSnapshot, getOpenMvStatus } from '../integrations/openmv/service.js'
 import { getRosStatus } from '../integrations/ros/index.js'
+import { getOpenClawAgentStatus } from '../services/openclawAgentService.js'
 import { createHttpError } from '../utils/response.js'
 import { resolveAuthenticatedUserByToken } from '../middleware/authRequired.js'
 import { getCameraConfig, isPushStreamMode } from '../camera/cameraConfig.js'
@@ -25,6 +26,10 @@ async function resolveOpenMvPreviewUser(req) {
 
 export async function openClawStatus(_req, res, next) {
   try {
+    if (String(process.env.OPENCLAW_ROUTE_MODE || '').trim() === 'pc-worker') {
+      return sendSuccess(res, getOpenClawAgentStatus())
+    }
+
     const status = await getOpenClawStatus()
     return sendSuccess(res, status)
   } catch (error) {

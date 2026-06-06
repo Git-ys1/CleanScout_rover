@@ -15,5 +15,5 @@ export function printDiagnostics(config) {
   console.log(`[diag] local ip list ${addresses.join(', ') || 'none'}`)
   console.log(`[diag] camera url ${config.mock ? 'mock' : config.cameraSourceUrl}`)
   console.log(`[diag] cloud ws url ${config.cloudWsUrl}`)
-  console.log(`[diag] device=${config.deviceId} camera=${config.cameraId} targetFps=${config.targetFps}`)
+  console.log(`[diag] device=${config.deviceId} camera=${config.cameraId} uplinkMode=${config.uplinkMode} targetFps=${config.targetFps}`)
 }

@@ -131,6 +131,25 @@ export function attachCameraIngestWsServer(server) {
             })
           }
 
+          if (cameraFrameHub.rawStreamActive) {
+            const chunk = cameraFrameHub.acceptRawChunk(
+              socket,
+              data,
+              Math.max(config.maxFrameBytes, config.rawSubscriberBufferBytes),
+              config.maxFrameBytes
+            )
+
+            if (chunk.seq === 1 || chunk.seq % 300 === 0) {
+              logCamera('raw-chunk-accepted', {
+                deviceId: cameraFrameHub.deviceId,
+                cameraId: cameraFrameHub.cameraId,
+                seq: chunk.seq,
+                bytes: chunk.bytes,
+              })
+            }
+            return
+          }
+
           const frame = cameraFrameHub.acceptFrame(socket, data, config.maxFrameBytes)
 
           if (frame.seq === 1 || frame.seq % 60 === 0) {
@@ -181,6 +200,21 @@ export function attachCameraIngestWsServer(server) {
             ok: true,
             deviceId: payload.deviceId,
             cameraId: payload.cameraId,
+            ts: Date.now(),
+          })
+          return
+        }
+
+        if (payload.type === 'CAMERA_STREAM_START') {
+          cameraFrameHub.startRawStream(socket, payload)
+          logCamera('raw-stream-started', {
+            deviceId: cameraFrameHub.deviceId,
+            cameraId: cameraFrameHub.cameraId,
+            contentType: payload.contentType || '',
+          })
+          safeSend(socket, {
+            type: 'CAMERA_STREAM_START_ACK',
+            ok: true,
             ts: Date.now(),
           })
           return

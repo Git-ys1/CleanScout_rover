@@ -32,6 +32,7 @@ function serializeMessage(message) {
 
 function buildTransport(result, status) {
   const agent = result.agent || {}
+  const timeoutMs = getChatTimeoutMs()
 
   return {
     mode: 'openclaw',
@@ -48,6 +49,9 @@ function buildTransport(result, status) {
     openclawReachable: true,
     latencyMs: result.latencyMs || 0,
     requestId: result.requestId || '',
+    timeoutMs,
+    realtimeStreaming: false,
+    displayStreaming: 'frontend-typewriter',
   }
 }
 
@@ -78,6 +82,10 @@ export function getOpenClawAgentStatus(deviceId = DEFAULT_DEVICE_ID) {
     status: healthStatus,
     activeTransport,
     apiMode: 'chat',
+    routeMode: normalizeString(process.env.OPENCLAW_ROUTE_MODE, 'pc-worker'),
+    chatTimeoutMs: getChatTimeoutMs(),
+    realtimeStreaming: false,
+    displayStreaming: 'frontend-typewriter',
     message: buildStatusMessage(status),
   }
 }
@@ -209,5 +217,7 @@ export async function sendOpenClawAgentChat(user, payload = {}) {
     replyMessage: serializeMessage(replyMessage),
     requestId: result.requestId || '',
     latencyMs: result.latencyMs || 0,
+    realtimeStreaming: false,
+    displayStreaming: 'frontend-typewriter',
   }
 }

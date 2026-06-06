@@ -147,7 +147,7 @@ http://localhost:5173
 正式图传链路：
 
 ```text
-ESP32-CAM -> UbuntuPC pc-camera-worker -> wss://api.hzhhds.top/edge/camera -> backend -> /api/integrations/openmv/stream -> H5
+ESP32-CAM -> UbuntuPC pc-camera-worker raw-mjpeg -> wss://api.hzhhds.top/edge/camera -> backend raw relay -> /api/integrations/openmv/stream -> H5
 ```
 
 云端 backend env 需要启用：
@@ -160,6 +160,10 @@ CAMERA_INGEST_PATH=/edge/camera
 CAMERA_INGEST_TOKEN=<与 UbuntuPC CAMERA_CLOUD_TOKEN 相同>
 CAMERA_ALLOWED_DEVICE_IDS=pc-001
 CAMERA_ALLOWED_CAMERA_IDS=openmv-arm-cam-001
+CAMERA_MAX_FRAME_BYTES=500000
+CAMERA_STREAM_INTERVAL_MS=50
+CAMERA_STREAM_HEARTBEAT_MS=1000
+CAMERA_RAW_SUBSCRIBER_BUFFER_BYTES=1048576
 CAMERA_MAX_VIEWERS=3
 ```
 
@@ -172,6 +176,17 @@ cp .env.example .env
 nano .env
 npm run start
 ```
+
+推荐帧率配置：
+
+```text
+CAMERA_UPLINK_MODE=raw-mjpeg
+CAMERA_TARGET_FPS=20
+CAMERA_MAX_FRAME_BYTES=500000
+CAMERA_MAX_CLOUD_BUFFERED_BYTES=2097152
+```
+
+V-2.2.2 后正式展示使用 `CAMERA_UPLINK_MODE=raw-mjpeg`：worker 直接转发 ESP32-CAM `/stream` 的原始 multipart 字节流，后端不再拆 JPEG 后重包。`CAMERA_TARGET_FPS=20` 只用于 `jpeg-frame` 兼容模式；`CAMERA_STREAM_INTERVAL_MS=50` 也只影响旧的最新帧输出循环。
 
 无真实 ESP32-CAM 时先跑：
 

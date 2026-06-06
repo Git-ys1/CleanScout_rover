@@ -19,6 +19,12 @@ function getDefaultTransport() {
     agentId: DEFAULT_AGENT_ID,
     pcWorkerOnline: false,
     openclawReachable: false,
+    pendingRequests: 0,
+    chatTimeoutMs: 0,
+    lastHeartbeatAgeMs: null,
+    routeMode: 'pc-worker',
+    realtimeStreaming: false,
+    displayStreaming: 'frontend-typewriter',
   }
 }
 
@@ -57,12 +63,48 @@ function buildTransportSystemMessage(transport) {
   const modeText = formatStatusText(transport?.mode, '未知链路')
   const statusText = formatStatusText(transport?.status, '未知状态')
   const apiText = formatStatusText(transport?.apiMode, '未知模式')
+  const streamingText = transport?.realtimeStreaming
+    ? '真流式返回'
+    : transport?.displayStreaming === 'frontend-typewriter'
+      ? '一次性返回，前端打字机展示'
+      : '一次性返回'
 
   if (transport?.fallback) {
-    return `当前链路已回退到${modeText}，状态为${statusText}，接口模式为${apiText}。`
+    return `当前链路已回退到${modeText}，状态为${statusText}，接口模式为${apiText}，展示方式为${streamingText}。`
   }
 
-  return `当前链路为${modeText}，状态为${statusText}，接口模式为${apiText}。`
+  return `当前链路为${modeText}，状态为${statusText}，接口模式为${apiText}，展示方式为${streamingText}。`
+}
+
+function isRecoverableOpenClawRequestError(error) {
+  const code = String(error?.code || '').toUpperCase()
+  const message = String(error?.message || '').toLowerCase()
+
+  return (
+    code === 'NETWORK_ERROR' ||
+    code === 'OPENCLAW_WORKER_TIMEOUT' ||
+    message.includes('timeout') ||
+    message.includes('request:fail') ||
+    message.includes('请求超时')
+  )
+}
+
+function formatOpenClawRequestError(error) {
+  const code = String(error?.code || '')
+
+  if (code === 'PC_OPENCLAW_WORKER_OFFLINE') {
+    return 'pc-openclaw-worker 当前离线，请先确认 UbuntuPC worker 已启动并连接云端。'
+  }
+
+  if (code === 'OPENCLAW_WORKER_TIMEOUT') {
+    return 'OpenClaw 回复超时，可能仍在本机生成。已尝试同步最新对话记录。'
+  }
+
+  if (code === 'NETWORK_ERROR') {
+    return '前端请求连接中断，后端可能仍在等待 worker 返回。已尝试同步最新对话记录。'
+  }
+
+  return error?.message || '消息发送失败，请稍后重试。'
 }
 
 function sleep(ms) {
@@ -109,6 +151,12 @@ export const useChatStore = defineStore('chat', {
         pcWorkerOnline: Boolean(status?.pcWorkerOnline),
         openclawReachable: Boolean(status?.openclawReachable),
         lastHeartbeatAt: status?.lastHeartbeatAt || '',
+        lastHeartbeatAgeMs: status?.lastHeartbeatAgeMs ?? null,
+        pendingRequests: status?.pendingRequests || 0,
+        chatTimeoutMs: status?.chatTimeoutMs || 0,
+        routeMode: status?.routeMode || 'pc-worker',
+        realtimeStreaming: Boolean(status?.realtimeStreaming),
+        displayStreaming: status?.displayStreaming || 'frontend-typewriter',
       })
 
       if (appendNotice) {
@@ -176,7 +224,7 @@ export const useChatStore = defineStore('chat', {
             createdAt: new Date().toISOString(),
           },
           {
-            displayText: '正在生成…',
+            displayText: '已发送到云端，正在等待 UbuntuPC worker 与 OpenClaw 返回…',
             streaming: true,
           }
         ),
@@ -215,8 +263,46 @@ export const useChatStore = defineStore('chat', {
 
         return result
       } catch (error) {
+        const recoverable = isRecoverableOpenClawRequestError(error)
+        const messageText = formatOpenClawRequestError(error)
+
+        if (recoverable) {
+          this.replaceMessage(
+            tempAssistantId,
+            createMessageViewModel(
+              {
+                id: tempAssistantId,
+                role: 'assistant',
+                content: messageText,
+                createdAt: new Date().toISOString(),
+              },
+              {
+                displayText: messageText,
+                streaming: false,
+              }
+            )
+          )
+          this.appendSystemMessage('如果 OpenClaw 稍后返回，页面会自动同步历史记录；无需切换页面手动刷新。', 'openclaw-recovering')
+
+          await sleep(1800)
+
+          try {
+            await this.loadHistory()
+            await this.syncTransportStatus({ appendNotice: false })
+            this.appendSystemMessage('已自动同步 OpenClaw 对话记录。', 'openclaw-history-sync')
+          } catch (_syncError) {
+            this.appendSystemMessage('自动同步历史记录失败，请稍后手动刷新对话页。', 'openclaw-history-sync-failed')
+          }
+
+          return {
+            ok: false,
+            recovered: true,
+            error,
+          }
+        }
+
         this.messages = this.messages.filter((message) => message.id !== tempAssistantId)
-        this.appendSystemMessage(error.message || '消息发送失败，请稍后重试。', 'send-error')
+        this.appendSystemMessage(messageText, 'send-error')
         throw error
       } finally {
         this.sending = false
