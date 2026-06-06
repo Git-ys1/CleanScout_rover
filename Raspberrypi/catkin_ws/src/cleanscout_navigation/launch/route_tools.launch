@@ -1,0 +1,7 @@
+<launch>
+  <arg name="routes_file" default="$(find cleanscout_navigation)/config/routes.yaml" />
+
+  <node pkg="cleanscout_navigation" type="route_executor.py" name="route_executor" output="screen">
+    <param name="routes_file" value="$(arg routes_file)" />
+  </node>
+</launch>

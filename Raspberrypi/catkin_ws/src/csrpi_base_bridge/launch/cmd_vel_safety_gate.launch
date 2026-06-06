@@ -5,7 +5,7 @@
   <arg name="rate" default="30" />
   <arg name="max_vx" default="0.20" />
   <arg name="max_vy" default="0.15" />
-  <arg name="max_wz" default="0.35" />
+  <arg name="max_wz" default="0.5" />
 
   <node pkg="csrpi_base_bridge" type="cmd_vel_safety_gate.py" name="cmd_vel_safety_gate" output="screen">
     <param name="input_topic" value="$(arg input_topic)" />

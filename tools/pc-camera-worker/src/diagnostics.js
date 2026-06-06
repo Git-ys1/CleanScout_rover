@@ -18,5 +18,5 @@ export function printDiagnostics(config) {
   console.log(`[diag] camera hmirror ${config.cameraHMirror === null ? 'unchanged' : config.cameraHMirror}`)
   console.log(`[diag] camera vflip ${config.cameraVFlip === null ? 'unchanged' : config.cameraVFlip}`)
   console.log(`[diag] cloud ws url ${config.cloudWsUrl}`)
-  console.log(`[diag] device=${config.deviceId} camera=${config.cameraId} targetFps=${config.targetFps}`)
+  console.log(`[diag] device=${config.deviceId} camera=${config.cameraId} uplinkMode=${config.uplinkMode} targetFps=${config.targetFps}`)
 }

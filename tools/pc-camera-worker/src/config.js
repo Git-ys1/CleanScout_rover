@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import os from 'node:os'
 import { resolve } from 'node:path'
 
 function loadDotEnv() {
@@ -72,23 +73,75 @@ function required(value, name) {
   return normalized
 }
 
+function getLocalIpv4() {
+  const interfaces = os.networkInterfaces()
+
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (entry.family === 'IPv4' && !entry.internal) {
+        return entry.address
+      }
+    }
+  }
+
+  return ''
+}
+
+function buildHostFromSuffix(ip, suffix) {
+  const parts = String(ip || '').trim().split('.')
+
+  if (parts.length !== 4 || !suffix) {
+    return ''
+  }
+
+  return `${parts[0]}.${parts[1]}.${parts[2]}.${suffix}`
+}
+
+function buildCameraSourceUrl() {
+  const explicitUrl = String(process.env.CAMERA_SOURCE_URL || '').trim()
+
+  if (explicitUrl) {
+    return explicitUrl
+  }
+
+  const hostSuffix = String(process.env.CAMERA_SOURCE_HOST_SUFFIX || '91').trim()
+  const port = String(process.env.CAMERA_SOURCE_PORT || '81').trim()
+  const path = String(process.env.CAMERA_SOURCE_PATH || '/stream').trim() || '/stream'
+  const localIp = getLocalIpv4()
+  const host = buildHostFromSuffix(localIp, hostSuffix)
+
+  if (!host) {
+    return ''
+  }
+
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return `http://${host}:${port}${normalizedPath}`
+}
+
 export function loadConfig(argv = process.argv.slice(2)) {
   loadDotEnv()
 
   const mock = argv.includes('--mock') || parseBoolean(process.env.CAMERA_MOCK)
+  const uplinkMode = String(process.env.CAMERA_UPLINK_MODE || 'raw-mjpeg').trim().toLowerCase()
+
+  if (!['raw-mjpeg', 'jpeg-frame'].includes(uplinkMode)) {
+    throw new Error(`CAMERA_UPLINK_MODE must be raw-mjpeg or jpeg-frame, got ${uplinkMode}`)
+  }
 
   return {
     enabled: parseBoolean(process.env.CAMERA_WORKER_ENABLED, true),
     mock,
     deviceId: required(process.env.DEVICE_ID || 'pc-001', 'DEVICE_ID'),
     cameraId: required(process.env.CAMERA_ID || 'openmv-arm-cam-001', 'CAMERA_ID'),
-    cameraSourceUrl: mock ? 'mock://local' : required(process.env.CAMERA_SOURCE_URL, 'CAMERA_SOURCE_URL'),
+    cameraSourceUrl: mock ? 'mock://local' : required(buildCameraSourceUrl(), 'CAMERA_SOURCE_URL'),
     cameraMode: String(process.env.CAMERA_MODE || 'mjpeg').trim().toLowerCase(),
     cameraFrameSize: Number.isFinite(Number(process.env.CAMERA_FRAMESIZE)) ? Number(process.env.CAMERA_FRAMESIZE) : null,
     cameraHMirror: parseOptionalFlag(process.env.CAMERA_HMIRROR),
     cameraVFlip: parseOptionalFlag(process.env.CAMERA_VFLIP),
-    targetFps: parseNumber(process.env.CAMERA_TARGET_FPS, 8, 1),
-    maxFrameBytes: parseNumber(process.env.CAMERA_MAX_FRAME_BYTES, 200000, 1024),
+    uplinkMode: mock ? 'jpeg-frame' : uplinkMode,
+    targetFps: parseNumber(process.env.CAMERA_TARGET_FPS, 20, 1),
+    maxFrameBytes: parseNumber(process.env.CAMERA_MAX_FRAME_BYTES, 500000, 1024),
+    maxCloudBufferedBytes: parseNumber(process.env.CAMERA_MAX_CLOUD_BUFFERED_BYTES, 2097152, 65536),
     cameraConnectTimeoutMs: parseNumber(process.env.CAMERA_CONNECT_TIMEOUT_MS, 3000, 500),
     cameraReadTimeoutMs: parseNumber(process.env.CAMERA_READ_TIMEOUT_MS, 8000, 1000),
     cloudWsUrl: required(process.env.CAMERA_CLOUD_WS, 'CAMERA_CLOUD_WS'),

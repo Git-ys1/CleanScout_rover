@@ -12,12 +12,13 @@ from tf2_ros import TransformBroadcaster
 
 class Rf1VelToOdom:
     def __init__(self):
-        self.k_m = float(rospy.get_param("~k_m", 0.129675))
+        self.k_m = float(rospy.get_param("~k_m", 0.1987))
         self.odom_frame = rospy.get_param("~odom_frame", "odom")
         self.base_frame = rospy.get_param("~base_frame", "base_link")
         self.publish_tf = bool(rospy.get_param("~publish_tf", False))
         self.base_yaw_offset = float(rospy.get_param("~base_yaw_offset", 0.0))
         self.publish_rate_hz = float(rospy.get_param("~publish_rate_hz", 30.0))
+        self.vel_timeout_sec = float(rospy.get_param("~vel_timeout_sec", 0.5))
 
         self.x = 0.0
         self.y = 0.0
@@ -26,10 +27,17 @@ class Rf1VelToOdom:
         self.last_vx = 0.0
         self.last_vy = 0.0
         self.last_wz = 0.0
+        self.last_vel_time = None
 
         self.odom_pub = rospy.Publisher("/odom", Odometry, queue_size=20)
         self.tf_pub = TransformBroadcaster() if self.publish_tf else None
         rospy.Subscriber("/rf1/vel", Float32MultiArray, self.callback, queue_size=20)
+        rospy.loginfo(
+            "rf1_vel_to_odom k_m=%.6f publish_rate_hz=%.1f vel_timeout_sec=%.2f",
+            self.k_m,
+            self.publish_rate_hz,
+            self.vel_timeout_sec,
+        )
 
     def callback(self, msg):
         data = list(msg.data)
@@ -45,12 +53,26 @@ class Rf1VelToOdom:
         self.last_vx = vx
         self.last_vy = vy
         self.last_wz = wz
+        self.last_vel_time = rospy.Time.now()
 
     def step(self):
         now = rospy.Time.now()
         vx = self.last_vx
         vy = self.last_vy
         wz = self.last_wz
+        if (
+            self.last_vel_time is None
+            or (now - self.last_vel_time).to_sec() > self.vel_timeout_sec
+        ):
+            if self.last_vel_time is not None:
+                rospy.logwarn_throttle(
+                    2.0,
+                    "rf1_vel_to_odom: /rf1/vel stale for %.3f s; publishing zero velocity",
+                    (now - self.last_vel_time).to_sec(),
+                )
+            vx = 0.0
+            vy = 0.0
+            wz = 0.0
 
         if self.last_time is None:
             self.last_time = now

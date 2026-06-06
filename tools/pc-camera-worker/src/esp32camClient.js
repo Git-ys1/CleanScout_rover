@@ -33,7 +33,7 @@ async function applyCameraControls(config) {
   await applyOne('framesize', config.cameraFrameSize)
 }
 
-export async function* readEsp32CamFrames(config) {
+export async function openEsp32CamStream(config) {
   await applyCameraControls(config)
 
   const controller = new AbortController()
@@ -61,7 +61,30 @@ export async function* readEsp32CamFrames(config) {
     console.warn(`[pc-camera-worker] unexpected camera content-type=${contentType}`)
   }
 
-  yield* parseJpegFrames(response.body, {
+  if (!response.body) {
+    throw Object.assign(new Error('ESP32-CAM stream response has no body'), {
+      code: 'CAMERA_SOURCE_EMPTY_BODY',
+    })
+  }
+
+  return {
+    contentType,
+    body: response.body,
+  }
+}
+
+export async function* readEsp32CamRawChunks(config) {
+  const stream = await openEsp32CamStream(config)
+
+  for await (const chunk of stream.body) {
+    yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+  }
+}
+
+export async function* readEsp32CamFrames(config) {
+  const stream = await openEsp32CamStream(config)
+
+  yield* parseJpegFrames(stream.body, {
     maxFrameBytes: config.maxFrameBytes,
     readTimeoutMs: config.cameraReadTimeoutMs,
   })

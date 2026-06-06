@@ -3,7 +3,17 @@ set -e
 
 # ===== CleanScout Pi ROS network config =====
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PI_IP="10.140.112.84"
+
+get_pi_ip() {
+  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
+}
+
+PI_IP="$(get_pi_ip)"
+
+if [ -z "${PI_IP}" ]; then
+  echo "Failed to detect Raspberry Pi local IPv4 address" >&2
+  return 1 2>/dev/null || exit 1
+fi
 
 source /opt/ros/noetic/setup.bash
 

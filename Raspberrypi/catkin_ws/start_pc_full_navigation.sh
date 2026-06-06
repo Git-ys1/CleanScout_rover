@@ -17,6 +17,9 @@ VEL_TOPIC="${VEL_TOPIC:-/rf1/vel}"
 ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 MAP_FILE="${MAP_FILE:-$(rospack find clbrobot)/maps/407-5.22-2120.yaml}"
 USE_LASER_SCAN_MATCHER="${USE_LASER_SCAN_MATCHER:-0}"
+# Effective yaw lever arm used to reconstruct angular velocity from measured
+# wheel linear speeds. This is independent from command-side turn tuning.
+ODOM_K_M="${ODOM_K_M:-0.1987}"
 
 wait_for_topic() {
   local topic="$1"
@@ -62,11 +65,13 @@ if [ "${USE_LASER_SCAN_MATCHER}" = "1" ]; then
     pose_out_topic:=/pose2D_lsm &
   LSM_PID=$!
 else
+  echo "Starting RF1 encoder odom with ODOM_K_M=${ODOM_K_M}"
   rosrun csrpi_base_bridge rf1_vel_to_odom.py \
-    _k_m:=0.129675 \
+    _k_m:="${ODOM_K_M}" \
     _odom_frame:=odom \
     _base_frame:=base_link \
     _publish_tf:=true \
+    _vel_timeout_sec:=0.5 \
     _publish_rate_hz:=30 &
   ODOM_PID=$!
 fi

@@ -12,7 +12,22 @@ GATE_LOG="/tmp/c331_nav_multi_gate.log"
 FAN_LOG="/tmp/c331_nav_multi_fan.log"
 EDGE_LOG="/tmp/c331_nav_multi_edge.log"
 EDGE_URL="wss://api.hzhhds.top/edge/ros"
-EDGE_FALLBACK_URL="ws://10.156.250.190:3000/edge/ros"
+
+get_current_ip() {
+  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
+}
+
+build_host_from_suffix() {
+  local ip="$1"
+  local suffix="$2"
+  IFS='.' read -r o1 o2 o3 _ <<< "${ip}"
+  printf '%s.%s.%s.%s' "${o1}" "${o2}" "${o3}" "${suffix}"
+}
+
+CURRENT_IP="$(get_current_ip)"
+EDGE_FALLBACK_HOST_SUFFIX="${EDGE_FALLBACK_HOST_SUFFIX:-190}"
+EDGE_FALLBACK_HOST="${EDGE_FALLBACK_HOST:-$(build_host_from_suffix "${CURRENT_IP}" "${EDGE_FALLBACK_HOST_SUFFIX}")}"
+EDGE_FALLBACK_URL="${EDGE_FALLBACK_URL:-ws://${EDGE_FALLBACK_HOST}:3000/edge/ros}"
 EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK="3"
 EDGE_DEVICE_ID="csrpi-001"
 EDGE_DEVICE_TOKEN="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2"

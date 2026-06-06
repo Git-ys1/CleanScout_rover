@@ -11,7 +11,22 @@ MAPPING_LOG="/tmp/c331_mapping_406.log"
 EDGE_RELAY_LOG="/tmp/c331_edge_relay.log"
 
 ENABLE_EDGE_RELAY="${ENABLE_EDGE_RELAY:-1}"
-EDGE_RELAY_URL="${EDGE_RELAY_URL:-ws://10.22.7.190:3000/edge/ros}"
+
+get_current_ip() {
+  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
+}
+
+build_host_from_suffix() {
+  local ip="$1"
+  local suffix="$2"
+  IFS='.' read -r o1 o2 o3 _ <<< "${ip}"
+  printf '%s.%s.%s.%s' "${o1}" "${o2}" "${o3}" "${suffix}"
+}
+
+CURRENT_IP="$(get_current_ip)"
+EDGE_RELAY_HOST_SUFFIX="${EDGE_RELAY_HOST_SUFFIX:-190}"
+EDGE_RELAY_HOST="${EDGE_RELAY_HOST:-$(build_host_from_suffix "${CURRENT_IP}" "${EDGE_RELAY_HOST_SUFFIX}")}"
+EDGE_RELAY_URL="${EDGE_RELAY_URL:-ws://${EDGE_RELAY_HOST}:3000/edge/ros}"
 EDGE_DEVICE_ID="${EDGE_DEVICE_ID:-csrpi-001}"
 EDGE_DEVICE_TOKEN="${EDGE_DEVICE_TOKEN:-}"
 EDGE_HEARTBEAT_MS="${EDGE_HEARTBEAT_MS:-5000}"

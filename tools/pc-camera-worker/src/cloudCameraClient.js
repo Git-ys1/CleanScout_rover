@@ -104,8 +104,20 @@ export class CloudCameraClient {
       cameraId: this.config.cameraId,
       source: 'esp32-cam-sta',
       cameraUrl: this.config.cameraSourceUrl,
-      mode: this.config.cameraMode,
-      workerVersion: 'V-2.2.0',
+      mode: this.config.uplinkMode,
+      sourceMode: this.config.cameraMode,
+      workerVersion: 'V-2.2.2',
+      ts: nowTs(),
+    })
+  }
+
+  startRawStream(extra = {}) {
+    return this.sendJson({
+      type: 'CAMERA_STREAM_START',
+      deviceId: this.config.deviceId,
+      cameraId: this.config.cameraId,
+      mode: 'raw-mjpeg',
+      contentType: extra.contentType || '',
       ts: nowTs(),
     })
   }
@@ -126,6 +138,11 @@ export class CloudCameraClient {
 
   sendFrame(frame) {
     if (!this.isOpen()) {
+      return false
+    }
+
+    if (this.socket.bufferedAmount > this.config.maxCloudBufferedBytes) {
+      this.lastError = `cloud websocket buffered too much data: ${this.socket.bufferedAmount}`
       return false
     }
 

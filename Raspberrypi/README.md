@@ -58,7 +58,17 @@
 - 电脑端运行 gmapping 建图
 - 地图可直接保存到电脑本地工作区
 
-### 6. 接入第一版 URDF / robot_state_publisher
+### 6. 明确第二模式转弯参数归属
+
+- 树莓派第二模式使用 `RF1_CMD_K_M` 控制 `/cmd_vel` 到四轮目标速度
+- 电脑两个第二模式入口使用 `ODOM_K_M` 从 `/rf1/vel` 反解 `/odom`
+- 2026-06-06 实车基线为 `RF1_CMD_K_M=0.1987`、`RF1_MIN_WHEEL_MS=0.0`、
+  `ODOM_K_M=0.1987`，都可在启动前覆盖
+- 可运行 `catkin_ws/calibrate_rf1_turn.sh left|right [wz] [seconds]` 复测；
+  工具会比较编码器、去零偏 IMU 和纯雷达匹配角，并在 `/tmp` 保存 rosbag
+- 标定换算：`新 ODOM_K_M = 旧 ODOM_K_M * odom 显示角度 / 实际角度`
+
+### 7. 接入第一版 URDF / robot_state_publisher
 
 - 已根据实车测量值建立第一版几何模型
 - 已将 `laser` / `imu_link` 纳入 `robot_state_publisher`
@@ -157,6 +167,8 @@ cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
 2. 不提交 `Raspberrypi/catkin_ws/devel/`
 3. 地图文件是否纳入版本库需要按阶段确认
 4. 正式汇报 / 可研报告时，应优先展示第二模式与建图第二模式成果
+5. 当前补充合并发布为 `C-4.1.2`，记录见
+   `releases/C-4.1.2/C-4.1.2_supplemental_merge_release.md`
 
 ## 六、参考文档
 

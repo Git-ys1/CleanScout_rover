@@ -1,0 +1,26 @@
+routes:
+  lab_test_2point:
+    description: 'Minimal test route: home -> point_A -> home'
+    map: 407-5.22-2120
+    points:
+    - name: home
+      x: 0.009
+      y: 0.001
+      yaw: -0.007
+      tolerance_xy: 0.2
+      tolerance_yaw: 0.3
+      pause_sec: 0.0
+    - name: point_A
+      x: 0.887
+      y: -0.063
+      yaw: 0.22
+      tolerance_xy: 0.2
+      tolerance_yaw: 0.3
+      pause_sec: 0.0
+    - name: home_return
+      x: 1.819
+      y: -0.048
+      yaw: 0.037
+      tolerance_xy: 0.2
+      tolerance_yaw: 0.3
+      pause_sec: 1.0

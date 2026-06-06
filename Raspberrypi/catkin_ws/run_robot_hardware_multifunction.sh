@@ -3,7 +3,22 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EDGE_URL="wss://api.hzhhds.top/edge/ros"
-EDGE_FALLBACK_URL="ws://10.156.250.190:3000/edge/ros"
+
+get_current_ip() {
+  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
+}
+
+build_host_from_suffix() {
+  local ip="$1"
+  local suffix="$2"
+  IFS='.' read -r o1 o2 o3 _ <<< "${ip}"
+  printf '%s.%s.%s.%s' "${o1}" "${o2}" "${o3}" "${suffix}"
+}
+
+CURRENT_IP="$(get_current_ip)"
+EDGE_FALLBACK_HOST_SUFFIX="${EDGE_FALLBACK_HOST_SUFFIX:-190}"
+EDGE_FALLBACK_HOST="${EDGE_FALLBACK_HOST:-$(build_host_from_suffix "${CURRENT_IP}" "${EDGE_FALLBACK_HOST_SUFFIX}")}"
+EDGE_FALLBACK_URL="${EDGE_FALLBACK_URL:-ws://${EDGE_FALLBACK_HOST}:3000/edge/ros}"
 EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK="3"
 EDGE_DEVICE_ID="csrpi-001"
 EDGE_DEVICE_TOKEN="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2"
@@ -13,6 +28,10 @@ EDGE_ALLOW_MANUAL_CONTROL="${EDGE_ALLOW_MANUAL_CONTROL:-true}"
 EDGE_PUBLISH_CMD_VEL="${EDGE_PUBLISH_CMD_VEL:-true}"
 EDGE_TOGGLE_MOTION_ENABLED="${EDGE_TOGGLE_MOTION_ENABLED:-true}"
 EDGE_ALLOW_FAN_CONTROL="${EDGE_ALLOW_FAN_CONTROL:-true}"
+# Command-side yaw gain. Keep it explicit because encoder odom on the PC uses
+# a separately calibrated ODOM_K_M to reconstruct actual angular velocity.
+RF1_CMD_K_M="${RF1_CMD_K_M:-0.1987}"
+RF1_MIN_WHEEL_MS="${RF1_MIN_WHEEL_MS:-0.0}"
 
 source "${SCRIPT_DIR}/use_cleanscout_pi.sh"
 
@@ -81,7 +100,10 @@ sleep 1
 roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/robot_state_publisher.launch" &
 RSP_PID=$!
 
-roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.launch" &
+echo "Starting RF1 command bridge with RF1_CMD_K_M=${RF1_CMD_K_M} RF1_MIN_WHEEL_MS=${RF1_MIN_WHEEL_MS}"
+roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.launch" \
+  k_m:="${RF1_CMD_K_M}" \
+  min_wheel_ms:="${RF1_MIN_WHEEL_MS}" &
 BRINGUP_PID=$!
 wait_for_topic "/rf1/vel"
 

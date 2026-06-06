@@ -8,7 +8,7 @@ class CmdvelToRf1:
     def __init__(self):
         self.wb_m = float(rospy.get_param("~wb_m", 0.1905))
         self.tw_m = float(rospy.get_param("~tw_m", 0.1800))
-        self.k_m = float(rospy.get_param("~k_m", 0.18525))
+        self.k_m = float(rospy.get_param("~k_m", 0.1987))
 
         self.publish_rate_hz = float(rospy.get_param("~publish_rate_hz", 50.0))
         self.cmd_vel_timeout = float(rospy.get_param("~cmd_vel_timeout", 0.4))
@@ -17,7 +17,7 @@ class CmdvelToRf1:
         self.max_vy = float(rospy.get_param("~max_vy", 0.15))
         self.max_wz = float(rospy.get_param("~max_wz", 0.35))
 
-        self.min_wheel_ms = float(rospy.get_param("~min_wheel_ms", 0.03))
+        self.min_wheel_ms = float(rospy.get_param("~min_wheel_ms", 0.0))
         self.max_wheel_ms = float(rospy.get_param("~max_wheel_ms", 0.35))
 
         self.last_cmd = Twist()
