@@ -2,15 +2,15 @@ TrajectoryPlannerROS:
   holonomic_robot: false
   y_vels: [0.0]
 
-  max_vel_x: 0.16
+  max_vel_x: 0.25
   min_vel_x: 0.05
 
-  max_rotational_vel: 0.25
-  min_in_place_rotational_vel: 0.18
+  max_rotational_vel: 0.40
+  min_in_place_rotational_vel: 0.30
 
   # Keep aliases for readability with older notes.
-  max_vel_theta: 0.25
-  min_in_place_vel_theta: 0.18
+  max_vel_theta: 0.40
+  min_in_place_vel_theta: 0.30
 
   acc_lim_x: 0.35
   acc_lim_y: 0.0
@@ -20,7 +20,7 @@ TrajectoryPlannerROS:
   yaw_goal_tolerance: 0.60
   latch_xy_goal_tolerance: true
 
-  sim_time: 1.5
+  sim_time: 2.0
   sim_granularity: 0.05
   angular_sim_granularity: 0.05
 

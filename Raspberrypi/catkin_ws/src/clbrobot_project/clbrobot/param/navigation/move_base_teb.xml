@@ -1,0 +1,23 @@
+<launch>
+  <arg name="cmd_vel_topic" default="/cmd_vel_nav" />
+  <arg name="local_odom_frame" default="odom" />
+  <arg name="odom_topic" default="/odom" />
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <!-- Reuse the measured mecanum footprint and established costmap layers. -->
+    <rosparam file="$(find clbrobot)/param/navigation/costmap_mecanum_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find clbrobot)/param/navigation/costmap_mecanum_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find clbrobot)/param/navigation/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find clbrobot)/param/navigation/global_costmap_params.yaml" command="load" />
+
+    <rosparam file="$(find clbrobot)/param/navigation/teb_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find clbrobot)/param/navigation/move_base_teb_params.yaml" command="load" />
+
+    <!-- Keep frame and topic overrides aligned with the selected odometry chain. -->
+    <param name="local_costmap/global_frame" value="$(arg local_odom_frame)" />
+    <param name="TebLocalPlannerROS/odom_topic" value="$(arg odom_topic)" />
+
+    <!-- move_base -> /cmd_vel_nav -> safety_gate -> /cmd_vel -->
+    <remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
+  </node>
+</launch>

@@ -9,6 +9,10 @@ Raspberrypi/catkin_ws/.catkin_workspace
 Raspberrypi/catkin_ws/frames.gv
 Raspberrypi/catkin_ws/frames.pdf
 
+# Local dependency clones kept outside catkin's source space.
+Raspberrypi/catkin_ws/csm/
+Raspberrypi/catkin_ws/move_base_flex/
+
 # Local large/reference packages and generated artifacts that are not published.
 *.img.xz
 *.torrent

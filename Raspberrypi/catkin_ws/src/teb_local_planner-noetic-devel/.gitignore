@@ -1,0 +1,5 @@
+# Hidden files for different IDE (exclude this file)
+!.gitignore
+.*
+*.kdev4
+cmake-build-debug

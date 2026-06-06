@@ -1,6 +1,7 @@
 <launch>
   <arg name="cmd_vel_topic" default="/cmd_vel" />
   <arg name="local_odom_frame" default="odom_lsm" />
+  <arg name="odom_topic" default="/odom_lsm" />
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find clbrobot)/param/navigation/costmap_$(env CLBBASE)_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find clbrobot)/param/navigation/costmap_$(env CLBBASE)_params.yaml" command="load" ns="local_costmap" />
@@ -9,6 +10,7 @@
     <rosparam file="$(find clbrobot)/param/navigation/base_local_planner_params.yaml" command="load" />
     <rosparam file="$(find clbrobot)/param/navigation/move_base_params.yaml" command="load" />
     <param name="local_costmap/global_frame" value="$(arg local_odom_frame)" />
+    <param name="TrajectoryPlannerROS/odom_topic" value="$(arg odom_topic)" />
     <remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
   </node>
 </launch>

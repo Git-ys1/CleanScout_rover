@@ -17,6 +17,7 @@ VEL_TOPIC="${VEL_TOPIC:-/rf1/vel}"
 ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 MAP_FILE="${MAP_FILE:-$(rospack find clbrobot)/maps/407-5.22-2120.yaml}"
 USE_LASER_SCAN_MATCHER="${USE_LASER_SCAN_MATCHER:-0}"
+NAV_LAUNCH="${NAV_LAUNCH:-navigation_406_rf1_teb.launch}"
 # Effective yaw lever arm used to reconstruct angular velocity from measured
 # wheel linear speeds. This is independent from command-side turn tuning.
 ODOM_K_M="${ODOM_K_M:-0.1987}"
@@ -78,9 +79,10 @@ fi
 
 wait_for_topic "${ODOM_TOPIC}"
 
-roslaunch clbrobot navigation_406_rf1.launch \
+roslaunch clbrobot "${NAV_LAUNCH}" \
   map_file:="${MAP_FILE}" \
   odom_frame_id:="${ODOM_TOPIC#/}" \
+  odom_topic:="${ODOM_TOPIC}" \
   cmd_vel_topic:=/cmd_vel_nav &
 NAV_PID=$!
 

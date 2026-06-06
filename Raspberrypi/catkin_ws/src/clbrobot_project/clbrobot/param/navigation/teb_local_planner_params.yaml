@@ -1,0 +1,116 @@
+TebLocalPlannerROS:
+
+  # =========================
+  # 基础输入
+  # =========================
+  # The navigation launch contract may override this together with ODOM_TOPIC.
+  odom_topic: /odom
+  map_frame: map
+
+  # =========================
+  # 机器人速度/加速度限制
+  # 这里要和 safety_gate / cmdvel_to_rf1 限速一致或略低
+  # =========================
+  max_vel_x: 0.25
+  max_vel_x_backwards: 0.10
+  max_vel_y: 0.10
+  max_vel_trans: 0.25
+  max_vel_theta: 0.40
+
+  acc_lim_x: 0.20
+  acc_lim_y: 0.15
+  acc_lim_theta: 0.30
+
+  # 全向轮/麦轮不是阿克曼车，不需要转弯半径约束
+  min_turning_radius: 0.0
+  wheelbase: 0.0
+  cmd_angle_instead_rotvel: false
+
+  # =========================
+  # 目标容差
+  # =========================
+  xy_goal_tolerance: 0.12
+  yaw_goal_tolerance: 0.35
+  free_goal_vel: false
+  complete_global_plan: true
+
+  # =========================
+  # 轨迹采样
+  # =========================
+  teb_autosize: true
+  dt_ref: 0.30
+  dt_hysteresis: 0.10
+  min_samples: 3
+  max_samples: 500
+
+  global_plan_overwrite_orientation: true
+  max_global_plan_lookahead_dist: 1.5
+  global_plan_viapoint_sep: 0.20
+  force_reinit_new_goal_dist: 0.5
+  feasibility_check_no_poses: 5
+  publish_feedback: true
+
+  # =========================
+  # 障碍物
+  # =========================
+  min_obstacle_dist: 0.12
+  inflation_dist: 0.22
+  include_costmap_obstacles: true
+  costmap_obstacles_behind_robot_dist: 0.60
+  obstacle_poses_affected: 15
+
+  legacy_obstacle_association: false
+  obstacle_association_force_inclusion_factor: 1.5
+  obstacle_association_cutoff_factor: 5.0
+
+  # =========================
+  # 优化权重
+  # 重点：weight_kinematics_nh 不要太大，否则会把横移压没
+  # =========================
+  no_inner_iterations: 5
+  no_outer_iterations: 4
+  optimization_activate: true
+  optimization_verbose: false
+
+  penalty_epsilon: 0.03
+
+  weight_max_vel_x: 2.0
+  weight_max_vel_y: 2.0
+  weight_max_vel_theta: 1.0
+
+  weight_acc_lim_x: 1.0
+  weight_acc_lim_y: 1.0
+  weight_acc_lim_theta: 1.0
+
+  weight_kinematics_nh: 1.0
+  weight_kinematics_forward_drive: 0.3
+  weight_kinematics_turning_radius: 0.0
+
+  weight_optimaltime: 1.0
+  weight_obstacle: 50.0
+  weight_inflation: 0.2
+  weight_viapoint: 1.0
+  weight_adapt_factor: 2.0
+
+  # =========================
+  # 多拓扑规划
+  # 先关掉，降低调参复杂度和 CPU 压力
+  # =========================
+  enable_homotopy_class_planning: false
+  enable_multithreading: true
+  max_number_classes: 2
+
+  selection_cost_hysteresis: 1.0
+  selection_prefer_initial_plan: 0.95
+  selection_obst_cost_scale: 1.0
+  selection_alternative_time_cost: false
+
+  # =========================
+  # 恢复行为
+  # =========================
+  shrink_horizon_backup: true
+  shrink_horizon_min_duration: 5.0
+  oscillation_recovery: true
+  oscillation_v_eps: 0.06
+  oscillation_omega_eps: 0.06
+  oscillation_recovery_min_duration: 5.0
