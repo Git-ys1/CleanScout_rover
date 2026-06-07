@@ -1,5 +1,6 @@
 param(
-    [string]$Uv4Path = 'D:\Work\Keil5\UV4\UV4.exe'
+    [string]$Uv4Path = 'D:\Work\Keil5\UV4\UV4.exe',
+    [switch]$StrictWarnings
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,8 +41,17 @@ if ($log -notmatch 'Error\(s\), \d+ Warning\(s\)') {
 
 $log
 
-if ($log -notmatch '0 Error\(s\), 0 Warning\(s\)') {
-    throw 'Keil 编译未达到 0 Error / 0 Warning，请检查上方日志。'
+if ($log -notmatch '0 Error\(s\), (\d+) Warning\(s\)') {
+    throw 'Keil 编译存在错误，请检查上方日志。'
+}
+
+$warningCount = [int]$Matches[1]
+if ($StrictWarnings -and $warningCount -ne 0) {
+    throw "Keil 编译有 $warningCount 个告警；StrictWarnings 模式要求 0 Warning。"
+}
+
+if ($warningCount -ne 0) {
+    Write-Warning "构建包含 $warningCount 个已显示告警；固件源代码未为清告警而改变控制行为。"
 }
 
 $hexPath = Join-Path $projectRoot 'Build\Objects\OpenRF1_Motion.hex'

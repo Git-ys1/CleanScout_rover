@@ -1,11 +1,10 @@
 #include "main.h"
 
 /*
- * OpenRF1 底盘运行模式。
- *
- * STOP        ：四路立即停止，控制状态清零；
- * RAW         ：M 命令直接给某一路原始 PWM，仅用于底层诊断；
- * CLOSED_LOOP ：W 命令锁存四轮目标速度，50Hz 增量 PI 持续跟踪。
+ * OpenRF1 底盘有三种运行模式：
+ * STOP：停车并等待命令；
+ * RAW：M 命令直接控制单通道 PWM，用于底层诊断；
+ * CLOSED_LOOP：W 命令锁存四轮目标速度并运行 50Hz 增量 PI。
  */
 typedef enum
 {
@@ -21,54 +20,48 @@ static uint32_t g_last_command_ms = 0;
 static uint32_t g_last_control_ms = 0;
 static uint32_t g_last_telemetry_ms = 0;
 
-/* 电机执行状态。 */
 static int16_t g_raw_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 static int16_t g_output_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 
 /*
- * 速度闭环状态。
- *
- * cmd  ：串口 W 命令的原始目标；
- * ramp ：经过加速度限制后，真正交给 PI 的目标；
- * measured/filtered：编码器速度及其低通结果。
+ * 速度状态说明：
+ * g_target_vel_cmd  是 W 命令目标；
+ * g_smooth_target_vel（定义在控制函数前）才是当前实车 PI 实际使用目标；
+ * g_target_vel_ramp 是 C-3.5.0 遥测兼容字段，当前控制路径未使用它。
+ * 此处保留原实现，不在工程迁移轮次顺手改变控制行为。
  */
 static float g_target_vel_cmd[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_target_vel_ramp[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_measured_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-
 /*
- * 增量 PI 状态。
- *
- * g_pi_output_accum 保存累计 PWM，不是传统位置式 PI 的“积分误差”。
- * 这个命名能避免后续维护者把它误当成 error*dt 再做一次积分。
+ * 名称沿用历史代码。当前 g_integral_state 实际保存“累计 PWM 输出”，
+ * 不是传统位置式 PI 中单纯的误差积分。
  */
-static float g_pi_output_accum[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-/* NAVDBG 使用的诊断缓存。增量 PI 没有独立前馈，因此 ff 始终为 0。 */
 static float g_debug_ff_pwm[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-static float g_debug_pid_increment[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
+static float g_debug_pid_correction[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static uint8_t g_debug_saturated[CSR_CHANNEL_COUNT] = {0U, 0U, 0U, 0U};
 
-/*
- * 四个电机型号一致，控制参数保持一致。
- * 数组顺序固定为 CN1/LR、CN2/LF、CN3/RR、CN4/RF。
- */
-static const float g_kp[CSR_CHANNEL_COUNT] =
-{
+/* 四轮统一参数，数组顺序固定为 CN1/LR、CN2/LF、CN3/RR、CN4/RF。 */
+static float g_kp[CSR_CHANNEL_COUNT] = {
     CSR_PI_KP_DEFAULT,
     CSR_PI_KP_DEFAULT,
     CSR_PI_KP_DEFAULT,
     CSR_PI_KP_DEFAULT
 };
-
-static const float g_ki[CSR_CHANNEL_COUNT] =
-{
+static float g_ki[CSR_CHANNEL_COUNT] = {
     CSR_PI_KI_DEFAULT,
     CSR_PI_KI_DEFAULT,
     CSR_PI_KI_DEFAULT,
     CSR_PI_KI_DEFAULT
+};
+static float g_kd[CSR_CHANNEL_COUNT] = {
+    CSR_PI_KD_DEFAULT,
+    CSR_PI_KD_DEFAULT,
+    CSR_PI_KD_DEFAULT,
+    CSR_PI_KD_DEFAULT
 };
 
 static uint32_t csr_millis(void)
@@ -83,7 +76,11 @@ void SysTick_Handler(void)
 
 static float csr_absf(float value)
 {
-    return (value < 0.0f) ? -value : value;
+    if (value < 0.0f)
+    {
+        return -value;
+    }
+    return value;
 }
 
 static float csr_clampf(float value, float min_value, float max_value)
@@ -99,9 +96,31 @@ static float csr_clampf(float value, float min_value, float max_value)
     return value;
 }
 
+static int16_t csr_slew_i16(int16_t current, int16_t target, int16_t step)
+{
+    if (step < 1)
+    {
+        step = 1;
+    }
+
+    if (target > (int16_t)(current + step))
+    {
+        return (int16_t)(current + step);
+    }
+    if (target < (int16_t)(current - step))
+    {
+        return (int16_t)(current - step);
+    }
+    return target;
+}
+
 static int16_t csr_float_to_pwm(float value)
 {
-    return (value >= 0.0f) ? (int16_t)(value + 0.5f) : (int16_t)(value - 0.5f);
+    if (value >= 0.0f)
+    {
+        return (int16_t)(value + 0.5f);
+    }
+    return (int16_t)(value - 0.5f);
 }
 
 static void csr_systick_init(void)
@@ -109,13 +128,12 @@ static void csr_systick_init(void)
     SysTick_Config(SystemCoreClock / 1000U);
 }
 
-/*
- * CN3 编码器使用 TIM2 全重映射后的 PA15/PB3。
- * 必须在所有 GPIO/编码器初始化之前关闭 JTAG、保留 SWD，才能释放
- * PA15/PB3，同时继续使用 STLink 下载与调试。
- */
 static void csr_init_debug_ports(void)
 {
+    /*
+     * CN3 编码器使用 TIM2 全重映射后的 PA15/PB3。
+     * 必须先关闭 JTAG、保留 SWD，才能释放这两个引脚且继续使用 STLink。
+     */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
     GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 }
@@ -126,12 +144,12 @@ static void csr_clear_pi_state(void)
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
-        g_pi_output_accum[index] = 0.0f;
+        g_integral_state[index] = 0.0f;
         g_prev_error[index] = 0.0f;
         g_filtered_vel[index] = 0.0f;
         g_measured_vel[index] = 0.0f;
         g_debug_ff_pwm[index] = 0.0f;
-        g_debug_pid_increment[index] = 0.0f;
+        g_debug_pid_correction[index] = 0.0f;
         g_debug_saturated[index] = 0U;
     }
 }
@@ -174,17 +192,22 @@ static void csr_stop_all(void)
     g_control_mode = CSR_MODE_STOP;
 }
 
-/* 上电自动前进仅用于架空排障，正式配置默认不会编入有效动作。 */
 static void csr_start_boot_forward_test(void)
 {
 #if CSR_BOOT_FORWARD_TEST_ENABLE
     uint8_t index;
 
-    csr_stop_all();
+    csr_clear_velocity_targets();
+    csr_clear_raw_targets();
+    csr_clear_pi_state();
+
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         g_target_vel_cmd[index] = CSR_BOOT_FORWARD_TEST_SPEED_MPS;
+        g_target_vel_ramp[index] = 0.0f;
+        g_output_pwm[index] = 0;
     }
+
     g_control_mode = CSR_MODE_CLOSED_LOOP;
     g_last_command_ms = csr_millis();
 #endif
@@ -220,17 +243,13 @@ static uint8_t csr_target_sign_reversed(float previous, float next)
 
 static void csr_reset_channel_pi_state(csr_channel_t channel)
 {
-    g_pi_output_accum[channel] = 0.0f;
+    g_integral_state[channel] = 0.0f;
     g_prev_error[channel] = 0.0f;
     g_output_pwm[channel] = 0;
-    g_debug_pid_increment[channel] = 0.0f;
-    g_debug_saturated[channel] = 0U;
 }
 
-static float csr_ramp_target(float current, float target)
+static float csr_ramp_target(float current, float target, float step_limit)
 {
-    const float step_limit = CSR_WHEEL_DV_PER_TICK;
-
     if (target > current)
     {
         current += step_limit;
@@ -251,110 +270,106 @@ static float csr_ramp_target(float current, float target)
     return current;
 }
 
-/*
- * 增量 PI：
- *   delta_pwm = Kp*(e[k]-e[k-1]) + Ki*e[k]*dt
- *   pwm[k]    = clamp(pwm[k-1] + delta_pwm)
- *
- * 相比“固定大前馈 + 位置式 PI”，该算法在当前机械结构上减少了低速命令
- * 突然跳到大 PWM 的现象。达到 PWM 上限后直接钳位累计输出，避免继续增长。
- */
 static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, float measured)
 {
     float error;
     float increment;
-    float candidate_output;
-    float limited_output;
     float effective_output;
-    const float dt = (float)CSR_CONTROL_PERIOD_MS / 1000.0f;
 
+    // 静止死区：彻底停车时清零，防止静态抖动
     if (csr_absf(target) < 0.0005f)
     {
-        csr_reset_channel_pi_state(channel);
+        g_integral_state[channel] = 0.0f;
+        g_prev_error[channel] = 0.0f;
         return 0;
     }
 
     error = target - measured;
-    increment = (g_kp[channel] * (error - g_prev_error[channel]))
-              + (g_ki[channel] * error * dt);
 
-    candidate_output = g_pi_output_accum[channel] + increment;
-    limited_output = csr_clampf(
-        candidate_output,
-        -(float)CSR_INPUT_PWM_MAX,
-        (float)CSR_INPUT_PWM_MAX
-    );
+    // 增量 PI：不叠加前馈，PWM 变化完全由当前误差和误差变化决定。
+    increment = g_kp[channel] * (error - g_prev_error[channel])
+              + g_ki[channel] * error * (CSR_CONTROL_PERIOD_MS / 1000.0f);
 
-    g_pi_output_accum[channel] = limited_output;
+    // 累加计算当前总 PWM 输出
+    g_integral_state[channel] += increment;
+
+    // 物理安全限幅 (绝对满油门限制)
+    g_integral_state[channel] = csr_clampf(g_integral_state[channel], -(float)CSR_INPUT_PWM_MAX, (float)CSR_INPUT_PWM_MAX);
+
     g_prev_error[channel] = error;
-    g_debug_ff_pwm[channel] = 0.0f;
-    g_debug_pid_increment[channel] = increment;
-    g_debug_saturated[channel] = (candidate_output != limited_output) ? 1U : 0U;
 
-    effective_output = limited_output * (float)g_csr_motor_dir_sign[channel];
+    // 结合电机方向
+    effective_output = g_integral_state[channel] * (float)g_csr_motor_dir_sign[channel];
     return csr_float_to_pwm(effective_output);
 }
+
+/*
+ * 当前实车实际使用的目标速度加速度限制。
+ * 2.5m/s^2 表示从 0 加速到 0.5m/s 理论需要 0.2 秒。
+ */
+#define CSR_MAX_ACCEL_MPS2 2.5f
+
+/* 该数组是当前 PI 的真实输入目标，不要与兼容遥测字段混淆。 */
+static float g_smooth_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 
 static void csr_control_tick(void)
 {
     uint8_t index;
     float raw_velocity;
+    float step_limit;
 
-    /*
-     * 每个周期都先采集四路编码器，保证 STOP/RAW/CLOSED_LOOP 三种模式下
-     * 的 E、D 和遥测数据持续更新。
-     */
+    // 计算这 20ms 周期内允许的最大速度跃变
+    step_limit = CSR_MAX_ACCEL_MPS2 * (CSR_CONTROL_PERIOD_MS / 1000.0f);
+
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
+        // 测速与滤波
         raw_velocity = csr_measure_speed_mps((csr_channel_t)index);
-        g_filtered_vel[index] =
-            (CSR_VEL_FILTER_ALPHA * g_filtered_vel[index])
-            + ((1.0f - CSR_VEL_FILTER_ALPHA) * raw_velocity);
+        g_filtered_vel[index] = (CSR_VEL_FILTER_ALPHA * g_filtered_vel[index]) + ((1.0f - CSR_VEL_FILTER_ALPHA) * raw_velocity);
         g_measured_vel[index] = g_filtered_vel[index];
-        g_target_vel_ramp[index] = csr_ramp_target(
-            g_target_vel_ramp[index],
-            g_target_vel_cmd[index]
-        );
+
+        // 斜坡平滑逻辑：让 g_smooth_target_vel 快速且平稳地追赶 g_target_vel
+        if (g_target_vel_cmd[index] > g_smooth_target_vel[index])
+        {
+            g_smooth_target_vel[index] += step_limit;
+            if (g_smooth_target_vel[index] > g_target_vel_cmd[index])
+                g_smooth_target_vel[index] = g_target_vel_cmd[index];
+        }
+        else if (g_target_vel_cmd[index] < g_smooth_target_vel[index])
+        {
+            g_smooth_target_vel[index] -= step_limit;
+            if (g_smooth_target_vel[index] < g_target_vel_cmd[index])
+                g_smooth_target_vel[index] = g_target_vel_cmd[index];
+        }
     }
 
-    if (g_control_mode == CSR_MODE_RAW)
-    {
-        csr_apply_raw_outputs();
-        return;
-    }
-
-    if (g_control_mode != CSR_MODE_CLOSED_LOOP)
-    {
-        return;
-    }
+    // RAW/STOP 模式不进入速度闭环；M 命令已在命令处理时直接写入电机。
+    if (g_control_mode != CSR_MODE_CLOSED_LOOP) return;
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
-        g_output_pwm[index] = csr_compute_closed_loop_pwm(
+        int16_t next_pwm;
+        // 关键点：这里喂给 PID 的是平滑后的目标速度
+        next_pwm = csr_compute_closed_loop_pwm(
             (csr_channel_t)index,
-            g_target_vel_ramp[index],
+            g_smooth_target_vel[index],
             g_measured_vel[index]
         );
+        g_output_pwm[index] = next_pwm;
         csr_motor_set((csr_channel_t)index, g_output_pwm[index]);
     }
 }
 
 static void csr_send_telemetry(void)
 {
-    /* 保留既有 VEL/PWM 格式，避免破坏树莓派端解析。 */
     csr_proto_send_vel(g_measured_vel, g_target_vel_cmd);
     csr_proto_send_pwm(g_output_pwm);
-
-    /*
-     * NAVDBG 中 ff 为 0，corr 字段记录本周期增量 PI 的 delta_pwm。
-     * ramp 字段现在与控制器实际使用的目标完全一致。
-     */
     csr_proto_send_navdbg(
         g_target_vel_cmd,
         g_target_vel_ramp,
         g_measured_vel,
         g_debug_ff_pwm,
-        g_debug_pid_increment,
+        g_debug_pid_correction,
         g_output_pwm,
         g_debug_saturated
     );
@@ -468,7 +483,7 @@ int main(void)
     csr_proto_command_t command;
     uint32_t now_ms;
 
-    /* 初始化顺序不可随意调整，JTAG 释放必须早于 CN3 编码器初始化。 */
+    /* 初始化顺序不可调整：调试口释放必须早于 CN3 编码器初始化。 */
     csr_init_debug_ports();
     csr_systick_init();
     csr_motor_init();
@@ -492,22 +507,16 @@ int main(void)
 
         now_ms = csr_millis();
 
-        /*
-         * 正常情况下每 20ms 执行一次。若主循环阻塞超过两个周期，直接
-         * 对齐当前时间而不连续补跑，避免短时间连续计算导致 PWM 突跳。
-         */
-        if ((uint32_t)(now_ms - g_last_control_ms) >= CSR_CONTROL_PERIOD_MS)
-        {
-            if ((uint32_t)(now_ms - g_last_control_ms) > (CSR_CONTROL_PERIOD_MS * 2UL))
-            {
-                g_last_control_ms = now_ms;
-            }
-            else
-            {
-                g_last_control_ms += CSR_CONTROL_PERIOD_MS;
-            }
-            csr_control_tick();
-        }
+	    if ((uint32_t)(now_ms - g_last_control_ms) >= CSR_CONTROL_PERIOD_MS)
+		{
+			// 如果落后太多（比如超过2个周期），说明发生了阻塞，直接对齐时间，放弃追赶
+			if ((uint32_t)(now_ms - g_last_control_ms) > (CSR_CONTROL_PERIOD_MS * 2)) {
+				g_last_control_ms = now_ms;
+			} else {
+				g_last_control_ms += CSR_CONTROL_PERIOD_MS;
+			}
+			csr_control_tick();
+		}
 
         if ((uint32_t)(now_ms - g_last_telemetry_ms) >= CSR_TELEMETRY_PERIOD_MS)
         {

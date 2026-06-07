@@ -54,23 +54,25 @@ static uint16_t csr_motor_scale_drive(uint16_t magnitude)
 
 static uint16_t csr_motor_normalize_channel_drive(BitAction in1_level, uint16_t drive)
 {
+    const uint16_t reset_phase_offset = 1100U;
+
     if (drive == 0U)
     {
         return 0U;
     }
 
     /*
-     * 板级实测表明，IN1=RESET 相位的有效占空比斜率与 SET 相位相反：
-     * 原始 compare 越小，实际驱动力反而越强。这里统一换算，使控制层
-     * 无论正反方向都只需要遵守“PWM 绝对值越大，驱动力越强”。
+     * 板级实测：IN1=RESET 相位的有效占空比斜率相反，原始数值越小，
+     * 实际驱动力越强。这里把它归一化，让控制层始终遵守
+     * “PWM 绝对值越大，驱动力越强”。
      */
     if (in1_level == Bit_RESET)
     {
-        if (drive >= CSR_RESET_PHASE_OFFSET)
+        if (drive >= reset_phase_offset)
         {
             return 1U;
         }
-        return (uint16_t)(CSR_RESET_PHASE_OFFSET - drive);
+        return (uint16_t)(reset_phase_offset - drive);
     }
 
     return drive;
@@ -82,8 +84,8 @@ static void csr_motor_apply_unified(csr_channel_t channel, BitAction in1_level, 
     drive = csr_motor_normalize_channel_drive(in1_level, drive);
 
     /*
-     * AT8236 当前接线下，非零驱动需要落在 TIM8 高 compare 侧，方向由
-     * IN1 电平选择。该转换属于板级真值，禁止在 PID 层重复补偿。
+     * AT8236 当前接线下，非零驱动使用 TIM8 高 compare 侧，方向由
+     * IN1 电平选择。该转换属于板级真值，不应在 PID 层重复补偿。
      */
     if (drive != 0U)
     {
@@ -103,10 +105,8 @@ static void csr_motor_apply_cn1(int16_t signed_pwm)
         return;
     }
 
-    /*
-     * CN1 H 桥真值：
-     * 正 PWM -> IN1=RESET；负 PWM -> IN1=SET。
-     * 车体前进语义还会经过 g_csr_motor_dir_sign，不等同于此处正负号。
+    /* CN1 H 桥真值：
+     * +PWM -> IN1=RESET；-PWM -> IN1=SET。
      */
     if (signed_pwm > 0)
     {
@@ -128,7 +128,7 @@ static void csr_motor_apply_cn2(int16_t signed_pwm)
         return;
     }
 
-    /* CN2 H 桥真值：正 PWM -> IN1=SET；负 PWM -> IN1=RESET。 */
+    /* CN2 H 桥真值：+PWM -> IN1=SET；-PWM -> IN1=RESET。 */
     if (signed_pwm > 0)
     {
         csr_motor_apply_unified(CSR_CHANNEL_CN2, Bit_SET, magnitude);
@@ -149,7 +149,7 @@ static void csr_motor_apply_cn3(int16_t signed_pwm)
         return;
     }
 
-    /* CN3 H 桥真值：正 PWM -> IN1=SET；负 PWM -> IN1=RESET。 */
+    /* CN3 H 桥真值：+PWM -> IN1=SET；-PWM -> IN1=RESET。 */
     if (signed_pwm > 0)
     {
         csr_motor_apply_unified(CSR_CHANNEL_CN3, Bit_SET, magnitude);
@@ -170,7 +170,7 @@ static void csr_motor_apply_cn4(int16_t signed_pwm)
         return;
     }
 
-    /* CN4 H 桥真值：正 PWM -> IN1=RESET；负 PWM -> IN1=SET。 */
+    /* CN4 H 桥真值：+PWM -> IN1=RESET；-PWM -> IN1=SET。 */
     if (signed_pwm > 0)
     {
         csr_motor_apply_unified(CSR_CHANNEL_CN4, Bit_RESET, magnitude);
@@ -187,10 +187,6 @@ void csr_motor_init(void)
     TIM_TimeBaseInitTypeDef tim_base_init;
     TIM_OCInitTypeDef tim_oc_init;
 
-    /*
-     * TIM8 CH1~CH4 输出四路 PWM；PA8/PA11/PA12/PC10 控制对应 H 桥
-     * 的另一输入端。四路共用同一计数周期，保证 PWM 时间基准一致。
-     */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8 | RCC_APB2Periph_AFIO, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC, ENABLE);
 
