@@ -45,6 +45,19 @@ firmware/openrf1_motion_controller/DebugConfig/
 firmware/openrf1_motion_controller/*.uvguix.*
 firmware/openrf1_motion_controller/*.uvoptx
 
+# Mechanical-arm official baseline import staging and local IDE/build artifacts.
+docs/1.STM32控制板源代码/
+docs/1.STM32控制板源代码.zip
+firmware/mechanical_arm_official_baseline/Listing/
+firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/DebugConfig/
+firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/*.uvguix*
+firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/BH-STM32.uvoptx
+firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/JLinkLog.txt
+firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/JLinkSettings.ini
+firmware/mechanical_arm_official_baseline/Output/*
+!firmware/mechanical_arm_official_baseline/Output/template.hex
+!firmware/mechanical_arm_official_baseline/Output/template.build_log.htm
+
 # Local worker runtime files
 tools/*/.env
 tools/*/.env.local
