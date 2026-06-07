@@ -55,7 +55,7 @@ typedef enum
  * 目标速度斜坡。
  *
  * 2.5m/s^2 对应每个 20ms 周期最多变化 0.05m/s。该参数来自
- * car_move_lihaotian 最新实车版本，用来兼顾导航响应和机械冲击。
+ * C-3.6.0 实车参数基线，用来兼顾导航响应和机械冲击。
  */
 #define CSR_WHEEL_ACC_LIMIT_MPS2        2.5f
 #define CSR_WHEEL_DV_PER_TICK           (CSR_WHEEL_ACC_LIMIT_MPS2 * ((float)CSR_CONTROL_PERIOD_MS / 1000.0f))

@@ -17,7 +17,7 @@ static const char *g_channel_notes[CSR_CHANNEL_COUNT] =
 };
 
 /*
- * 这两张表来自 car_move_lihaotian 工程实际参与编译的根目录版本。
+ * 这两张表保持迁移前固件实际参与编译的方向行为。
  *
  * 原工程同时存在根目录与 User/ 两套 csr_board_map.c/h：Keil 实际编译
  * 根目录 .c，却让 User/main.c 包含 User/ 下的参数头文件。C-3.6.0 将
