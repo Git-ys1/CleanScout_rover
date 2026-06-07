@@ -1,0 +1,15 @@
+#ifndef CSR_MOTOR_DRV_H
+#define CSR_MOTOR_DRV_H
+
+#include "csr_board_map.h"
+
+/* 初始化 TIM8 四路 PWM 与四路 H 桥方向 GPIO。 */
+void csr_motor_init(void);
+
+/* signed_pwm 范围 [-1000,1000]，符号为底层通道方向，绝对值为驱动力。 */
+void csr_motor_set(csr_channel_t channel, int16_t signed_pwm);
+void csr_motor_stop(csr_channel_t channel);
+void csr_motor_stop_all(void);
+int16_t csr_motor_last_pwm(csr_channel_t channel);
+
+#endif

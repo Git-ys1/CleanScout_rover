@@ -25,6 +25,7 @@ docs/arduino uno/
 docs/未确认-新文件/
 docs/Clean Scout Rover 退休交接总包.pdf
 _local/C24+V2.1/
+_local/car_move_lihaotian/
 _local/**/Output/
 _local/**/Listing/
 _local/**/*.log
@@ -36,6 +37,12 @@ _local/openrf1_keil_work_2/Listing/
 _local/openrf1_keil_work_2/.vscode/
 _local/openrf1_keil_work_2/Project/RVMDK（uv5）/BH-STM32.uvguix*
 _local/openrf1_keil_work_2/Project/RVMDK（uv5）/JLinkLog.txt
+
+# OpenRF1 正式 Keil 工程的本机构建和个人配置。
+firmware/openrf1_motion_controller/Build/
+firmware/openrf1_motion_controller/DebugConfig/
+firmware/openrf1_motion_controller/*.uvguix.*
+firmware/openrf1_motion_controller/*.uvoptx
 
 # Local worker runtime files
 tools/*/.env

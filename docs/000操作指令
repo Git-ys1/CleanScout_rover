@@ -1,16 +1,11 @@
 编译：
-$proj = (Resolve-Path '_local\openrf1_keil_work_2\Project\RVMDK（uv5）\BH-STM32.uvprojx').Path
-$log = Join-Path (Split-Path $proj) 'manual_rf1_build.log'
-
-& 'D:\Work\Keil5\UV4\uVision.com' -b $proj -o $log
-
-Get-Content -LiteralPath $log -Tail 80
+.\firmware\openrf1_motion_controller\scripts\build.ps1
 
 烧录：
-$cli = 'F:\CodeForge\STM32CubeIDE_2.1.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.400.202601091506\tools\bin\STM32_Programmer_CLI.exe'
-$hex = (Resolve-Path '_local\openrf1_keil_work_2\Output\template.hex').Path
+.\firmware\openrf1_motion_controller\scripts\flash.ps1
 
-& $cli -c port=SWD -w $hex -v -rst
+重新编译后直接烧录：
+.\firmware\openrf1_motion_controller\scripts\flash.ps1 -BuildFirst
 
 调试：
 前进：

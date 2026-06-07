@@ -1,5 +1,8 @@
 # OpenRF1 Keil Overlay
 
+> 历史归档：该 overlay 已被 `firmware/openrf1_motion_controller/` 的自包含
+> 正式工程取代，不再作为开发、编译或发布入口。
+
 这个目录只存放 `OpenRF1` 的自研应用层 overlay，不存放 vendor 原工程整包。
 
 当前目的：
@@ -21,4 +24,4 @@
 
 集成方式见：
 
-- [integration_notes.md](f:/Project/CleanScout_rover/firmware/openrf1_keil_overlay/integration_notes.md)
+- [integration_notes.md](integration_notes.md)
