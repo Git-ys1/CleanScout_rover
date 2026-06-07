@@ -90,7 +90,7 @@ CSR_RF1_READY
 ACK:W / ACK:M / ACK:E / ACK:D / ACK:STOP
 VEL,...
 PWM,...
-NAVDBG,...
+NAVDBG,cmd1..cmd4,ramp1..ramp4,rt1..rt4,out1..out4
 ENC,...
 DBG,...
 ```
@@ -104,7 +104,7 @@ DBG,...
 | `CSR_CONTROL_PERIOD_MS` | 20ms | 闭环频率 50Hz |
 | `CSR_WHEEL_RESOLUTION` | 1768 | 输出轴每圈编码器计数 |
 | `CSR_WHEEL_DIAMETER_M` | 0.06m | 当前轮径 |
-| `CSR_MAX_ACCEL_MPS2` | 2.5 | 当前实际参与控制的目标轮速斜坡上限，定义在 `main.c` |
+| `CSR_WHEEL_ACC_LIMIT_MPS2` | 2.5 | 目标轮速斜坡上限 |
 | `CSR_PI_KP_DEFAULT` | 200 | 增量 PI 比例项 |
 | `CSR_PI_KI_DEFAULT` | 2500 | 增量 PI 积分项 |
 | `CSR_INPUT_PWM_MAX` | 1000 | 控制层绝对输出上限 |
@@ -121,7 +121,6 @@ DBG,...
 
 ## 行为保持说明
 
-C-3.6.0 只把实际参与编译的旧源码收口到本目录，并补充 UTF-8 中文注释。
-应用源码经过“去注释、去空白”比较，与原 Keil 编译输入等价。当前代码中仍保留
-3 个历史未使用符号，完整重编会显示 3 个告警；它们没有被擅自删除，以免工程
-整理轮次改变已收敛的实车控制行为。
+C-3.6.0 将实际参与编译的旧源码收口到本目录。后续清理只删除未参与运行计算的
+旧参数、旧函数和空诊断字段；当前实车使用的增量 PI、2.5m/s² 目标斜坡、
+速度滤波、方向表以及 `W/M/E/D/STOP` 语义保持不变。

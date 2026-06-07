@@ -450,12 +450,11 @@ void csr_proto_send_pwm(const int16_t *pwm)
     csr_proto_send_text(line);
 }
 
-void csr_proto_send_navdbg(const float *cmd, const float *ramp, const float *rt, const float *ff, const float *corr, const int16_t *out, const uint8_t *sat)
+void csr_proto_send_navdbg(const float *cmd, const float *ramp, const float *rt, const int16_t *out)
 {
-    char line[384];
+    char line[256];
     char fragment[24];
     uint8_t index;
-    uint8_t sat_mask = 0U;
 
     strcpy(line, "NAVDBG");
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
@@ -476,26 +475,11 @@ void csr_proto_send_navdbg(const float *cmd, const float *ramp, const float *rt,
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         csr_proto_append_text(line, sizeof(line), ",");
-        csr_proto_append_float3(line, sizeof(line), ff[index]);
-    }
-    for (index = 0; index < CSR_CHANNEL_COUNT; index++)
-    {
-        csr_proto_append_text(line, sizeof(line), ",");
-        csr_proto_append_float3(line, sizeof(line), corr[index]);
-    }
-    for (index = 0; index < CSR_CHANNEL_COUNT; index++)
-    {
-        csr_proto_append_text(line, sizeof(line), ",");
         sprintf(fragment, "%d", out[index]);
         csr_proto_append_text(line, sizeof(line), fragment);
-        if (sat[index] != 0U)
-        {
-            sat_mask |= (uint8_t)(1U << index);
-        }
     }
 
-    sprintf(fragment, ",%u\r\n", (unsigned int)sat_mask);
-    csr_proto_append_text(line, sizeof(line), fragment);
+    csr_proto_append_text(line, sizeof(line), "\r\n");
     csr_proto_send_text(line);
 }
 

@@ -25,10 +25,8 @@ static int16_t g_output_pwm[CSR_CHANNEL_COUNT] = {0, 0, 0, 0};
 
 /*
  * 速度状态说明：
- * g_target_vel_cmd  是 W 命令目标；
- * g_smooth_target_vel（定义在控制函数前）才是当前实车 PI 实际使用目标；
- * g_target_vel_ramp 是 C-3.5.0 遥测兼容字段，当前控制路径未使用它。
- * 此处保留原实现，不在工程迁移轮次顺手改变控制行为。
+ * g_target_vel_cmd 是 W 命令目标；
+ * g_target_vel_ramp 是经过加速度限制后送入 PI 的实际目标。
  */
 static float g_target_vel_cmd[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_target_vel_ramp[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -40,9 +38,6 @@ static float g_filtered_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
  */
 static float g_integral_state[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float g_prev_error[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-static float g_debug_ff_pwm[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-static float g_debug_pid_correction[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-static uint8_t g_debug_saturated[CSR_CHANNEL_COUNT] = {0U, 0U, 0U, 0U};
 
 /* 四轮统一参数，数组顺序固定为 CN1/LR、CN2/LF、CN3/RR、CN4/RF。 */
 static float g_kp[CSR_CHANNEL_COUNT] = {
@@ -56,12 +51,6 @@ static float g_ki[CSR_CHANNEL_COUNT] = {
     CSR_PI_KI_DEFAULT,
     CSR_PI_KI_DEFAULT,
     CSR_PI_KI_DEFAULT
-};
-static float g_kd[CSR_CHANNEL_COUNT] = {
-    CSR_PI_KD_DEFAULT,
-    CSR_PI_KD_DEFAULT,
-    CSR_PI_KD_DEFAULT,
-    CSR_PI_KD_DEFAULT
 };
 
 static uint32_t csr_millis(void)
@@ -94,24 +83,6 @@ static float csr_clampf(float value, float min_value, float max_value)
         return max_value;
     }
     return value;
-}
-
-static int16_t csr_slew_i16(int16_t current, int16_t target, int16_t step)
-{
-    if (step < 1)
-    {
-        step = 1;
-    }
-
-    if (target > (int16_t)(current + step))
-    {
-        return (int16_t)(current + step);
-    }
-    if (target < (int16_t)(current - step))
-    {
-        return (int16_t)(current - step);
-    }
-    return target;
 }
 
 static int16_t csr_float_to_pwm(float value)
@@ -148,9 +119,6 @@ static void csr_clear_pi_state(void)
         g_prev_error[index] = 0.0f;
         g_filtered_vel[index] = 0.0f;
         g_measured_vel[index] = 0.0f;
-        g_debug_ff_pwm[index] = 0.0f;
-        g_debug_pid_correction[index] = 0.0f;
-        g_debug_saturated[index] = 0U;
     }
 }
 
@@ -161,7 +129,6 @@ static void csr_clear_velocity_targets(void)
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         g_target_vel_cmd[index] = 0.0f;
-        g_target_vel_ramp[index] = 0.0f;
     }
 }
 
@@ -204,7 +171,6 @@ static void csr_start_boot_forward_test(void)
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
         g_target_vel_cmd[index] = CSR_BOOT_FORWARD_TEST_SPEED_MPS;
-        g_target_vel_ramp[index] = 0.0f;
         g_output_pwm[index] = 0;
     }
 
@@ -248,28 +214,6 @@ static void csr_reset_channel_pi_state(csr_channel_t channel)
     g_output_pwm[channel] = 0;
 }
 
-static float csr_ramp_target(float current, float target, float step_limit)
-{
-    if (target > current)
-    {
-        current += step_limit;
-        if (current > target)
-        {
-            current = target;
-        }
-    }
-    else if (target < current)
-    {
-        current -= step_limit;
-        if (current < target)
-        {
-            current = target;
-        }
-    }
-
-    return current;
-}
-
 static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, float measured)
 {
     float error;
@@ -303,15 +247,6 @@ static int16_t csr_compute_closed_loop_pwm(csr_channel_t channel, float target, 
     return csr_float_to_pwm(effective_output);
 }
 
-/*
- * 当前实车实际使用的目标速度加速度限制。
- * 2.5m/s^2 表示从 0 加速到 0.5m/s 理论需要 0.2 秒。
- */
-#define CSR_MAX_ACCEL_MPS2 2.5f
-
-/* 该数组是当前 PI 的真实输入目标，不要与兼容遥测字段混淆。 */
-static float g_smooth_target_vel[CSR_CHANNEL_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f};
-
 static void csr_control_tick(void)
 {
     uint8_t index;
@@ -319,7 +254,7 @@ static void csr_control_tick(void)
     float step_limit;
 
     // 计算这 20ms 周期内允许的最大速度跃变
-    step_limit = CSR_MAX_ACCEL_MPS2 * (CSR_CONTROL_PERIOD_MS / 1000.0f);
+    step_limit = CSR_WHEEL_ACC_LIMIT_MPS2 * (CSR_CONTROL_PERIOD_MS / 1000.0f);
 
     for (index = 0; index < CSR_CHANNEL_COUNT; index++)
     {
@@ -328,18 +263,18 @@ static void csr_control_tick(void)
         g_filtered_vel[index] = (CSR_VEL_FILTER_ALPHA * g_filtered_vel[index]) + ((1.0f - CSR_VEL_FILTER_ALPHA) * raw_velocity);
         g_measured_vel[index] = g_filtered_vel[index];
 
-        // 斜坡平滑逻辑：让 g_smooth_target_vel 快速且平稳地追赶 g_target_vel
-        if (g_target_vel_cmd[index] > g_smooth_target_vel[index])
+        // 斜坡平滑逻辑：让实际 PI 目标平稳追赶串口命令目标
+        if (g_target_vel_cmd[index] > g_target_vel_ramp[index])
         {
-            g_smooth_target_vel[index] += step_limit;
-            if (g_smooth_target_vel[index] > g_target_vel_cmd[index])
-                g_smooth_target_vel[index] = g_target_vel_cmd[index];
+            g_target_vel_ramp[index] += step_limit;
+            if (g_target_vel_ramp[index] > g_target_vel_cmd[index])
+                g_target_vel_ramp[index] = g_target_vel_cmd[index];
         }
-        else if (g_target_vel_cmd[index] < g_smooth_target_vel[index])
+        else if (g_target_vel_cmd[index] < g_target_vel_ramp[index])
         {
-            g_smooth_target_vel[index] -= step_limit;
-            if (g_smooth_target_vel[index] < g_target_vel_cmd[index])
-                g_smooth_target_vel[index] = g_target_vel_cmd[index];
+            g_target_vel_ramp[index] -= step_limit;
+            if (g_target_vel_ramp[index] < g_target_vel_cmd[index])
+                g_target_vel_ramp[index] = g_target_vel_cmd[index];
         }
     }
 
@@ -352,7 +287,7 @@ static void csr_control_tick(void)
         // 关键点：这里喂给 PID 的是平滑后的目标速度
         next_pwm = csr_compute_closed_loop_pwm(
             (csr_channel_t)index,
-            g_smooth_target_vel[index],
+            g_target_vel_ramp[index],
             g_measured_vel[index]
         );
         g_output_pwm[index] = next_pwm;
@@ -368,10 +303,7 @@ static void csr_send_telemetry(void)
         g_target_vel_cmd,
         g_target_vel_ramp,
         g_measured_vel,
-        g_debug_ff_pwm,
-        g_debug_pid_correction,
-        g_output_pwm,
-        g_debug_saturated
+        g_output_pwm
     );
 }
 
