@@ -34,14 +34,9 @@ typedef enum
 #define CSR_CONTROL_PERIOD_MS           20UL
 #define CSR_TELEMETRY_PERIOD_MS         100UL
 
-/*
- * 下面两项是 C-3.5.0 旧目标斜坡接口保留值。
- * 当前实车版本真正参与控制的加速度值定义在 main.c 的
- * CSR_MAX_ACCEL_MPS2=2.5f。暂不删除此处兼容宏，避免改变已收敛代码。
- */
+/* 目标轮速斜坡：2.5m/s^2 表示从 0 加速到 0.5m/s 理论需要 0.2 秒。 */
 #define CSR_CONTROL_HZ                  50.0f
-#define CSR_WHEEL_ACC_LIMIT_MPS2        0.20f
-#define CSR_WHEEL_DV_PER_TICK           (CSR_WHEEL_ACC_LIMIT_MPS2 * ((float)CSR_CONTROL_PERIOD_MS / 1000.0f))
+#define CSR_WHEEL_ACC_LIMIT_MPS2        2.5f
 
 /* 上电自动前进仅用于架空排障，正式运行必须保持为 0。 */
 #define CSR_BOOT_FORWARD_TEST_ENABLE    0
@@ -58,16 +53,7 @@ typedef enum
 
 /* PWM/H 桥范围。TIM8 周期为 2000，控制层有符号输入范围为 ±1000。 */
 #define CSR_INPUT_PWM_MAX               1000
-#define CSR_EFFECTIVE_PWM_MAX           850
 #define CSR_TIM8_PWM_TOP                2000U
-#define CSR_PWM_STEP_LIMIT_NAV          10
-
-/*
- * 下列前馈、修正量和积分限幅宏来自上一版控制器，当前增量 PI 主路径
- * 未直接使用。为保持实车版本源代码边界，本轮仅注明，不做删除。
- */
-#define CSR_FEEDFORWARD_PWM_AT_0_10_MPS 400.0f
-#define CSR_PI_CORRECTION_LIMIT         1000.0f
 
 /*
  * 当前四轮统一增量 PI 参数：
@@ -75,9 +61,6 @@ typedef enum
  */
 #define CSR_PI_KP_DEFAULT               200.0f
 #define CSR_PI_KI_DEFAULT               2500.0f
-#define CSR_PI_KD_DEFAULT               0.0f
-#define CSR_PI_INTEGRAL_LIMIT           0.15f
-#define CSR_PI_OUTPUT_LIMIT             CSR_PI_CORRECTION_LIMIT
 
 /* 速度一阶低通系数：数值越大越平滑，同时响应延迟也越大。 */
 #define CSR_VEL_FILTER_ALPHA            0.35f
