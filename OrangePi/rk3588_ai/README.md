@@ -1,6 +1,6 @@
 # RK3588 AI Baseline
 
-本目录记录 Orange Pi 5 Max 8GB 上 RK3588 NPU / RKNN / YOLO11 / USB 摄像头实时检测的已验证基线。这里不是完整 Python 虚拟环境，也不是 RKNN Model Zoo 上游仓库镜像；仓库只保存能复现结论的轻量脚本、报告、任务书和 overlay。
+本目录记录 Orange Pi 5 Max 8GB 上 RK3588 NPU / RKNN / YOLO11 / USB 摄像头实时检测的已验证基线，并从 C-5.0.1 开始保存机械臂二维视觉追踪 dry-run 原型。这里不是完整 Python 虚拟环境，也不是 RKNN Model Zoo 上游仓库镜像；仓库只保存能复现结论的轻量脚本、报告、任务书、overlay 和安全 demo。
 
 ## 硬件与系统
 
@@ -22,6 +22,7 @@
 3. 官方 YOLO11 Python demo 的 `dfl()` 晚加载 PyTorch 会触发 aarch64 static TLS / libgomp 问题。
 4. 最终采用 NumPy DFL，和 torch 版输出对比 `max_abs_error: 0.0`，运行不需要 `LD_PRELOAD`。
 5. 新增 `yolo11_camera.py` 后，USB 摄像头实时检测窗口可运行，`q` / ESC 退出、资源释放已验证。
+6. 新增 `arm_tracking_demo/` 后，YOLO11 检测结果可进入 target selector 与 visual servo，默认只 dry-run，不接 ROS。
 
 ## 文件说明
 
@@ -40,6 +41,7 @@
 | `model_zoo_overlay/` | 已验证的 `yolo11.py` 与 `yolo11_camera.py` 覆盖文件 |
 | `UPSTREAMS.md` | 被忽略的上游仓库、虚拟环境、模型和日志恢复说明 |
 | `scripts/apply_model_zoo_overlay.sh` | clone 官方 Model Zoo 并应用 CleanScout overlay |
+| `arm_tracking_demo/` | C-5.0.1 机械臂二维视觉追踪 dry-run demo |
 | `*.jpg` | 图片与摄像头验收结果 |
 
 ## 板端使用
@@ -109,6 +111,29 @@ python3 yolo11_camera.py \
   --snapshot_path ~/rk3588_ai/debug_logs/yolo11_camera/yolo11_camera_result.jpg
 ```
 
+运行机械臂视觉追踪 dry-run：
+
+```bash
+cd ~/rk3588_ai/arm_tracking_demo
+~/rk3588_ai/rknn_lite_env/bin/python3 yolo_arm_track.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --camera 0 \
+  --track_class any \
+  --dry_run true \
+  --enable_arm \
+  --print_cmd \
+  --no_show \
+  --max_frames 5
+```
+
+真实机械臂动作前必须先执行：
+
+```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/scan_serial.py
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_arm_driver_dryrun.py --print_cmd
+```
+
 退出方式：
 
 - 窗口获得焦点后按 `q`
@@ -154,7 +179,8 @@ cp -av model_zoo_overlay/examples/yolo11/python/yolo11_camera.py \
 | 摄像头节点打不开 | `/dev/video1` 可能是 UVC metadata，优先用 `/dev/video0` |
 | `mp4v` 写视频失败 | 使用 MJPEG fallback |
 | SSH 没窗口 | 使用 `--no_show` 或设置 NoMachine 的 `DISPLAY=:0` |
+| 机械臂真实模式报 `No module named serial` | `~/rk3588_ai/rknn_lite_env` 尚未安装 `pyserial`，先保持 dry-run |
 
 ## 后续边界
 
-当前阶段只证明 RK3588 上 YOLO11 感知链路可用。机械臂动作控制、ROS 话题发布、检测结果到机械臂抓取的闭环，后续另开任务。
+当前阶段已证明 RK3588 上 YOLO11 感知链路可用，并建立了不接 ROS 的机械臂二维视觉追踪 dry-run demo。真实机械臂动作控制需要下一轮完成串口接线、`pyserial`、单关节方向和 PWM 安全范围验证；抓取、ROS 话题发布、完整 IK、鱼眼标定仍后续另开任务。
