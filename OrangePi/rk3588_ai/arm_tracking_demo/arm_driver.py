@@ -15,10 +15,9 @@ DEFAULT_CONFIG = {
     "protocol": "yh_pwm_text",
     "timeout_s": 0.2,
     "echo_commands": True,
-    "yaw_joint": "joint0",
-    "pitch_joint": "joint3",
     "yaw_servo_index": 0,
     "pitch_servo_index": 3,
+    "servo_ids": [0, 1, 2, 3, 4, 5],
     "duration_ms": 200,
     "yaw_init": 0.0,
     "pitch_init": 1.2,
@@ -31,7 +30,8 @@ DEFAULT_CONFIG = {
     "pwm_min": 900,
     "pwm_max": 2100,
     "reference_hold_joints": [0.0, -0.930, 1.6, 1.2, 0.0, 0.801],
-    "stop_servo_indices": [0, 3],
+    "hold_servo_pwms": [1500, 1500, 1500, 1500, 1500, 1500],
+    "stop_servo_indices": [0, 1, 2, 3, 4, 5],
 }
 
 
@@ -134,16 +134,9 @@ class ArmDriver:
         self.last_yaw = yaw
         self.last_pitch = pitch
 
-        protocol = str(self.config.get("protocol", "yh_pwm_text"))
-        if protocol == "yh_pwm_text":
-            joints = {
-                "yaw": yaw,
-                "pitch": pitch,
-            }
-        else:
-            joints = list(self.config["reference_hold_joints"])
-            joints[0] = yaw
-            joints[3] = pitch
+        joints = list(self.config["reference_hold_joints"])
+        joints[0] = yaw
+        joints[3] = pitch
         return self.set_joints(joints, duration_ms=duration_ms)
 
     def stop(self):
@@ -151,7 +144,7 @@ class ArmDriver:
         if protocol == "yh_pwm_text":
             # Avoid the official firmware's all-stop path until the
             # pwmServo_stop_motion(255) out-of-range access is fixed/verified.
-            for index in self.config.get("stop_servo_indices", [0, 3]):
+            for index in self.config.get("stop_servo_indices", [0, 1, 2, 3, 4, 5]):
                 self._write_payload("#{:03d}PDST!".format(int(index)).encode("ascii"))
         elif self.config.get("echo_commands", True):
             print("[ArmDriver] stop requested; binary reference protocol has no verified stop frame")
@@ -202,20 +195,23 @@ class ArmDriver:
         return pwm
 
     def _pack_yh_pwm_text(self, joints: Sequence[float], duration_ms: int) -> bytes:
-        yaw_index = int(self.config["yaw_servo_index"])
-        pitch_index = int(self.config["pitch_servo_index"])
-        yaw_pwm = self._angle_to_pwm(float(joints[0]), "yaw")
-        pitch_pwm = self._angle_to_pwm(float(joints[3]), "pitch")
         duration = int(_clamp(int(duration_ms), 20, 9999))
-        command = "#{:03d}P{:04d}T{:04d}!#{:03d}P{:04d}T{:04d}!".format(
-            yaw_index,
-            yaw_pwm,
-            duration,
-            pitch_index,
-            pitch_pwm,
-            duration,
-        )
-        return command.encode("ascii")
+        hold_pwms = list(self.config.get("hold_servo_pwms", [1500] * 6))
+        servo_ids = list(self.config.get("servo_ids", [0, 1, 2, 3, 4, 5]))
+        if len(hold_pwms) < len(servo_ids):
+            hold_pwms.extend([1500] * (len(servo_ids) - len(hold_pwms)))
+
+        frames = []
+        for servo_id in servo_ids:
+            servo_id = int(servo_id)
+            if servo_id == int(self.config["yaw_servo_index"]):
+                pwm = self._angle_to_pwm(float(joints[0]), "yaw")
+            elif servo_id == int(self.config["pitch_servo_index"]):
+                pwm = self._angle_to_pwm(float(joints[3]), "pitch")
+            else:
+                pwm = int(hold_pwms[servo_id]) if servo_id < len(hold_pwms) else 1500
+            frames.append("#{:03d}P{:04d}T{:04d}!".format(servo_id, pwm, duration))
+        return "".join(frames).encode("ascii")
 
     def _pack_reference_arm_frame(self, joints: Sequence[float]) -> bytes:
         frame = [0xAA, 0x55, 0x11, 0x80]

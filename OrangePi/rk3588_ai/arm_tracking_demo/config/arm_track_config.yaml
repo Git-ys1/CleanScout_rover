@@ -34,9 +34,11 @@ driver:
   # flashed lower firmware is confirmed to understand it.
   reference_binary_enabled: false
   reference_hold_joints: [0.0, -0.930, 1.6, 1.2, 0.0, 0.801]
-  stop_servo_indices: [0, 3]
+  hold_servo_pwms: [1500, 1500, 1500, 1500, 1500, 1500]
+  stop_servo_indices: [0, 1, 2, 3, 4, 5]
 
 visual_servo:
+  base_joints: [0.0, -0.930, 1.6, 1.2, 0.0, 0.801]
   dead_zone_px: 30
   control_rate_hz: 10
   max_yaw_delta: 0.015

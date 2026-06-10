@@ -48,8 +48,13 @@ def main():
     )
     driver.connect()
     payload = driver.set_yaw_pitch(0.0, 1.2, duration_ms=200)
+    payload_ascii = payload.decode("ascii", errors="replace")
+    for servo_id in range(6):
+        expected = "#{:03d}P".format(servo_id)
+        if expected not in payload_ascii:
+            raise AssertionError("missing servo frame {}".format(expected))
     if args.print_cmd:
-        print("payload_ascii={}".format(payload.decode("ascii", errors="replace")))
+        print("payload_ascii={}".format(payload_ascii))
         print("payload_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
     driver.stop()
     driver.close()

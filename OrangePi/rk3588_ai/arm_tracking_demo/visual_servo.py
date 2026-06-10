@@ -14,6 +14,7 @@ def clamp(value: float, low: float, high: float) -> float:
 
 @dataclass
 class VisualServoConfig:
+    base_joints: Sequence[float] = (0.0, -0.930, 1.6, 1.2, 0.0, 0.801)
     dead_zone_px: int = 30
     control_rate_hz: float = 10.0
     max_yaw_delta: float = 0.015
@@ -42,6 +43,7 @@ class VisualServo:
         self.config = config or VisualServoConfig()
         self.yaw = self.config.yaw_init
         self.pitch = self.config.pitch_init
+        self.joints = self._make_base_joints()
         self.confirm_count = 0
         self.lost_count = 0
         self.last_control_time = 0.0
@@ -54,6 +56,7 @@ class VisualServo:
     def reset(self):
         self.yaw = self.config.yaw_init
         self.pitch = self.config.pitch_init
+        self.joints = self._make_base_joints()
         self.confirm_count = 0
         self.lost_count = 0
         self.integral_x = 0.0
@@ -61,6 +64,16 @@ class VisualServo:
         self.prev_error_x = 0.0
         self.prev_error_y = 0.0
         self.last_control_time = 0.0
+        self.last_result = self._result(None, None, 0.0, 0.0, False, False)
+
+    def _make_base_joints(self):
+        joints = list(self.config.base_joints)
+        if len(joints) < 6:
+            joints.extend([0.0] * (6 - len(joints)))
+        joints = joints[:6]
+        joints[0] = self.yaw
+        joints[3] = self.pitch
+        return joints
 
     def update(
         self,
@@ -130,11 +143,14 @@ class VisualServo:
         pitch_delta = clamp(pitch_delta, -self.config.max_pitch_delta, self.config.max_pitch_delta)
         self.yaw = clamp(self.yaw + yaw_delta, self.config.yaw_min, self.config.yaw_max)
         self.pitch = clamp(self.pitch + pitch_delta, self.config.pitch_min, self.config.pitch_max)
+        self.joints[0] = self.yaw
+        self.joints[3] = self.pitch
 
     def _result(self, cx, cy, error_x, error_y, active: bool, should_send: bool):
         return {
             "yaw": self.yaw,
             "pitch": self.pitch,
+            "joints": list(self.joints),
             "cx": cx,
             "cy": cy,
             "error_x": error_x,

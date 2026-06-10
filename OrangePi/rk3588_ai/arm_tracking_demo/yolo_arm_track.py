@@ -291,6 +291,14 @@ def run(args):
         if platform != "rknn":
             raise RuntimeError("Camera tracking demo requires an RKNN model")
 
+        duration_ms = int(dict(config.get("driver", {})).get("duration_ms", 200))
+        arm_stop_sent = False
+        if args.enable_arm and not arm_paused:
+            payload = driver.set_joints(servo.last_result["joints"], duration_ms=duration_ms)
+            arm_stop_sent = False
+            if args.print_cmd and not args.dry_run:
+                print("arm_initial_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
+
         frame_width = pending_frame.shape[1]
         frame_height = pending_frame.shape[0]
         if args.save_path:
@@ -376,14 +384,18 @@ def run(args):
 
             if args.enable_arm and (not arm_paused) and last_servo_result["should_send"]:
                 if last_servo_result["active"]:
-                    payload = driver.set_yaw_pitch(
-                        last_servo_result["yaw"],
-                        last_servo_result["pitch"],
-                        duration_ms=int(dict(config.get("driver", {})).get("duration_ms", 200)),
+                    payload = driver.set_joints(
+                        last_servo_result["joints"],
+                        duration_ms=duration_ms,
                     )
+                    arm_stop_sent = False
                     if args.print_cmd and not args.dry_run:
                         print("arm_payload_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
-                elif args.print_cmd:
+            elif args.enable_arm and (not arm_paused) and (not last_servo_result["active"]):
+                if not arm_stop_sent:
+                    driver.stop()
+                    arm_stop_sent = True
+                if args.print_cmd:
                     print("arm inactive: lost_count={}".format(last_servo_result["lost_count"]))
 
             visual = frame.copy()
@@ -444,6 +456,11 @@ def run(args):
                     print("arm_paused={}".format(arm_paused))
                 if key == ord("r"):
                     servo.reset()
+                    if args.enable_arm and not arm_paused:
+                        payload = driver.set_joints(servo.last_result["joints"], duration_ms=duration_ms)
+                        if args.print_cmd and not args.dry_run:
+                            print("arm_reset_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
+                        arm_stop_sent = False
                     print("visual servo reset")
                 try:
                     if cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE) == 0:
