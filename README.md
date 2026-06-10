@@ -10,6 +10,7 @@
 | 快速上手 | [docs/快速上手.md](docs/快速上手.md) | 常用启动、编译、烧录、串口调试、Vue/H5/后端运维命令 |
 | H5 正式入口 | [https://h5.hzhhds.top](https://h5.hzhhds.top) | 小程序 / H5 管理前端正式域名 |
 | H5 Netlify 入口 | [https://cleanscoutrover-management.netlify.app](https://cleanscoutrover-management.netlify.app) | H5 托管平台备用/源站入口 |
+| OrangePi AI 基线 | [OrangePi/](OrangePi/) | Orange Pi 5 Max / RK3588 / RKNN / YOLO11 摄像头检测基线 |
 | RF1 串口工具 | [tools/openrf1_serial_probe.ps1](tools/openrf1_serial_probe.ps1) | Windows 下位机串口调试入口 |
 | RF1 正式固件 | [firmware/openrf1_motion_controller/](firmware/openrf1_motion_controller/) | 自包含 Keil 工程、底盘源码、编译与烧录入口 |
 | 机械臂官方基线 | [firmware/mechanical_arm_official_baseline/](firmware/mechanical_arm_official_baseline/) | STM32F103RC 机械臂控制板官方例程冻结基线 |
@@ -19,6 +20,7 @@
 | 层级 | 当前实物 / 模块 | 当前职责 |
 | --- | --- | --- |
 | 上位机 | Raspberry Pi 4B | ROS 工作区、传感器接入、系统协调、上层功能编排 |
+| AI 边缘板 | Orange Pi 5 Max 8GB / RK3588 | YOLO11 RKNN 推理、USB 摄像头实时检测、后续机械臂视觉入口 |
 | 下位机 | OpenRF1 / STM32F103RCT6 | 四轮底盘实时控制、编码器采样、闭环控制、串口协议 |
 | 感知 | 思岚 A3、MPU6050 | 激光扫描、IMU 数据 |
 | 执行 | 四轮霍尔编码麦轮、双风机、继电器、顶盖舵机 | 运动、清扫、开关控制 |
@@ -34,6 +36,7 @@
 | [firmware/mechanical_arm_official_baseline/](firmware/mechanical_arm_official_baseline/) | 机械臂官方冻结基线 | 当前最新官方 STM32 机械臂控制板例程，作为 C-3.7.0 开工基线 |
 | [firmware/mechanical_arm_controller/](firmware/mechanical_arm_controller/) | 机械臂独立开发占位 | 后续先隔离调试基础机械臂控制，再评估与底盘融合 |
 | [Raspberrypi/](Raspberrypi/) | 树莓派 / ROS 工作区 | ROS 包、launch、脚本与发布目录 |
+| [OrangePi/](OrangePi/) | Orange Pi / RK3588 AI 工作区 | RKNN Runtime、YOLO11 图片检测、USB 摄像头实时检测基线 |
 | [jixiebi/](jixiebi/) | 机械臂历史实验副本 | OpenMV / 视觉抓取旧实验线，不再代表当前 STM32 机械臂基线 |
 | [tools/](tools/) | 本地工具 | 串口探测、UNO/RF1 辅助脚本等 |
 | [vue3/](vue3/) | V 线前后端工程 | uni-app Vue3 前端、Express/Prisma 后端、H5/小程序/App 构建与云端 edge-relay 接入 |
@@ -51,6 +54,7 @@
 | RF1 平滑调试 | [C-3.1.4D_openrf1_closed_loop_smoothing](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md) | 闭环平顺性调参记录 |
 | RF1 工程收口 | [C-3.6.0_openrf1_firmware_normalization](docs/SOFTWARE/C-3.6.0_openrf1_firmware_normalization.md) | 正式 Keil 工程、增量 PI 参数和迁移纪律 |
 | 机械臂基线 | [C-3.7.0_mechanical_arm_baseline_freeze](docs/SOFTWARE/C-3.7.0_mechanical_arm_baseline_freeze.md) | 官方例程冻结、独立开发目录与后续融合边界 |
+| OrangePi AI | [OrangePi/README.md](OrangePi/README.md) | Orange Pi 5 Max、RK3588、RKNN、YOLO11 摄像头检测入口 |
 | 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |
 | Vue3 前后端 | [vue3/README.md](vue3/README.md) | 前端页面、云端 backend、edge-relay、OpenClaw/ASR/OpenMV 适配入口 |
 | 机械臂 | [jixiebi/](jixiebi/) | 机械臂实验入口 |

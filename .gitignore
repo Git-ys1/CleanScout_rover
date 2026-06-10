@@ -48,6 +48,10 @@ firmware/openrf1_motion_controller/*.uvoptx
 # Mechanical-arm official baseline import staging and local IDE/build artifacts.
 docs/1.STM32控制板源代码/
 docs/1.STM32控制板源代码.zip
+docs/01.树莓派源码/
+docs/01.树莓派源码 - 副本/
+docs/01.树莓派源码*.rar
+docs/01.树莓派源码*.zip
 firmware/mechanical_arm_official_baseline/Listing/
 firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/DebugConfig/
 firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/*.uvguix*
@@ -57,6 +61,18 @@ firmware/mechanical_arm_official_baseline/Project/RVMDK（uv5）/JLinkSettings.i
 firmware/mechanical_arm_official_baseline/Output/*
 !firmware/mechanical_arm_official_baseline/Output/template.hex
 !firmware/mechanical_arm_official_baseline/Output/template.build_log.htm
+
+# OrangePi / RK3588 AI local runtime and vendor artifacts.
+OrangePi/**/rknn_toolkit2_env/
+OrangePi/**/rknn_lite_env/
+OrangePi/**/rknn_model_zoo/
+OrangePi/**/models/
+OrangePi/**/debug_logs/
+OrangePi/**/*.rknn
+OrangePi/**/*.onnx
+OrangePi/**/*.pt
+OrangePi/**/*.mp4
+OrangePi/**/*.avi
 
 # Local worker runtime files
 tools/*/.env

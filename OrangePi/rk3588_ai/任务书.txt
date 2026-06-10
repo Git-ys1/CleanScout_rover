@@ -1,0 +1,370 @@
+你现在通过 SSH 登录我的 Orange Pi 5 Max 8GB，目标是系统级排查 RK3588 NPU / RKNN Runtime 为什么在 `RKNNLite.init_runtime()` 阶段直接段错误。
+
+请严格按“诊断优先、不要破坏现有系统”的原则执行。当前板子上有 ROS Noetic、Fast-Drone-250 工作区、rk3588_ai 工作目录，不允许删除、移动、清空这些工作区。除非我明确授权，不要重装系统，不要卸载 ROS，不要删除 `/opt/ros`，不要删除 `~/Fast-Drone-250`，不要删除 `~/rk3588_ai`。
+
+一、当前已知现象
+
+板子：Orange Pi 5 Max 8GB，RK3588，Ubuntu 20.04，ROS Noetic。
+
+当前 RKNN 环境大致如下：
+
+* `rknn-toolkit-lite2 == 2.3.2`
+* `/usr/lib/librknnrt.so` 已经替换为 2.3.2
+* `/usr/bin/rknn_server` 已经替换为 2.3.2
+* `rknn_server` 可以启动
+* 内核日志显示 RKNPU driver 已初始化，版本为 `rknpu 0.9.6 20240322`
+* 之前旧 runtime 是 `librknnrt 1.4.0`，会报 `Invalid RKNN model version 6`
+* 替换 runtime 到 2.3.2 后，不再报模型版本错误，但在 `init_runtime()` 阶段直接段错误
+
+已经测试失败的模型：
+
+1. `~/rk3588_ai/models/lxmyzzs/yolo11n.rknn`
+2. `~/rk3588_ai/models/official_yolo11.rknn`
+
+其中 `official_yolo11.rknn` 是我在 Ubuntu 20.04 x86 PC 上用官方 `rknn_model_zoo/examples/yolo11` 和 `rknn-toolkit2==2.3.2` 转换出来的官方 YOLO11 模型。
+
+失败命令如下：
+
+```bash
+cd ~/rk3588_ai
+
+env -i \
+HOME=$HOME \
+USER=$USER \
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+LD_LIBRARY_PATH=/usr/lib:/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu \
+VIRTUAL_ENV=$HOME/rk3588_ai/rknn_lite_env \
+PYTHONPATH= \
+$HOME/rk3588_ai/rknn_lite_env/bin/python3 \
+test_rknn_core0.py ~/rk3588_ai/models/official_yolo11.rknn
+```
+
+输出：
+
+```text
+W rknn-toolkit-lite2 version: 2.3.2
+[1] load_rknn: /home/orangepi/rk3588_ai/models/official_yolo11.rknn
+load_rknn ret = 0
+[2] init_runtime: NPU_CORE_0
+段错误 (核心已转储)
+```
+
+因此目前要排查的核心问题是：
+
+* 是 runtime / driver / rknn_server / C API 库不匹配？
+* 是当前 Orange Pi Ubuntu 20.04 镜像的 RKNPU driver 与 RKNN 2.3.2 runtime 不兼容？
+* 是 Python Lite2 层崩溃，还是 C API 层也崩溃？
+* 是否存在多个 `librknnrt.so`、`librknn_api.so`、`rknn_server` 混用？
+* 是否存在旧库仍被动态加载？
+* 是否应该换系统镜像，而不是继续修当前系统？
+
+二、官方/准官方参考资料
+
+请优先参考这些资料，不要只凭经验猜：
+
+1. RKNN-Toolkit2 官方仓库
+   https://github.com/airockchip/rknn-toolkit2
+
+重点看：
+
+* RKNN-Toolkit2
+* RKNN-Toolkit-Lite2
+* RKNN Runtime
+* rknpu2/runtime/Linux
+* librknnrt.so
+* rknn_server
+
+2. RKNN Model Zoo 官方仓库
+   https://github.com/airockchip/rknn_model_zoo
+
+重点看：
+
+* examples/yolo11
+* examples/yolov8
+* 3rdparty/rknpu2/Linux/aarch64
+* Python API demo
+* C API demo
+
+3. YOLO11 官方 RKNN 示例说明
+   https://github.com/airockchip/rknn_model_zoo/blob/main/examples/yolo11/README.md
+
+重点看：
+
+* 官方 `yolo11n.onnx` 是优化模型
+* ONNX → RKNN 转换命令
+* Python Demo
+* Linux C/C++ Demo
+
+4. Rockchip RKNPU2 仓库
+   https://github.com/airockchip/rknpu2
+
+重点看：
+
+* runtime
+* examples
+* Linux demo
+* driver/runtime 说明
+
+5. Firefly RK3588 NPU 文档
+   https://wiki.t-firefly.com/en/EC-R3588SPC/usage_npu.html
+
+重点看：
+
+* RKNN 模型如何在 RK3588 上运行
+* rknpu2/examples
+* runtime/server 更新方式
+
+6. Luckfox RKNN Toolkit Lite2 文档
+   https://wiki.luckfox.com/luckfox-Aura/RKNN-Toolkit-Lite2/
+
+重点看：
+
+* Lite2 是板端 Python 推理接口
+* runtime、rknn_server、librknnrt 版本匹配
+* restart_rknn.sh
+
+三、请先做只读诊断，不要先改系统
+
+请创建一个诊断日志目录：
+
+```bash
+mkdir -p ~/rk3588_ai/debug_logs
+cd ~/rk3588_ai/debug_logs
+```
+
+收集系统基础信息：
+
+```bash
+date | tee 00_date.txt
+uname -a | tee 01_uname.txt
+cat /etc/os-release | tee 02_os_release.txt
+python3 --version | tee 03_python_system_version.txt
+groups | tee 04_groups.txt
+id | tee 05_id.txt
+```
+
+收集 NPU / DRM / 设备节点信息：
+
+```bash
+ls -l /dev/dri | tee 10_dev_dri.txt
+ls -l /dev/rknpu 2>&1 | tee 11_dev_rknpu.txt
+find /sys -iname "*rknpu*" 2>/dev/null | tee 12_sys_rknpu_paths.txt
+dmesg | grep -Ei "rknpu|npu|rknn|iommu|dma|fault|segfault|drm" | tail -200 | tee 13_dmesg_npu.txt
+```
+
+收集 runtime/server 文件和版本：
+
+```bash
+sudo find / -name "librknnrt.so*" 2>/dev/null -ls | tee 20_find_librknnrt.txt
+sudo find / -name "librknn_api.so*" 2>/dev/null -ls | tee 21_find_librknn_api.txt
+sudo find / -name "rknn_server*" 2>/dev/null -ls | tee 22_find_rknn_server.txt
+
+for f in $(sudo find / -name "librknnrt.so*" 2>/dev/null); do
+  echo "===== $f ====="
+  strings "$f" 2>/dev/null | grep -i "librknnrt version" | head -1
+done | tee 23_librknnrt_versions.txt
+
+for f in $(sudo find / -name "librknn_api.so*" 2>/dev/null); do
+  echo "===== $f ====="
+  file "$f"
+  strings "$f" 2>/dev/null | grep -Ei "rknn|version|build" | head -20
+done | tee 24_librknn_api_versions.txt
+
+strings /usr/bin/rknn_server 2>/dev/null | grep -Ei "rknn_server version|version|build|Transfer version" | head -50 | tee 25_rknn_server_version.txt
+strings /usr/lib/librknnrt.so 2>/dev/null | grep -i "librknnrt version" | tee 26_usr_lib_librknnrt_version.txt
+ldconfig -p | grep -Ei "rknn|drm" | tee 27_ldconfig_rknn.txt
+```
+
+收集进程状态：
+
+```bash
+ps -ef | grep -Ei "rknn|npu" | grep -v grep | tee 30_rknn_processes.txt
+```
+
+收集 Python 环境：
+
+```bash
+cd ~/rk3588_ai
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+which python3 | tee debug_logs/40_venv_python_path.txt
+python3 --version | tee debug_logs/41_venv_python_version.txt
+python3 -m pip show rknn-toolkit-lite2 | tee debug_logs/42_pip_show_rknn_lite.txt
+python3 -c "from rknnlite.api import RKNNLite; print('RKNNLite import OK')" | tee debug_logs/43_rknnlite_import.txt
+```
+
+四、复现段错误，并收集真实加载库
+
+先用干净环境复现官方模型：
+
+```bash
+cd ~/rk3588_ai
+
+env -i \
+HOME=$HOME \
+USER=$USER \
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+LD_LIBRARY_PATH=/usr/lib:/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu \
+VIRTUAL_ENV=$HOME/rk3588_ai/rknn_lite_env \
+PYTHONPATH= \
+$HOME/rk3588_ai/rknn_lite_env/bin/python3 \
+test_rknn_core0.py ~/rk3588_ai/models/official_yolo11.rknn \
+2>&1 | tee ~/rk3588_ai/debug_logs/50_reproduce_official_python.txt
+```
+
+再做 `LD_DEBUG`，重点确认有没有真正加载 `/usr/lib/librknnrt.so`，以及是否加载了奇怪路径下的旧库：
+
+```bash
+cd ~/rk3588_ai
+
+env -i \
+HOME=$HOME \
+USER=$USER \
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+LD_LIBRARY_PATH=/usr/lib:/lib:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu \
+VIRTUAL_ENV=$HOME/rk3588_ai/rknn_lite_env \
+PYTHONPATH= \
+LD_DEBUG=libs \
+$HOME/rk3588_ai/rknn_lite_env/bin/python3 \
+test_rknn_core0.py ~/rk3588_ai/models/official_yolo11.rknn \
+2>&1 | tee ~/rk3588_ai/debug_logs/51_lddebug_official_python.txt
+
+grep -i "librknnrt\|librknn_api\|rknn" ~/rk3588_ai/debug_logs/51_lddebug_official_python.txt | tee ~/rk3588_ai/debug_logs/52_lddebug_rknn_grep.txt
+```
+
+复现后立即看内核日志：
+
+```bash
+dmesg | grep -Ei "rknpu|npu|rknn|iommu|dma|fault|segfault|python" | tail -200 | tee ~/rk3588_ai/debug_logs/53_dmesg_after_crash.txt
+```
+
+五、检查是否缺少或未安装 `librknn_api.so`
+
+重点确认 `/usr/lib/librknn_api.so` 是否存在。之前只明确替换了 `/usr/lib/librknnrt.so` 和 `/usr/bin/rknn_server`，但有些官方/社区升级流程会同时安装 `librknn_api.so`。
+
+请执行：
+
+```bash
+ls -lh /usr/lib/librknn_api.so 2>&1 | tee ~/rk3588_ai/debug_logs/60_usr_lib_librknn_api_exists.txt
+file /usr/lib/librknn_api.so 2>&1 | tee ~/rk3588_ai/debug_logs/61_usr_lib_librknn_api_file.txt
+```
+
+如果不存在，先不要立刻乱装。请先在本地官方仓库中找：
+
+```bash
+find ~/rk3588_ai -name "librknn_api.so" -ls | tee ~/rk3588_ai/debug_logs/62_find_librknn_api_local.txt
+```
+
+如果确认官方仓库中有 aarch64 版本，例如：
+
+```text
+~/rk3588_ai/rknn_model_zoo/3rdparty/rknpu2/Linux/aarch64/librknn_api.so
+```
+
+则建议备份后安装：
+
+```bash
+sudo cp -av /usr/lib/librknn_api.so /usr/lib/librknn_api.so.bak_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+sudo cp -av ~/rk3588_ai/rknn_model_zoo/3rdparty/rknpu2/Linux/aarch64/librknn_api.so /usr/lib/librknn_api.so
+sudo chown root:root /usr/lib/librknn_api.so
+sudo chmod 755 /usr/lib/librknn_api.so
+sudo ldconfig
+```
+
+然后完整重启：
+
+```bash
+sudo reboot
+```
+
+重启后再复测官方模型。
+
+六、请用 C API demo 隔离 Python Lite2 问题
+
+当前 Python Lite2 在 `init_runtime()` 段错误。必须判断 C API 是否也崩。请优先尝试官方 Model Zoo 的 Linux C/C++ demo 或 rknpu2 examples。
+
+目标：
+
+* 如果 C API demo 成功，而 Python Lite2 崩：问题集中在 Python Lite2 wheel / Python 环境 / Lite2 封装。
+* 如果 C API demo 也崩：问题集中在底层 runtime / driver / 系统镜像。
+
+请在官方 `rknn_model_zoo` 里查找 yolo11 或 yolov8 的 C/C++ Linux demo 编译说明：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo
+find examples -maxdepth 4 -iname "*README*" | grep -Ei "yolo11|yolov8|cpp|capi"
+find examples -maxdepth 5 -type f | grep -Ei "rknn.*demo|build.*sh|CMakeLists|main.cc|main.cpp|rknn_yolo"
+```
+
+如果官方 yolo11 C demo 难以编译，先找更简单的 mobilenet 或 classification demo 做 C API smoke test。目标不是检测效果，而是让 C API 能否 `rknn_init` 成功。
+
+请记录：
+
+```bash
+mkdir -p ~/rk3588_ai/debug_logs/capi_test
+# 所有编译命令和运行输出 tee 到 debug_logs/capi_test 下
+```
+
+七、请判断是否需要换系统镜像
+
+完成上面排查后，请给出明确结论：
+
+A. 如果官方 Python 模型在补齐 `librknn_api.so`、重启后成功：
+
+* 说明原系统 runtime 安装不完整。
+* 给出最终稳定安装清单。
+* 不需要换系统。
+
+B. 如果 Python 仍崩，但 C API demo 成功：
+
+* 说明 NPU driver/runtime 基本可用，Python Lite2 层可能不兼容。
+* 尝试更换 Lite2 wheel 版本，例如与 runtime 更匹配的 2.3.2 官方 wheel，或者改用 C++/C API 部署。
+* 不要立刻换系统。
+
+C. 如果 Python 和 C API 都在 `rknn_init/init_runtime` 崩：
+
+* 说明当前 Orange Pi Ubuntu 20.04 镜像的 RKNPU driver/kernel/runtime 组合不稳定。
+* 建议换系统镜像。
+* 优先建议使用 Orange Pi 官方较新镜像，或确认支持 Orange Pi 5 Max NPU 的较新 Ubuntu/Debian/Armbian 镜像。
+* 换系统前必须备份当前 SD 卡或使用新 SD 卡/新 NVMe 测试，不能破坏现有 ROS 环境。
+
+D. 如果所有官方 demo 都能跑，但我的两个 YOLO 模型崩：
+
+* 说明模型转换或模型结构问题。
+* 回到 PC 端重新转换官方模型，并检查 `target_platform=rk3588`、Toolkit2 版本、量化配置、模型输出结构。
+
+八、最终请输出一份诊断报告
+
+报告文件保存为：
+
+```text
+~/rk3588_ai/debug_logs/RK3588_RKNN_NPU_DIAGNOSIS_REPORT.md
+```
+
+报告必须包含：
+
+1. 系统版本、内核版本、架构
+2. RKNPU driver 版本
+3. `/dev/dri` / `/dev/rknpu` / sysfs 设备情况
+4. `librknnrt.so` 所有路径和版本
+5. `librknn_api.so` 是否存在、路径和版本
+6. `rknn_server` 版本和运行状态
+7. Python Lite2 版本
+8. Python 官方模型复现结果
+9. `LD_DEBUG` 中实际加载的 RKNN 相关库路径
+10. 崩溃后的 `dmesg` 关键信息
+11. C API demo 是否能跑
+12. 最终判断：模型问题、Python Lite2 问题、runtime/driver 问题、系统镜像问题，还是硬件问题
+13. 推荐下一步操作，不超过 3 个方案，并按优先级排序
+
+九、注意事项
+
+* 不要删除 ROS 工作区。
+* 不要删除 `~/Fast-Drone-250`。
+* 不要删除 `~/rk3588_ai`。
+* 不要修改 `.bashrc`，除非我明确授权。
+* 不要直接重装系统。
+* 替换 `/usr/lib/*.so` 前必须备份。
+* 每个关键命令都要 tee 到日志文件。
+* 不要只说“可能是环境问题”，必须用证据说明是哪一层。
+* 如果需要搜索资料，优先看官方 GitHub、Rockchip、Firefly、Radxa、Luckfox、Orange Pi 官方资料。

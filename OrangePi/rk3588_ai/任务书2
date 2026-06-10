@@ -1,0 +1,415 @@
+任务：通过 SSH 修复 Orange Pi 5 Max 上 RK3588 YOLO11 RKNN 官方 Python Demo 的可视化运行问题。
+
+设备与路径：
+
+* 设备：Orange Pi 5 Max 8GB，RK3588
+* 系统：Ubuntu 20.04
+* 工作目录：`~/rk3588_ai`
+* RKNN Model Zoo：`~/rk3588_ai/rknn_model_zoo`
+* Python 虚拟环境：`~/rk3588_ai/rknn_lite_env`
+* 官方模型：`~/rk3588_ai/models/official_yolo11.rknn`
+* lxmyzzs 模型：`~/rk3588_ai/models/lxmyzzs/yolo11n.rknn`
+* 目标脚本：`~/rk3588_ai/rknn_model_zoo/examples/yolo11/python/yolo11.py`
+* 当前 executor：`~/rk3588_ai/rknn_model_zoo/py_utils/rknn_executor.py`
+
+重要前提：
+
+1. RKNN Runtime 底层已经修复，不要再重装系统。
+2. `/usr/lib/librknnrt.so` 已是官方完整 2.3.2。
+3. NPU 推理已经通过最小 Python 脚本和 C API 验证。
+4. 当前问题发生在 YOLO11 后处理 `dfl()` 阶段 import torch。
+5. 不要删除 ROS 工作区，不要删除 `~/Fast-Drone-250`，不要修改 `.bashrc`，不要重装系统。
+6. 可以备份并修改 `yolo11.py` 和 `py_utils/rknn_executor.py`，但必须保留备份。
+
+当前报错：
+
+运行命令：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo/examples/yolo11/python
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+python3 yolo11.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --img_show
+```
+
+现象：
+
+```text
+init_runtime ret = 0
+Model-...official_yolo11.rknn is rknn model, starting val
+...
+File "yolo11.py", line 90, in dfl
+    import torch
+ImportError: ... torch.libs/libgomp-804f19d4.so.1.0.0: cannot allocate memory in static TLS block
+```
+
+注意：torch 单独 import 可能正常，但在 yolo11.py 中后期 import torch 会失败。怀疑是 cv2 / numpy / RKNNLite / libgomp / torch 的动态库加载顺序问题。
+
+官方参考资料：
+
+1. RKNN Toolkit2 官方仓库
+   https://github.com/airockchip/rknn-toolkit2
+
+2. RKNN Model Zoo 官方仓库
+   https://github.com/airockchip/rknn_model_zoo
+
+3. 官方 YOLO11 示例
+   https://github.com/airockchip/rknn_model_zoo/blob/main/examples/yolo11/README.md
+
+4. YOLO11 Python 源码
+   https://github.com/airockchip/rknn_model_zoo/blob/main/examples/yolo11/python/yolo11.py
+
+5. aarch64 / Jetson 上 libgomp static TLS 参考
+   https://forums.developer.nvidia.com/t/importerror-cannot-allocate-memory-in-static-tls-block/321535
+
+第一阶段：建立日志目录
+
+```bash
+mkdir -p ~/rk3588_ai/debug_logs/yolo11_visual_fix
+cd ~/rk3588_ai/debug_logs/yolo11_visual_fix
+```
+
+第二阶段：记录当前文件状态
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo
+
+cp -av examples/yolo11/python/yolo11.py \
+  ~/rk3588_ai/debug_logs/yolo11_visual_fix/yolo11.py.before_fix.$(date +%Y%m%d_%H%M%S)
+
+cp -av py_utils/rknn_executor.py \
+  ~/rk3588_ai/debug_logs/yolo11_visual_fix/rknn_executor.py.before_fix.$(date +%Y%m%d_%H%M%S)
+
+sha256sum examples/yolo11/python/yolo11.py py_utils/rknn_executor.py \
+  | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/00_sha256_before.txt
+```
+
+第三阶段：确认当前依赖
+
+```bash
+cd ~/rk3588_ai
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+which python3 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/01_python_path.txt
+python3 --version | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/02_python_version.txt
+
+python3 -m pip show rknn-toolkit-lite2 torch numpy opencv-python 2>&1 \
+  | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/03_pip_show.txt
+
+python3 - <<'PY' 2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/04_import_basic.txt
+import sys
+print("python:", sys.executable)
+import numpy as np
+print("numpy:", np.__version__)
+import cv2
+print("cv2:", cv2.__version__)
+from rknnlite.api import RKNNLite
+print("rknnlite OK")
+try:
+    import torch
+    print("torch:", torch.__version__)
+except Exception as e:
+    print("torch import failed:", repr(e))
+PY
+```
+
+第四阶段：专门测试导入顺序
+
+请创建脚本：
+
+```bash
+cat > ~/rk3588_ai/debug_logs/yolo11_visual_fix/test_import_orders.py <<'PY'
+import subprocess
+import textwrap
+import os
+import sys
+
+tests = {
+    "torch_only": """
+import torch
+print("torch OK", torch.__version__)
+""",
+    "torch_cv2_rknn": """
+import torch
+print("torch OK", torch.__version__)
+import cv2
+print("cv2 OK", cv2.__version__)
+from rknnlite.api import RKNNLite
+print("rknnlite OK")
+""",
+    "cv2_torch_rknn": """
+import cv2
+print("cv2 OK", cv2.__version__)
+import torch
+print("torch OK", torch.__version__)
+from rknnlite.api import RKNNLite
+print("rknnlite OK")
+""",
+    "rknn_cv2_torch": """
+from rknnlite.api import RKNNLite
+print("rknnlite OK")
+import cv2
+print("cv2 OK", cv2.__version__)
+import torch
+print("torch OK", torch.__version__)
+""",
+    "numpy_cv2_rknn_torch": """
+import numpy
+print("numpy OK", numpy.__version__)
+import cv2
+print("cv2 OK", cv2.__version__)
+from rknnlite.api import RKNNLite
+print("rknnlite OK")
+import torch
+print("torch OK", torch.__version__)
+"""
+}
+
+for name, code in tests.items():
+    print("\\n==========", name, "==========")
+    p = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], text=True, capture_output=True)
+    print("returncode:", p.returncode)
+    print("stdout:\\n", p.stdout)
+    print("stderr:\\n", p.stderr)
+PY
+
+cd ~/rk3588_ai
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+python3 ~/rk3588_ai/debug_logs/yolo11_visual_fix/test_import_orders.py \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/05_import_order_results.txt
+```
+
+判断：
+
+* 如果 `torch_cv2_rknn` 成功而 `rknn_cv2_torch` 失败，说明必须在脚本最开头提前 import torch。
+* 如果所有包含 torch 的组合都失败，检查 torch 安装本身。
+* 如果 torch 单独成功，后期 import 失败，则是 static TLS / libgomp 加载顺序问题。
+
+第五阶段：测试 LD_PRELOAD，但不要写入 bashrc
+
+查找 libgomp：
+
+```bash
+find /usr/lib ~/rk3588_ai/rknn_lite_env -name "libgomp*.so*" -ls \
+  | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/06_find_libgomp.txt
+```
+
+尝试系统 libgomp：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo/examples/yolo11/python
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1 python3 - <<'PY' \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/07_torch_preload_system_gomp.txt
+import torch
+print("torch OK", torch.__version__)
+PY
+```
+
+如果系统 libgomp 不行，再尝试 torch 自带 libgomp：
+
+```bash
+TORCH_GOMP=$(find ~/rk3588_ai/rknn_lite_env -name "libgomp*.so*" | head -1)
+echo "$TORCH_GOMP" | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/08_torch_gomp_path.txt
+
+LD_PRELOAD="$TORCH_GOMP" python3 - <<'PY' \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/09_torch_preload_torch_gomp.txt
+import torch
+print("torch OK", torch.__version__)
+PY
+```
+
+第六阶段：首选修复方案 A：提前 import torch
+
+如果导入顺序测试表明提前 import torch 有效，则修改 `yolo11.py`：
+
+目标：把 `import torch` 放到文件顶部，在 `cv2`、`numpy`、`RKNNLite`、OpenCV 相关库之前尽早加载，避免 static TLS 块被后续动态库占用。
+
+操作：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo/examples/yolo11/python
+
+cp -av yolo11.py yolo11.py.bak_before_import_torch_first
+
+python3 - <<'PY'
+from pathlib import Path
+p = Path("yolo11.py")
+s = p.read_text()
+
+# 如果顶部还没有 import torch，则插入到 import cv2 前
+if "import torch" not in s.split("\\n")[:20]:
+    s = s.replace("import cv2", "import torch\\nimport cv2", 1)
+
+# 删除 dfl() 内部的局部 import torch，避免重复导入
+s = s.replace("    import torch\\n", "")
+
+p.write_text(s)
+print("patched yolo11.py: torch imported at top")
+PY
+
+grep -n "import torch\\|def dfl" -A5 -B5 yolo11.py \
+  | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/10_yolo11_torch_import_patch.txt
+```
+
+然后运行：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo/examples/yolo11/python
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+python3 yolo11.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --img_show \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/11_run_after_torch_first.txt
+```
+
+如果仍然 TLS 报错，则用 LD_PRELOAD + torch first：
+
+```bash
+LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1 python3 yolo11.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --img_show \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/12_run_after_torch_first_preload.txt
+```
+
+第七阶段：备选修复方案 B：不装/不用 torch，改成 NumPy DFL，但必须验证一致性
+
+只有在方案 A 失败时才采用。
+
+目标：用 NumPy 实现与 torch.softmax 完全等价的 DFL 解码。不要盲改，必须先在 PC 或板端能 import torch 的独立环境中用随机输入对比 torch 版和 NumPy 版输出误差。
+
+NumPy DFL 函数：
+
+```python
+def dfl(position):
+    import numpy as np
+    n, c, h, w = position.shape
+    p_num = 4
+    mc = c // p_num
+    y = position.reshape(n, p_num, mc, h, w)
+    y = y - np.max(y, axis=2, keepdims=True)
+    y = np.exp(y)
+    y = y / np.sum(y, axis=2, keepdims=True)
+    acc_metrix = np.arange(mc, dtype=np.float32).reshape(1, 1, mc, 1, 1)
+    y = (y * acc_metrix).sum(axis=2)
+    return y
+```
+
+验证脚本：
+
+```bash
+cat > ~/rk3588_ai/debug_logs/yolo11_visual_fix/compare_dfl_numpy_torch.py <<'PY'
+import numpy as np
+import torch
+
+def dfl_torch(position):
+    x = torch.tensor(position)
+    n,c,h,w = x.shape
+    p_num = 4
+    mc = c // p_num
+    y = x.reshape(n,p_num,mc,h,w)
+    y = y.softmax(2)
+    acc_metrix = torch.tensor(range(mc)).float().reshape(1,1,mc,1,1)
+    y = (y*acc_metrix).sum(2)
+    return y.numpy()
+
+def dfl_numpy(position):
+    n, c, h, w = position.shape
+    p_num = 4
+    mc = c // p_num
+    y = position.reshape(n, p_num, mc, h, w)
+    y = y - np.max(y, axis=2, keepdims=True)
+    y = np.exp(y)
+    y = y / np.sum(y, axis=2, keepdims=True)
+    acc_metrix = np.arange(mc, dtype=np.float32).reshape(1, 1, mc, 1, 1)
+    y = (y * acc_metrix).sum(axis=2)
+    return y
+
+np.random.seed(0)
+x = np.random.randn(1, 64, 80, 80).astype(np.float32)
+a = dfl_torch(x)
+b = dfl_numpy(x)
+print("max_abs_error:", np.max(np.abs(a-b)))
+print("mean_abs_error:", np.mean(np.abs(a-b)))
+PY
+
+cd ~/rk3588_ai
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+python3 ~/rk3588_ai/debug_logs/yolo11_visual_fix/compare_dfl_numpy_torch.py \
+  2>&1 | tee ~/rk3588_ai/debug_logs/yolo11_visual_fix/20_compare_dfl_numpy_torch.txt
+```
+
+只有当 `max_abs_error` 很小，例如小于 `1e-5` 或 `1e-4`，才修改 `yolo11.py` 的 dfl。
+
+第八阶段：确保结果可视化或保存
+
+如果 `--img_show` 因远程桌面/SSH 显示问题失败，请不要把它当成推理失败。检查：
+
+```bash
+echo $DISPLAY
+```
+
+如果显示不可用，请在 `yolo11.py` 末尾添加保存结果图的逻辑，或者检查是否已有 `--img_save` 参数。
+
+目标输出：
+
+* 能打印检测类别、置信度、坐标。
+* 能保存结果图片，例如：
+  `~/rk3588_ai/debug_logs/yolo11_visual_fix/yolo11_result.jpg`
+
+第九阶段：最终验收标准
+
+必须完成至少一个：
+
+A. 官方 YOLO11 Python Demo 可显示检测结果窗口。
+
+或：
+
+B. 官方 YOLO11 Python Demo 可保存带检测框的结果图片。
+
+并记录：
+
+```text
+1. official_yolo11.rknn 是否成功推理
+2. 是否完成 post_process
+3. 是否输出 person / bus 等类别
+4. 是否保存或显示结果图
+5. 最终采用的是 torch-first 方案、LD_PRELOAD 方案，还是 NumPy DFL 方案
+6. 是否改动了 yolo11.py 和 rknn_executor.py
+7. 如何恢复原文件
+```
+
+第十阶段：生成报告
+
+报告保存为：
+
+```text
+~/rk3588_ai/debug_logs/yolo11_visual_fix/YOLO11_VISUAL_DEMO_FIX_REPORT.md
+```
+
+报告必须写明：
+
+1. 本次问题根因。
+2. torch / libgomp / static TLS 是否由导入顺序引起。
+3. 是否使用 LD_PRELOAD。
+4. 是否最终改用 NumPy DFL。
+5. RKNN/NPU 是否正常。
+6. 可视化结果图片路径。
+7. 后续接摄像头应该从哪个脚本继续。
+
+注意事项：
+
+* 不要重装系统。
+* 不要卸载 ROS。
+* 不要删除 `~/Fast-Drone-250`。
+* 不要删除 `~/rk3588_ai`。
+* 不要把环境变量永久写入 `.bashrc`，除非我确认。
+* 每次修改前备份。
+* 优先保持官方/大佬逻辑，只有在验证等价后才用 NumPy DFL。

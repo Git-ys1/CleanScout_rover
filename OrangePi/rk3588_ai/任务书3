@@ -1,0 +1,324 @@
+任务：在 Orange Pi 5 Max 8GB / RK3588 上，把已经跑通的官方 YOLO11 RKNN 图片检测脚本改造成 USB 摄像头实时检测窗口。
+
+设备与当前状态：
+
+* 设备：Orange Pi 5 Max 8GB，RK3588
+* 系统：Ubuntu 20.04.6，NoMachine 远程桌面可用
+* 用户：orangepi
+* 工作目录：`~/rk3588_ai`
+* 官方仓库：`~/rk3588_ai/rknn_model_zoo`
+* Python 虚拟环境：`~/rk3588_ai/rknn_lite_env`
+* 官方模型：`~/rk3588_ai/models/official_yolo11.rknn`
+* 当前已修复脚本：
+  `~/rk3588_ai/rknn_model_zoo/examples/yolo11/python/yolo11.py`
+* 当前 `yolo11.py` 已完成：
+
+  * RKNNLite executor 适配
+  * 4 维输入修正
+  * NumPy DFL 后处理修复
+  * 官方 bus 图片检测成功
+  * `--img_save` 能保存带检测框图片
+* USB 鱼眼相机已经通过 OpenCV 预览脚本确认可用：
+
+  * 远程桌面窗口可显示
+  * 预览约 29.8 / 30 FPS
+  * 说明 OpenCV、GUI、摄像头设备链路已通
+
+当前目标：
+
+不要接 ROS，不要做机械臂，不要做多线程优化。只实现：
+
+```text
+USB 摄像头 /dev/videoX
+↓
+OpenCV VideoCapture 稳定读取画面
+↓
+沿用 yolo11.py 的 letterbox、RGB 转换、model.run、post_process、draw
+↓
+RKNNLite 调用 NPU 推理
+↓
+OpenCV 在实时窗口显示画面和 YOLO 检测框
+↓
+按 q 或 ESC 退出
+```
+
+一、官方/技术参考
+
+优先参考：
+
+1. OpenCV VideoCapture 官方文档
+   https://docs.opencv.org/4.x/d8/dfe/classcv_1_1VideoCapture.html
+
+2. OpenCV Python 视频采集官方教程
+   https://docs.opencv.org/4.x/dd/d43/tutorial_py_video_display.html
+
+3. OpenCV HighGUI / imshow / waitKey 官方说明
+   https://docs.opencv.org/4.x/d7/dfc/group__highgui.html
+
+4. OpenCV Video I/O flags：CAP_PROP_FRAME_WIDTH、CAP_PROP_FRAME_HEIGHT、CAP_PROP_FPS、CAP_PROP_FOURCC
+   https://docs.opencv.org/4.x/d4/d15/group__videoio__flags__base.html
+
+5. v4l2-ctl 常用命令参考
+   https://linuxcommandlibrary.com/man/v4l2-ctl
+
+6. RKNN Model Zoo 官方仓库
+   https://github.com/airockchip/rknn_model_zoo
+
+7. RKNN Model Zoo 官方 YOLO11 示例
+   https://github.com/airockchip/rknn_model_zoo/blob/main/examples/yolo11/README.md
+
+二、不要破坏现有文件
+
+不要直接覆盖 `yolo11.py`。请创建新脚本：
+
+```text
+~/rk3588_ai/rknn_model_zoo/examples/yolo11/python/yolo11_camera.py
+```
+
+要求：
+
+* 复用现有 `yolo11.py` 中已经修好的函数：
+
+  * `setup_model`
+  * `post_process`
+  * `draw` 或等价画框逻辑
+  * `COCO_test_helper`
+  * `letter_box`
+  * `IMG_SIZE`
+  * `CLASSES`
+* 不要把 `yolo11.py` 改坏。
+* 每次修改前备份。
+* 不写 `.bashrc`。
+* 不删 ROS、不删工作区、不动 `~/Fast-Drone-250`。
+
+三、先收集摄像头信息
+
+执行并保存日志：
+
+```bash
+mkdir -p ~/rk3588_ai/debug_logs/yolo11_camera
+cd ~/rk3588_ai/debug_logs/yolo11_camera
+
+date | tee 00_date.txt
+v4l2-ctl --list-devices 2>&1 | tee 01_v4l2_devices.txt
+v4l2-ctl -d /dev/video0 --list-formats-ext 2>&1 | tee 02_video0_formats.txt
+v4l2-ctl -d /dev/video1 --list-formats-ext 2>&1 | tee 03_video1_formats.txt
+echo "DISPLAY=$DISPLAY" | tee 04_display.txt
+```
+
+如果 `/dev/video0` 不是可用视频流节点，自动尝试 `/dev/video1`、`/dev/video2`。不要假设固定是 0。
+
+四、实现 `yolo11_camera.py`
+
+建议结构：
+
+1. 从现有 `yolo11.py` 导入或复制必要函数。
+2. argparse 参数至少包括：
+
+```text
+--model_path
+--target
+--device_id
+--camera
+--width
+--height
+--fps
+--fourcc
+--save_path
+--no_show
+--skip
+```
+
+参数建议默认：
+
+```text
+--target rk3588
+--camera 0
+--width 640
+--height 480
+--fps 30
+--fourcc MJPG
+--skip 0
+```
+
+3. 使用 OpenCV 打开摄像头：
+
+```python
+cap = cv2.VideoCapture(cam_src, cv2.CAP_V4L2)
+```
+
+4. 设置参数时注意顺序：
+
+```python
+cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*args.fourcc))
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
+cap.set(cv2.CAP_PROP_FPS, args.fps)
+```
+
+5. 打印实际打开参数：
+
+```python
+real_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+real_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+real_fps = cap.get(cv2.CAP_PROP_FPS)
+real_fourcc = cap.get(cv2.CAP_PROP_FOURCC)
+```
+
+6. 实时循环：
+
+```python
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    img_src = frame
+    img = letterbox 到 640x640
+    img = BGR 转 RGB
+    input_data = np.expand_dims(img, axis=0)
+    outputs = model.run([input_data])
+    boxes, classes, scores = post_process(outputs)
+
+    vis = img_src.copy()
+    if boxes is not None:
+        boxes = co_helper.get_real_box(boxes)
+        draw(vis, boxes, scores, classes)
+
+    计算并绘制 YOLO FPS
+    cv2.imshow(...)
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q') or key == 27:
+        break
+```
+
+注意：
+
+* 当前模型输入需要 `(1, 640, 640, 3)`，不能传 `(640, 640, 3)`。
+* 现在是实时摄像头，不能使用 `cv2.waitKeyEx(0)`，必须使用 `cv2.waitKey(1)`。
+* `draw()` 原函数打印每个检测框，实时视频里可能刷屏。建议增加参数 `--print_boxes`，默认不打印每帧框，避免终端疯狂输出。
+* 如果 `--save_path` 不为空，则保存输出视频。
+* 如果 `--no_show` 开启，则不弹窗，只保存视频或只打印 FPS。
+* 退出时必须 `cap.release()`、`model.release()`、`cv2.destroyAllWindows()`。
+
+五、运行命令
+
+先用窗口显示：
+
+```bash
+cd ~/rk3588_ai/rknn_model_zoo/examples/yolo11/python
+source ~/rk3588_ai/rknn_lite_env/bin/activate
+
+python3 yolo11_camera.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --camera 0 \
+  --width 640 \
+  --height 480 \
+  --fps 30 \
+  --fourcc MJPG
+```
+
+如果 `/dev/video0` 不对，尝试：
+
+```bash
+python3 yolo11_camera.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --camera 1 \
+  --width 640 \
+  --height 480 \
+  --fps 30 \
+  --fourcc MJPG
+```
+
+或：
+
+```bash
+python3 yolo11_camera.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --camera /dev/video0 \
+  --width 640 \
+  --height 480 \
+  --fps 30 \
+  --fourcc MJPG
+```
+
+如果窗口无法显示，但摄像头可读，则保存短视频：
+
+```bash
+python3 yolo11_camera.py \
+  --model_path ~/rk3588_ai/models/official_yolo11.rknn \
+  --target rk3588 \
+  --camera 0 \
+  --width 640 \
+  --height 480 \
+  --fps 30 \
+  --fourcc MJPG \
+  --no_show \
+  --save_path ~/rk3588_ai/debug_logs/yolo11_camera/yolo11_camera_test.mp4
+```
+
+六、验收标准
+
+必须满足：
+
+1. 摄像头能打开。
+2. 能实时显示窗口。
+3. 窗口中显示原始画面。
+4. 如果画面中有 COCO 类目标，显示 YOLO 检测框、类别、置信度。
+5. 左上角显示 YOLO FPS 或 pipeline FPS。
+6. q 或 ESC 能退出。
+7. 退出后摄像头释放正常。
+8. 终端没有疯狂刷检测框，除非开启 `--print_boxes`。
+9. 保存一张截图或一段短视频作为验收结果。
+
+截图保存路径建议：
+
+```text
+~/rk3588_ai/debug_logs/yolo11_camera/yolo11_camera_result.jpg
+```
+
+视频保存路径建议：
+
+```text
+~/rk3588_ai/debug_logs/yolo11_camera/yolo11_camera_test.mp4
+```
+
+七、性能预期
+
+不要追求 30 FPS YOLO。普通摄像头预览 30 FPS 已经验证，但 YOLO11 RKNN 单次推理此前约 60 ms，因此实时 YOLO 初始版本预计只有 10~16 FPS 左右。当前阶段只要求稳定显示和正确检测，不做多线程。
+
+后续优化方向另做任务：
+
+* 采集线程和推理线程解耦
+* 队列只保留最新帧
+* 降低输入分辨率或换更小模型
+* 使用 NPU 多核或多实例
+* C++ Demo / C API 重写
+* RGA 做 resize / colorspace
+* ROS 发布检测结果
+
+八、输出报告
+
+完成后生成：
+
+```text
+~/rk3588_ai/debug_logs/yolo11_camera/YOLO11_CAMERA_DEMO_REPORT.md
+```
+
+报告必须包含：
+
+1. 使用的摄像头节点，例如 `/dev/video0`
+2. v4l2 支持格式
+3. OpenCV 实际打开的宽高、FPS、fourcc
+4. 是否使用 MJPG
+5. YOLO 模型路径
+6. 是否成功显示窗口
+7. 检测 FPS 大约多少
+8. 结果截图/视频路径
+9. 修改了哪些文件
+10. 如何运行脚本
+11. 如何退出窗口
+12. 下一步建议

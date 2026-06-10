@@ -1,0 +1,2 @@
+# Keep board-side shell scripts executable-friendly on Linux.
+OrangePi/**/*.sh text eol=lf
