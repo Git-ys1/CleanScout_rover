@@ -54,6 +54,7 @@
 | RF1 平滑调试 | [C-3.1.4D_openrf1_closed_loop_smoothing](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md) | 闭环平顺性调参记录 |
 | RF1 工程收口 | [C-3.6.0_openrf1_firmware_normalization](docs/SOFTWARE/C-3.6.0_openrf1_firmware_normalization.md) | 正式 Keil 工程、增量 PI 参数和迁移纪律 |
 | 机械臂基线 | [C-3.7.0_mechanical_arm_baseline_freeze](docs/SOFTWARE/C-3.7.0_mechanical_arm_baseline_freeze.md) | 官方例程冻结、独立开发目录与后续融合边界 |
+| 机械臂协议澄清 | [C-5.0.2_arm_bus_servo_protocol_note](docs/VERIFY/C-5.0.2_arm_bus_servo_protocol_note.md) | 总线舵机 ASCII 文本协议、STM32 执行层与 `yh_pwm_text` 语义定版 |
 | OrangePi AI | [OrangePi/README.md](OrangePi/README.md) | Orange Pi 5 Max、RK3588、RKNN、YOLO11 摄像头检测入口 |
 | 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |
 | Vue3 前后端 | [vue3/README.md](vue3/README.md) | 前端页面、云端 backend、edge-relay、OpenClaw/ASR/OpenMV 适配入口 |
