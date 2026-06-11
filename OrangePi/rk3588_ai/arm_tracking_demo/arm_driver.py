@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
@@ -15,6 +16,7 @@ DEFAULT_CONFIG = {
     "protocol": "yh_pwm_text",
     "timeout_s": 0.2,
     "echo_commands": True,
+    "wrap_multi_command": True,
     "yaw_servo_index": 0,
     "pitch_servo_index": 3,
     "servo_ids": [0, 1, 2, 3, 4, 5],
@@ -22,16 +24,24 @@ DEFAULT_CONFIG = {
     "yaw_init": 0.0,
     "pitch_init": 1.2,
     "yaw_pwm_neutral": 1500,
-    "pitch_pwm_neutral": 1500,
+    "pitch_pwm_neutral": 900,
     "yaw_pwm_per_rad": 500,
     "pitch_pwm_per_rad": 500,
     "yaw_pwm_sign": 1,
     "pitch_pwm_sign": -1,
     "pwm_min": 900,
-    "pwm_max": 2100,
+    "pwm_max": 2200,
     "reference_hold_joints": [0.0, -0.930, 1.6, 1.2, 0.0, 0.801],
-    "hold_servo_pwms": [1500, 1500, 1500, 1500, 1500, 1500],
-    "stop_servo_indices": [0, 1, 2, 3, 4, 5],
+    "hold_servo_pwms": [1500, 1907, 1900, 900, 1500, 1500],
+    "stop_servo_indices": [0, 3],
+    "prepare_tracking_pose": True,
+    "tracking_pose_pwms": {0: 1500, 1: 1907, 2: 1900, 3: 900, 4: 1500, 5: 1500},
+    "tracking_pose_duration_ms": 1500,
+    "tracking_pose_settle_s": 4.0,
+    "tracking_pose_stages": [
+        {"pwms": {1: 1907, 2: 1900}, "duration_ms": 3000, "settle_s": 1.0},
+        {"pwms": {0: 1500, 3: 900, 4: 1500, 5: 1500}, "duration_ms": 1500, "settle_s": 0.8},
+    ],
 }
 
 
@@ -97,14 +107,25 @@ class ArmDriver:
             import serial  # type: ignore
         except Exception as exc:
             raise ArmDriverError(
-                "pyserial is required for real arm output. Install it in the RKNN env first."
+                "pyserial is required for real arm output. Install it with: "
+                "~/rk3588_ai/rknn_lite_env/bin/python3 -m pip install pyserial"
             ) from exc
 
-        self.serial = serial.Serial(
-            port=self.port,
-            baudrate=self.baudrate,
-            timeout=float(self.config.get("timeout_s", 0.2)),
-        )
+        serial_options = {
+            "port": self.port,
+            "baudrate": self.baudrate,
+            "timeout": float(self.config.get("timeout_s", 0.2)),
+        }
+        if os.name == "posix":
+            # Linux otherwise allows multiple processes to open the same tty,
+            # which can split or misroute bus-servo replies between tools.
+            serial_options["exclusive"] = True
+        try:
+            self.serial = serial.Serial(**serial_options)
+        except Exception as exc:
+            raise ArmDriverError(
+                "cannot exclusively open serial port {}: {}".format(self.port, exc)
+            ) from exc
         self.connected = True
         return True
 
@@ -134,17 +155,118 @@ class ArmDriver:
         self.last_yaw = yaw
         self.last_pitch = pitch
 
+        if str(self.config.get("protocol", "yh_pwm_text")) == "yh_pwm_text":
+            payload = self._pack_yh_pwm_text_commands(
+                [
+                    (int(self.config["yaw_servo_index"]), self._angle_to_pwm(yaw, "yaw")),
+                    (int(self.config["pitch_servo_index"]), self._angle_to_pwm(pitch, "pitch")),
+                ],
+                duration_ms,
+            )
+            self.last_payload = payload
+            self._write_payload(payload)
+            return payload
+
         joints = list(self.config["reference_hold_joints"])
         joints[0] = yaw
         joints[3] = pitch
         return self.set_joints(joints, duration_ms=duration_ms)
 
-    def stop(self):
+    def set_yaw(self, yaw: Number, duration_ms: int = 200):
+        yaw = float(yaw)
+        self.last_yaw = yaw
+        if str(self.config.get("protocol", "yh_pwm_text")) == "yh_pwm_text":
+            payload = self._pack_yh_pwm_text_commands(
+                [(int(self.config["yaw_servo_index"]), self._angle_to_pwm(yaw, "yaw"))],
+                duration_ms,
+            )
+            self.last_payload = payload
+            self._write_payload(payload)
+            return payload
+
+        joints = list(self.last_joints)
+        joints[0] = yaw
+        return self.set_joints(joints, duration_ms=duration_ms)
+
+    def set_pitch(self, pitch: Number, duration_ms: int = 200):
+        pitch = float(pitch)
+        self.last_pitch = pitch
+        if str(self.config.get("protocol", "yh_pwm_text")) == "yh_pwm_text":
+            payload = self._pack_yh_pwm_text_commands(
+                [(int(self.config["pitch_servo_index"]), self._angle_to_pwm(pitch, "pitch"))],
+                duration_ms,
+            )
+            self.last_payload = payload
+            self._write_payload(payload)
+            return payload
+
+        joints = list(self.last_joints)
+        joints[3] = pitch
+        return self.set_joints(joints, duration_ms=duration_ms)
+
+    def set_servo_pwm(self, servo_id: int, pwm: int, duration_ms: int = 200):
+        servo_id = int(servo_id)
+        pwm = int(pwm)
+        if servo_id < 0 or servo_id > 254:
+            raise ArmDriverError("servo id out of range: {}".format(servo_id))
+        if pwm < int(self.config["pwm_min"]) or pwm > int(self.config["pwm_max"]):
+            raise ArmDriverError("servo pwm out of configured range: {}".format(pwm))
+        payload = self._pack_yh_pwm_text_commands([(servo_id, pwm)], duration_ms)
+        self.last_payload = payload
+        self._write_payload(payload)
+        return payload
+
+    def set_servo_pwms(self, commands, duration_ms: int = 200):
+        normalized = []
+        for servo_id, pwm in commands:
+            servo_id = int(servo_id)
+            pwm = int(pwm)
+            if servo_id < 0 or servo_id > 254:
+                raise ArmDriverError("servo id out of range: {}".format(servo_id))
+            if pwm < int(self.config["pwm_min"]) or pwm > int(self.config["pwm_max"]):
+                raise ArmDriverError("servo pwm out of configured range: {}".format(pwm))
+            normalized.append((servo_id, pwm))
+        if not normalized:
+            raise ArmDriverError("at least one servo command is required")
+        payload = self._pack_yh_pwm_text_commands(normalized, duration_ms)
+        self.last_payload = payload
+        self._write_payload(payload)
+        return payload
+
+    def prepare_tracking_pose(self):
+        stages = self.config.get("tracking_pose_stages")
+        if stages:
+            last_payload = b""
+            for stage in stages:
+                pose = stage.get("pwms", {})
+                commands = list(pose.items()) if isinstance(pose, Mapping) else list(pose)
+                duration_ms = int(stage.get("duration_ms", 3000))
+                last_payload = self.set_servo_pwms(commands, duration_ms)
+                if not self.dry_run:
+                    time.sleep((duration_ms / 1000.0) + float(stage.get("settle_s", 0.5)))
+            return last_payload
+
+        pose = self.config.get(
+            "tracking_pose_pwms",
+            {0: 1500, 1: 1907, 2: 1900, 3: 900, 4: 1500, 5: 1500},
+        )
+        commands = list(pose.items()) if isinstance(pose, Mapping) else list(pose)
+        return self.set_servo_pwms(
+            commands,
+            int(self.config.get("tracking_pose_duration_ms", 1500)),
+        )
+
+    def stop(self, servo_indices=None):
         protocol = str(self.config.get("protocol", "yh_pwm_text"))
         if protocol == "yh_pwm_text":
             # Avoid the official firmware's all-stop path until the
             # pwmServo_stop_motion(255) out-of-range access is fixed/verified.
-            for index in self.config.get("stop_servo_indices", [0, 1, 2, 3, 4, 5]):
+            indices = (
+                servo_indices
+                if servo_indices is not None
+                else self.config.get("stop_servo_indices", [0, 3])
+            )
+            for index in indices:
                 self._write_payload("#{:03d}PDST!".format(int(index)).encode("ascii"))
         elif self.config.get("echo_commands", True):
             print("[ArmDriver] stop requested; binary reference protocol has no verified stop frame")
@@ -195,13 +317,12 @@ class ArmDriver:
         return pwm
 
     def _pack_yh_pwm_text(self, joints: Sequence[float], duration_ms: int) -> bytes:
-        duration = int(_clamp(int(duration_ms), 20, 9999))
         hold_pwms = list(self.config.get("hold_servo_pwms", [1500] * 6))
         servo_ids = list(self.config.get("servo_ids", [0, 1, 2, 3, 4, 5]))
         if len(hold_pwms) < len(servo_ids):
             hold_pwms.extend([1500] * (len(servo_ids) - len(hold_pwms)))
 
-        frames = []
+        commands = []
         for servo_id in servo_ids:
             servo_id = int(servo_id)
             if servo_id == int(self.config["yaw_servo_index"]):
@@ -210,8 +331,45 @@ class ArmDriver:
                 pwm = self._angle_to_pwm(float(joints[3]), "pitch")
             else:
                 pwm = int(hold_pwms[servo_id]) if servo_id < len(hold_pwms) else 1500
-            frames.append("#{:03d}P{:04d}T{:04d}!".format(servo_id, pwm, duration))
-        return "".join(frames).encode("ascii")
+            commands.append((servo_id, pwm))
+
+        return self._pack_yh_pwm_text_commands(commands, duration_ms)
+
+    def _pack_yh_pwm_text_commands(self, commands, duration_ms: int) -> bytes:
+        duration = int(_clamp(int(duration_ms), 20, 9999))
+        frames = [
+            "#{:03d}P{:04d}T{:04d}!".format(int(servo_id), int(pwm), duration)
+            for servo_id, pwm in commands
+        ]
+        payload = "".join(frames)
+        if len(frames) > 1 and bool(self.config.get("wrap_multi_command", True)):
+            # The official bus-servo table and STM32 parser use {...} for a
+            # multi-servo command bundle. Single-servo commands stay unwrapped.
+            payload = "{" + payload + "}"
+        return payload.encode("ascii")
+
+    def send_text_command(self, command: str) -> bytes:
+        """Send one raw bus-servo ASCII command and return immediately available bytes."""
+        if not command:
+            raise ArmDriverError("command must not be empty")
+        payload = command.encode("ascii")
+        self._write_payload(payload)
+        return self.read_available()
+
+    def read_available(self) -> bytes:
+        if self.dry_run:
+            return b""
+        if not self.connected or self.serial is None:
+            raise ArmDriverError("serial is not connected")
+        end_time = time.time() + float(self.config.get("timeout_s", 0.2))
+        chunks = []
+        while time.time() < end_time:
+            waiting = int(getattr(self.serial, "in_waiting", 0))
+            if waiting > 0:
+                chunks.append(self.serial.read(waiting))
+            else:
+                time.sleep(0.01)
+        return b"".join(chunks)
 
     def _pack_reference_arm_frame(self, joints: Sequence[float]) -> bytes:
         frame = [0xAA, 0x55, 0x11, 0x80]
@@ -248,6 +406,20 @@ class ArmDriver:
 
         if not self.connected or self.serial is None:
             raise ArmDriverError("serial is not connected")
+        if self.config.get("echo_commands", True):
+            print(
+                json.dumps(
+                    {
+                        "dry_run": False,
+                        "port": self.port,
+                        "baudrate": self.baudrate,
+                        "payload_ascii": payload.decode("ascii", errors="replace"),
+                        "payload_hex": hex_bytes(payload),
+                        "time": time.time(),
+                    },
+                    ensure_ascii=False,
+                )
+            )
         self.serial.write(payload)
         self.serial.flush()
 

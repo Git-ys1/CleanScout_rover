@@ -49,19 +49,34 @@ def parse_args():
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--fps", type=float, default=30.0)
     parser.add_argument("--fourcc", default="MJPG")
-    parser.add_argument("--track_class", default="person")
+    parser.add_argument(
+        "--track_class",
+        default="",
+        help="COCO class name, or 'any' for any recognized class; config default is used when omitted",
+    )
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--selection_strategy", default="nearest_center", choices=("nearest_center", "highest_conf"))
     parser.add_argument("--serial_port", default="")
     parser.add_argument("--baudrate", type=int, default=0)
     parser.add_argument("--dry_run", type=str2bool, default=True)
     parser.add_argument("--enable_arm", action="store_true")
+    parser.add_argument(
+        "--prepare_pose",
+        type=str2bool,
+        default=None,
+        help="move Servo001/002 to the configured forward tracking pose before opening the camera",
+    )
     parser.add_argument("--control_rate", type=float, default=0.0)
     parser.add_argument("--dead_zone", type=int, default=0)
     parser.add_argument("--save_path", default="")
     parser.add_argument("--snapshot_path", default="")
     parser.add_argument("--print_boxes", action="store_true")
     parser.add_argument("--print_cmd", action="store_true")
+    parser.add_argument(
+        "--list_classes",
+        action="store_true",
+        help="print all class names supported by the loaded YOLO model and exit",
+    )
     parser.add_argument("--max_frames", type=int, default=0)
     parser.add_argument("--skip", type=int, default=0)
     parser.add_argument("--log_interval", type=int, default=30)
@@ -250,7 +265,7 @@ def build_driver(config, args):
     driver_cfg = dict(config.get("driver", {}))
     if "timeout_s" in serial_cfg:
         driver_cfg["timeout_s"] = serial_cfg["timeout_s"]
-    port = args.serial_port or serial_cfg.get("port", "/dev/ttyS7")
+    port = args.serial_port or serial_cfg.get("port", "/dev/ttyUSB0")
     baudrate = args.baudrate or int(serial_cfg.get("baudrate", 115200))
     return ArmDriver(port=port, baudrate=baudrate, dry_run=args.dry_run, config=driver_cfg)
 
@@ -265,6 +280,9 @@ def run(args):
 
     config = load_config(args.config)
     class_names, img_size, coco_helper_cls, post_process, setup_model = import_yolo_helpers(args.yolo_dir)
+    if args.list_classes:
+        print("\n".join(name.strip() for name in class_names))
+        return
     target_cfg = dict(config.get("target_selector", {}))
     servo = build_servo(config, args)
     driver = build_driver(config, args)
@@ -279,6 +297,19 @@ def run(args):
     try:
         if args.enable_arm:
             driver.connect()
+            prepare_pose = args.prepare_pose
+            if prepare_pose is None:
+                prepare_pose = bool(driver.config.get("prepare_tracking_pose", True))
+            if prepare_pose:
+                payload = driver.prepare_tracking_pose()
+                if args.print_cmd and not args.dry_run:
+                    print(
+                        "arm_prepare_pose_hex={}".format(
+                            " ".join("{:02x}".format(byte) for byte in payload)
+                        )
+                    )
+                if not args.dry_run:
+                    time.sleep(float(driver.config.get("tracking_pose_settle_s", 4.0)))
         capture, camera_label, pending_frame = open_camera(args)
         info = camera_info(capture, camera_label)
 
@@ -294,7 +325,11 @@ def run(args):
         duration_ms = int(dict(config.get("driver", {})).get("duration_ms", 200))
         arm_stop_sent = False
         if args.enable_arm and not arm_paused:
-            payload = driver.set_joints(servo.last_result["joints"], duration_ms=duration_ms)
+            payload = driver.set_yaw_pitch(
+                servo.last_result["yaw"],
+                servo.last_result["pitch"],
+                duration_ms=duration_ms,
+            )
             arm_stop_sent = False
             if args.print_cmd and not args.dry_run:
                 print("arm_initial_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
@@ -373,7 +408,7 @@ def run(args):
                 last_scores,
                 frame.shape[1],
                 frame.shape[0],
-                target_class=args.track_class or target_cfg.get("track_class", "person"),
+                target_class=args.track_class or target_cfg.get("track_class", "any"),
                 conf=args.conf if args.conf is not None else float(target_cfg.get("conf", 0.25)),
                 strategy=args.selection_strategy or target_cfg.get("strategy", "nearest_center"),
                 class_names=class_names,
@@ -384,8 +419,9 @@ def run(args):
 
             if args.enable_arm and (not arm_paused) and last_servo_result["should_send"]:
                 if last_servo_result["active"]:
-                    payload = driver.set_joints(
-                        last_servo_result["joints"],
+                    payload = driver.set_yaw_pitch(
+                        last_servo_result["yaw"],
+                        last_servo_result["pitch"],
                         duration_ms=duration_ms,
                     )
                     arm_stop_sent = False
@@ -395,8 +431,8 @@ def run(args):
                 if not arm_stop_sent:
                     driver.stop()
                     arm_stop_sent = True
-                if args.print_cmd:
-                    print("arm inactive: lost_count={}".format(last_servo_result["lost_count"]))
+                    if args.print_cmd:
+                        print("arm inactive: lost_count={}".format(last_servo_result["lost_count"]))
 
             visual = frame.copy()
             draw_detections(visual, last_boxes, last_scores, last_classes, class_names, print_boxes=args.print_boxes)
@@ -457,7 +493,11 @@ def run(args):
                 if key == ord("r"):
                     servo.reset()
                     if args.enable_arm and not arm_paused:
-                        payload = driver.set_joints(servo.last_result["joints"], duration_ms=duration_ms)
+                        payload = driver.set_yaw_pitch(
+                            servo.last_result["yaw"],
+                            servo.last_result["pitch"],
+                            duration_ms=duration_ms,
+                        )
                         if args.print_cmd and not args.dry_run:
                             print("arm_reset_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
                         arm_stop_sent = False

@@ -34,6 +34,7 @@
 | `RK3588_RKNN_NPU_DIAGNOSIS_REPORT.md` | Runtime / Driver / C API / Python 推理诊断报告 |
 | `YOLO11_VISUAL_DEMO_FIX_REPORT.md` | YOLO11 NumPy DFL 修复报告 |
 | `YOLO11_CAMERA_DEMO_REPORT.md` | USB 摄像头实时检测报告 |
+| `指令合集.md` | 板端摄像头、YOLO、机械臂 dry-run、单关节和真实追踪测试命令 |
 | `test_rknn_core0.py` | RKNNLite 最小 Python 推理脚本 |
 | `rknn_capi_smoke.c` | 最小 C API smoke test |
 | `compare_dfl_numpy_torch.py` | NumPy DFL 与 torch DFL 等价性测试 |
@@ -131,6 +132,7 @@ cd ~/rk3588_ai/arm_tracking_demo
 
 ```bash
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/scan_serial.py
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/bus_servo_probe.py --serial_port /dev/ttyUSB0 --read position --ids 0-5
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_arm_driver_dryrun.py --print_cmd
 ```
 
@@ -176,10 +178,11 @@ cp -av model_zoo_overlay/examples/yolo11/python/yolo11_camera.py \
 | `RKNNLite.init_runtime()` 段错误 | 先核验 `/usr/lib/librknnrt.so` 文件大小、SHA-256、`readelf` 和 `ctypes.CDLL` |
 | `Invalid RKNN model version` | Runtime 版本可能过旧，需要匹配 RKNN 2.3.2 |
 | `torch.libs/libgomp... static TLS` | 不在主流程依赖 torch，使用 NumPy DFL |
-| 摄像头节点打不开 | `/dev/video1` 可能是 UVC metadata，优先用 `/dev/video0` |
+| 摄像头节点打不开 | 先查 `v4l2-ctl --list-devices`；若节点存在但打不开，查 `fuser -v /dev/video0 /dev/video1` 是否被旧进程占用 |
 | `mp4v` 写视频失败 | 使用 MJPEG fallback |
 | SSH 没窗口 | 使用 `--no_show` 或设置 NoMachine 的 `DISPLAY=:0` |
-| 机械臂真实模式报 `No module named serial` | `~/rk3588_ai/rknn_lite_env` 尚未安装 `pyserial`，先保持 dry-run |
+| 机械臂真实模式报 `No module named serial` | 执行 `~/rk3588_ai/rknn_lite_env/bin/python3 -m pip install pyserial` 后再测单关节 |
+| 机械臂“发了命令但不动/读不到角度” | 先用 `tools/bus_servo_probe.py --command '#000PRAD!'` 和 `--command '#000P1600T1000!'` 分别测读回与动作；读回指令属于官方总线舵机协议，若 OrangePi `rx_len=0`，优先查端口、线序、DTR/RTS 和是否接到正确总线链路 |
 
 ## 后续边界
 

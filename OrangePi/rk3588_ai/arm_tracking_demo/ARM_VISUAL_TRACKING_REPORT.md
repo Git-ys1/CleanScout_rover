@@ -21,7 +21,7 @@
 
 ## 当前 STM32 / OPENRF1 工作区审计结果
 
-当前可确认的机械臂下位机基线为 `firmware/mechanical_arm_official_baseline`。它是 STM32F103RC 官方机械臂例程，使用 PWM 舵机文本协议，核心命令为：
+当前可确认的机械臂下位机基线为 `firmware/mechanical_arm_official_baseline`。它是 STM32F103RC 官方机械臂例程，使用总线舵机风格 ASCII 文本协议，并同时执行 UART 转发和本地 PWM 解析，核心命令为：
 
 ```text
 #000P1500T0200!
@@ -191,11 +191,17 @@ cd ~/rk3588_ai/arm_tracking_demo
 - 保持 `--dry_run true`。
 - 删除或忽略 `~/rk3588_ai/arm_tracking_demo` 不影响原 `yolo11_camera.py`。
 
+## 2026-06-11 实机更新
+
+- `/dev/ttyUSB0` 和 `pyserial` 已可用。
+- 实机读回确认 `000/001/002` 有总线响应；`003/004/005` 当前无总线响应。
+- `000` 和 `003` 均已通过末端相机位移证明真实动作。
+- `VisualServo` 合成目标连续 14 周期输出后，末端画面约旋转 `12.67°`。
+- 串口已改为 Linux 独占打开，防止探针与追踪程序互相拿走回包。
+- 真实 YOLO 链路已跑通，但测试画面只有天花板、无检测目标。
+
 ## 下一步建议
 
-- 确认 OrangePi 到 STM32 下位机实际串口。
-- 在 `~/rk3588_ai/rknn_lite_env` 安装 `pyserial`。
-- 用 `tools/test_one_joint_yaw.py` 确认 Servo0 方向。
-- 用 `tools/test_one_joint_pitch.py` 确认 Servo3 方向。
+- 将人或可识别物体放进末端相机视野，完成真实目标跟随方向验收。
 - 调整 `yaw_pwm_sign`、`pitch_pwm_sign`、`pwm_min/max`。
 - 之后再考虑多线程采集/推理/显示、ROS 封装、抓取、鱼眼标定和 IK。

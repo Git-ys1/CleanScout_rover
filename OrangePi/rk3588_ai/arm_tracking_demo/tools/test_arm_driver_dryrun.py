@@ -49,10 +49,16 @@ def main():
     driver.connect()
     payload = driver.set_yaw_pitch(0.0, 1.2, duration_ms=200)
     payload_ascii = payload.decode("ascii", errors="replace")
-    for servo_id in range(6):
+    if not (payload_ascii.startswith("{") and payload_ascii.endswith("}")):
+        raise AssertionError("two-axis payload should be wrapped in braces")
+    for servo_id in (0, 3):
         expected = "#{:03d}P".format(servo_id)
         if expected not in payload_ascii:
             raise AssertionError("missing servo frame {}".format(expected))
+    for servo_id in (1, 2, 4, 5):
+        unexpected = "#{:03d}P".format(servo_id)
+        if unexpected in payload_ascii:
+            raise AssertionError("tracking payload must not reset unrelated servo {}".format(servo_id))
     if args.print_cmd:
         print("payload_ascii={}".format(payload_ascii))
         print("payload_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
