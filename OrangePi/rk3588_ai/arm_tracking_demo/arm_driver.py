@@ -18,29 +18,34 @@ DEFAULT_CONFIG = {
     "echo_commands": True,
     "wrap_multi_command": True,
     "yaw_servo_index": 0,
+    "lift_servo_index": 1,
     "pitch_servo_index": 3,
     "servo_ids": [0, 1, 2, 3, 4, 5],
     "duration_ms": 200,
     "yaw_init": 0.0,
+    "lift_init": -0.930,
     "pitch_init": 1.2,
     "yaw_pwm_neutral": 1500,
-    "pitch_pwm_neutral": 900,
+    "lift_pwm_neutral": 1912,
+    "pitch_pwm_neutral": 884,
     "yaw_pwm_per_rad": 500,
+    "lift_pwm_per_rad": 500,
     "pitch_pwm_per_rad": 500,
     "yaw_pwm_sign": 1,
+    "lift_pwm_sign": 1,
     "pitch_pwm_sign": -1,
-    "pwm_min": 900,
+    "pwm_min": 500,
     "pwm_max": 2200,
     "reference_hold_joints": [0.0, -0.930, 1.6, 1.2, 0.0, 0.801],
-    "hold_servo_pwms": [1500, 1907, 1900, 900, 1500, 1500],
-    "stop_servo_indices": [0, 3],
+    "hold_servo_pwms": [1500, 1912, 1915, 884, 1500, 1500],
+    "stop_servo_indices": [0],
     "prepare_tracking_pose": True,
-    "tracking_pose_pwms": {0: 1500, 1: 1907, 2: 1900, 3: 900, 4: 1500, 5: 1500},
+    "tracking_pose_pwms": {0: 1500, 1: 1912, 2: 1915, 3: 884, 4: 1500, 5: 1500},
     "tracking_pose_duration_ms": 1500,
     "tracking_pose_settle_s": 4.0,
     "tracking_pose_stages": [
-        {"pwms": {1: 1907, 2: 1900}, "duration_ms": 3000, "settle_s": 1.0},
-        {"pwms": {0: 1500, 3: 900, 4: 1500, 5: 1500}, "duration_ms": 1500, "settle_s": 0.8},
+        {"pwms": {1: 1912, 2: 1915}, "duration_ms": 3000, "settle_s": 1.0},
+        {"pwms": {0: 1500, 3: 884, 4: 1500, 5: 1500}, "duration_ms": 1500, "settle_s": 0.8},
     ],
 }
 
@@ -93,6 +98,7 @@ class ArmDriver:
         self.connected = False
         self.last_joints = list(self.config["reference_hold_joints"])
         self.last_yaw = float(self.config["yaw_init"])
+        self.last_lift = float(self.config["lift_init"])
         self.last_pitch = float(self.config["pitch_init"])
         self.last_payload = b""
 
@@ -172,6 +178,50 @@ class ArmDriver:
         joints[3] = pitch
         return self.set_joints(joints, duration_ms=duration_ms)
 
+    def set_axis_values(self, values: Mapping[str, Number], duration_ms: int = 200):
+        """Command only selected logical axes.
+
+        This keeps the visual-servo stages independent: yaw -> Servo000,
+        lift -> Servo001, pitch -> Servo003. Other servos hold their current
+        physical pose and are not re-commanded unless the caller asks for them.
+        """
+        axes = []
+        for axis in ("yaw", "lift", "pitch"):
+            if axis in values:
+                axes.append((axis, float(values[axis])))
+        if not axes:
+            return b""
+
+        for axis, value in axes:
+            if axis == "yaw":
+                self.last_yaw = value
+            elif axis == "lift":
+                self.last_lift = value
+            elif axis == "pitch":
+                self.last_pitch = value
+
+        if str(self.config.get("protocol", "yh_pwm_text")) == "yh_pwm_text":
+            axis_to_servo = {
+                "yaw": int(self.config["yaw_servo_index"]),
+                "lift": int(self.config["lift_servo_index"]),
+                "pitch": int(self.config["pitch_servo_index"]),
+            }
+            commands = [
+                (axis_to_servo[axis], self._angle_to_pwm(value, axis))
+                for axis, value in axes
+            ]
+            return self.set_servo_pwms(commands, duration_ms=duration_ms)
+
+        joints = list(self.last_joints)
+        for axis, value in axes:
+            if axis == "yaw":
+                joints[0] = value
+            elif axis == "lift":
+                joints[1] = value
+            elif axis == "pitch":
+                joints[3] = value
+        return self.set_joints(joints, duration_ms=duration_ms)
+
     def set_yaw(self, yaw: Number, duration_ms: int = 200):
         yaw = float(yaw)
         self.last_yaw = yaw
@@ -186,6 +236,22 @@ class ArmDriver:
 
         joints = list(self.last_joints)
         joints[0] = yaw
+        return self.set_joints(joints, duration_ms=duration_ms)
+
+    def set_lift(self, lift: Number, duration_ms: int = 200):
+        lift = float(lift)
+        self.last_lift = lift
+        if str(self.config.get("protocol", "yh_pwm_text")) == "yh_pwm_text":
+            payload = self._pack_yh_pwm_text_commands(
+                [(int(self.config["lift_servo_index"]), self._angle_to_pwm(lift, "lift"))],
+                duration_ms,
+            )
+            self.last_payload = payload
+            self._write_payload(payload)
+            return payload
+
+        joints = list(self.last_joints)
+        joints[1] = lift
         return self.set_joints(joints, duration_ms=duration_ms)
 
     def set_pitch(self, pitch: Number, duration_ms: int = 200):
@@ -294,6 +360,8 @@ class ArmDriver:
             for key, value in joints.items():
                 if key == "yaw":
                     base[0] = float(value)
+                elif key == "lift":
+                    base[1] = float(value)
                 elif key == "pitch":
                     base[3] = float(value)
                 elif isinstance(key, str) and key.startswith("joint"):
@@ -316,6 +384,11 @@ class ArmDriver:
             neutral_pwm = float(self.config["yaw_pwm_neutral"])
             scale = float(self.config["yaw_pwm_per_rad"])
             sign = float(self.config["yaw_pwm_sign"])
+        elif axis == "lift":
+            neutral_angle = float(self.config["lift_init"])
+            neutral_pwm = float(self.config["lift_pwm_neutral"])
+            scale = float(self.config["lift_pwm_per_rad"])
+            sign = float(self.config["lift_pwm_sign"])
         elif axis == "pitch":
             neutral_angle = float(self.config["pitch_init"])
             neutral_pwm = float(self.config["pitch_pwm_neutral"])
@@ -339,6 +412,8 @@ class ArmDriver:
             servo_id = int(servo_id)
             if servo_id == int(self.config["yaw_servo_index"]):
                 pwm = self._angle_to_pwm(float(joints[0]), "yaw")
+            elif servo_id == int(self.config["lift_servo_index"]):
+                pwm = self._angle_to_pwm(float(joints[1]), "lift")
             elif servo_id == int(self.config["pitch_servo_index"]):
                 pwm = self._angle_to_pwm(float(joints[3]), "pitch")
             else:

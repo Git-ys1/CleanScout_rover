@@ -18,23 +18,31 @@ class VisualServoConfig:
     dead_zone_px: int = 30
     control_rate_hz: float = 10.0
     max_yaw_delta: float = 0.015
+    max_lift_delta: float = 0.010
     max_pitch_delta: float = 0.015
     confirm_frames: int = 2
     lost_hold_frames: int = 5
     lost_stop_frames: int = 15
     yaw_init: float = 0.0
+    lift_init: float = -0.930
     pitch_init: float = 1.2
     yaw_min: float = -0.5
     yaw_max: float = 0.5
+    lift_min: float = -1.20
+    lift_max: float = -0.65
     pitch_min: float = 0.9
     pitch_max: float = 1.5
     kp_yaw: float = 0.0008
     ki_yaw: float = 0.0
     kd_yaw: float = 0.0
+    kp_lift: float = 0.0007
+    ki_lift: float = 0.0
+    kd_lift: float = 0.0
     kp_pitch: float = 0.0008
     ki_pitch: float = 0.0
     kd_pitch: float = 0.0
     invert_yaw: bool = True
+    invert_lift: bool = True
     invert_pitch: bool = True
     control_axes: Sequence[str] = ("yaw", "pitch")
 
@@ -45,11 +53,24 @@ def normalize_control_axes(value) -> Tuple[str, ...]:
     else:
         raw_axes = list(value or ())
 
+    aliases = {
+        "yaw": "yaw",
+        "servo0": "yaw",
+        "joint0": "yaw",
+        "lift": "lift",
+        "servo1": "lift",
+        "joint1": "lift",
+        "pitch": "pitch",
+        "servo3": "pitch",
+        "joint3": "pitch",
+    }
+
     axes = []
     for axis in raw_axes:
         axis = str(axis).strip().lower()
-        if axis in ("yaw", "pitch") and axis not in axes:
-            axes.append(axis)
+        normalized = aliases.get(axis)
+        if normalized and normalized not in axes:
+            axes.append(normalized)
     return tuple(axes)
 
 
@@ -58,26 +79,32 @@ class VisualServo:
         self.config = config or VisualServoConfig()
         self.control_axes = normalize_control_axes(self.config.control_axes)
         self.yaw = self.config.yaw_init
+        self.lift = self.config.lift_init
         self.pitch = self.config.pitch_init
         self.joints = self._make_base_joints()
         self.confirm_count = 0
         self.lost_count = 0
         self.last_control_time = 0.0
         self.integral_x = 0.0
+        self.integral_lift = 0.0
         self.integral_y = 0.0
         self.prev_error_x = 0.0
+        self.prev_error_lift = 0.0
         self.prev_error_y = 0.0
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
 
     def reset(self):
         self.yaw = self.config.yaw_init
+        self.lift = self.config.lift_init
         self.pitch = self.config.pitch_init
         self.joints = self._make_base_joints()
         self.confirm_count = 0
         self.lost_count = 0
         self.integral_x = 0.0
+        self.integral_lift = 0.0
         self.integral_y = 0.0
         self.prev_error_x = 0.0
+        self.prev_error_lift = 0.0
         self.prev_error_y = 0.0
         self.last_control_time = 0.0
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
@@ -88,6 +115,7 @@ class VisualServo:
             joints.extend([0.0] * (6 - len(joints)))
         joints = joints[:6]
         joints[0] = self.yaw
+        joints[1] = self.lift
         joints[3] = self.pitch
         return joints
 
@@ -141,6 +169,15 @@ class VisualServo:
             derivative_x = 0.0
             self.prev_error_x = 0.0
 
+        if "lift" in self.control_axes:
+            self.integral_lift += effective_y * dt
+            derivative_lift = (effective_y - self.prev_error_lift) / dt
+            self.prev_error_lift = effective_y
+        else:
+            self.integral_lift = 0.0
+            derivative_lift = 0.0
+            self.prev_error_lift = 0.0
+
         if "pitch" in self.control_axes:
             self.integral_y += effective_y * dt
             derivative_y = (effective_y - self.prev_error_y) / dt
@@ -155,6 +192,11 @@ class VisualServo:
             + self.config.ki_yaw * self.integral_x
             + self.config.kd_yaw * derivative_x
         )
+        lift_delta = (
+            self.config.kp_lift * effective_y
+            + self.config.ki_lift * self.integral_lift
+            + self.config.kd_lift * derivative_lift
+        )
         pitch_delta = (
             self.config.kp_pitch * effective_y
             + self.config.ki_pitch * self.integral_y
@@ -163,21 +205,28 @@ class VisualServo:
 
         if self.config.invert_yaw:
             yaw_delta = -yaw_delta
+        if self.config.invert_lift:
+            lift_delta = -lift_delta
         if self.config.invert_pitch:
             pitch_delta = -pitch_delta
 
         yaw_delta = clamp(yaw_delta, -self.config.max_yaw_delta, self.config.max_yaw_delta)
+        lift_delta = clamp(lift_delta, -self.config.max_lift_delta, self.config.max_lift_delta)
         pitch_delta = clamp(pitch_delta, -self.config.max_pitch_delta, self.config.max_pitch_delta)
         if "yaw" in self.control_axes:
             self.yaw = clamp(self.yaw + yaw_delta, self.config.yaw_min, self.config.yaw_max)
+        if "lift" in self.control_axes:
+            self.lift = clamp(self.lift + lift_delta, self.config.lift_min, self.config.lift_max)
         if "pitch" in self.control_axes:
             self.pitch = clamp(self.pitch + pitch_delta, self.config.pitch_min, self.config.pitch_max)
         self.joints[0] = self.yaw
+        self.joints[1] = self.lift
         self.joints[3] = self.pitch
 
     def _result(self, cx, cy, error_x, error_y, active: bool, should_send: bool):
         return {
             "yaw": self.yaw,
+            "lift": self.lift,
             "pitch": self.pitch,
             "joints": list(self.joints),
             "cx": cx,

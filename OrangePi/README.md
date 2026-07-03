@@ -10,7 +10,7 @@ OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Ora
 | RKNPU Driver | `0.9.6 20240322`，C API 与 Python RKNNLite 均验证通过 |
 | YOLO11 图片检测 | 官方 `official_yolo11.rknn` 可完成 NPU 推理、后处理和结果图保存 |
 | YOLO11 摄像头检测 | USB 摄像头、OpenCV 窗口、NPU 推理、截图和视频保存均已跑通 |
-| 机械臂视觉追踪 | C-5.0.5 进入 `bottle` 单目标、000 yaw 单舵机追踪阶段 |
+| 机械臂视觉追踪 | C-5.0.6 进入 `bottle` 单目标、001 lift 单舵机上下追踪阶段；000 yaw 已可回归 |
 | ROS / 机械臂融合 | 暂不接 ROS；当前只做 OrangePi 直连下位机的安全原型 |
 
 ## 目录

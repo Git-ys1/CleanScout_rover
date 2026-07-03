@@ -71,7 +71,7 @@ def parse_args():
     parser.add_argument(
         "--control_axes",
         default="",
-        help="comma-separated arm axes to command, for example 'yaw' or 'yaw,pitch'",
+        help="comma-separated arm axes to command, for example 'yaw', 'lift', or 'yaw,pitch'",
     )
     parser.add_argument("--save_path", default="")
     parser.add_argument("--snapshot_path", default="")
@@ -282,6 +282,8 @@ def arm_stop_indices(driver, axes):
     indices = []
     if "yaw" in axes:
         indices.append(int(driver.config["yaw_servo_index"]))
+    if "lift" in axes:
+        indices.append(int(driver.config["lift_servo_index"]))
     if "pitch" in axes:
         indices.append(int(driver.config["pitch_servo_index"]))
     return indices
@@ -289,13 +291,11 @@ def arm_stop_indices(driver, axes):
 
 def send_arm_result(driver, result, duration_ms: int, axes):
     axes = set(normalize_control_axes(axes))
-    if "yaw" in axes and "pitch" in axes:
-        return driver.set_yaw_pitch(result["yaw"], result["pitch"], duration_ms=duration_ms)
-    if "yaw" in axes:
-        return driver.set_yaw(result["yaw"], duration_ms=duration_ms)
-    if "pitch" in axes:
-        return driver.set_pitch(result["pitch"], duration_ms=duration_ms)
-    return b""
+    values = {}
+    for axis in ("yaw", "lift", "pitch"):
+        if axis in axes:
+            values[axis] = result[axis]
+    return driver.set_axis_values(values, duration_ms=duration_ms)
 
 
 def run(args):
@@ -478,10 +478,11 @@ def run(args):
             status_lines = [
                 "Pipeline FPS: {:.1f}  YOLO FPS: {:.1f} ({:.1f} ms)".format(pipeline_fps, yolo_fps, infer_ms),
                 "Detections: {}  Target: {}".format(detection_count, target_label),
-                "err=({:.1f},{:.1f}) yaw={:.3f} pitch={:.3f}".format(
+                "err=({:.1f},{:.1f}) yaw={:.3f} lift={:.3f} pitch={:.3f}".format(
                     float(last_servo_result["error_x"]),
                     float(last_servo_result["error_y"]),
                     float(last_servo_result["yaw"]),
+                    float(last_servo_result["lift"]),
                     float(last_servo_result["pitch"]),
                 ),
                 "dry_run={} enable_arm={} paused={} serial_connected={}".format(
@@ -491,7 +492,7 @@ def run(args):
                     driver.connected,
                 ),
                 "control_axes={}".format(",".join(active_axes) if active_axes else "none"),
-                "q/ESC quit  s snapshot  space pause arm  r reset yaw/pitch",
+                "q/ESC quit  s snapshot  space pause arm  r reset active axes",
             ]
             draw_status(visual, status_lines)
             last_frame = visual
@@ -531,7 +532,7 @@ def run(args):
             if args.log_interval > 0 and frame_count % args.log_interval == 0:
                 print(
                     "Frames={}, inferences={}, pipeline_fps={:.2f}, yolo_fps={:.2f}, "
-                    "infer_ms={:.2f}, detections={}, target={}, yaw={:.3f}, pitch={:.3f}".format(
+                    "infer_ms={:.2f}, detections={}, target={}, yaw={:.3f}, lift={:.3f}, pitch={:.3f}".format(
                         frame_count,
                         inference_count,
                         pipeline_fps,
@@ -540,6 +541,7 @@ def run(args):
                         detection_count,
                         "yes" if last_target else "no",
                         float(last_servo_result["yaw"]),
+                        float(last_servo_result["lift"]),
                         float(last_servo_result["pitch"]),
                     )
                 )
