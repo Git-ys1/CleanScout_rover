@@ -16,7 +16,7 @@ import yaml
 
 from arm_driver import ArmDriver, ArmDriverError
 from target_selector import select_target
-from visual_servo import VisualServo, config_from_mapping
+from visual_servo import VisualServo, config_from_mapping, normalize_control_axes
 
 
 WINDOW_NAME = "YOLO11 Arm Tracking"
@@ -68,6 +68,11 @@ def parse_args():
     )
     parser.add_argument("--control_rate", type=float, default=0.0)
     parser.add_argument("--dead_zone", type=int, default=0)
+    parser.add_argument(
+        "--control_axes",
+        default="",
+        help="comma-separated arm axes to command, for example 'yaw' or 'yaw,pitch'",
+    )
     parser.add_argument("--save_path", default="")
     parser.add_argument("--snapshot_path", default="")
     parser.add_argument("--print_boxes", action="store_true")
@@ -257,6 +262,8 @@ def build_servo(config, args):
         vs_config["control_rate_hz"] = args.control_rate
     if args.dead_zone > 0:
         vs_config["dead_zone_px"] = args.dead_zone
+    if args.control_axes:
+        vs_config["control_axes"] = list(normalize_control_axes(args.control_axes))
     return VisualServo(config_from_mapping(vs_config))
 
 
@@ -268,6 +275,27 @@ def build_driver(config, args):
     port = args.serial_port or serial_cfg.get("port", "/dev/ttyUSB0")
     baudrate = args.baudrate or int(serial_cfg.get("baudrate", 115200))
     return ArmDriver(port=port, baudrate=baudrate, dry_run=args.dry_run, config=driver_cfg)
+
+
+def arm_stop_indices(driver, axes):
+    axes = set(normalize_control_axes(axes))
+    indices = []
+    if "yaw" in axes:
+        indices.append(int(driver.config["yaw_servo_index"]))
+    if "pitch" in axes:
+        indices.append(int(driver.config["pitch_servo_index"]))
+    return indices
+
+
+def send_arm_result(driver, result, duration_ms: int, axes):
+    axes = set(normalize_control_axes(axes))
+    if "yaw" in axes and "pitch" in axes:
+        return driver.set_yaw_pitch(result["yaw"], result["pitch"], duration_ms=duration_ms)
+    if "yaw" in axes:
+        return driver.set_yaw(result["yaw"], duration_ms=duration_ms)
+    if "pitch" in axes:
+        return driver.set_pitch(result["pitch"], duration_ms=duration_ms)
+    return b""
 
 
 def run(args):
@@ -286,6 +314,8 @@ def run(args):
     target_cfg = dict(config.get("target_selector", {}))
     servo = build_servo(config, args)
     driver = build_driver(config, args)
+    active_axes = tuple(servo.control_axes)
+    active_stop_indices = arm_stop_indices(driver, active_axes)
 
     capture = None
     writer = None
@@ -325,13 +355,9 @@ def run(args):
         duration_ms = int(dict(config.get("driver", {})).get("duration_ms", 200))
         arm_stop_sent = False
         if args.enable_arm and not arm_paused:
-            payload = driver.set_yaw_pitch(
-                servo.last_result["yaw"],
-                servo.last_result["pitch"],
-                duration_ms=duration_ms,
-            )
+            payload = send_arm_result(driver, servo.last_result, duration_ms, active_axes)
             arm_stop_sent = False
-            if args.print_cmd and not args.dry_run:
+            if payload and args.print_cmd and not args.dry_run:
                 print("arm_initial_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
 
         frame_width = pending_frame.shape[1]
@@ -419,17 +445,13 @@ def run(args):
 
             if args.enable_arm and (not arm_paused) and last_servo_result["should_send"]:
                 if last_servo_result["active"]:
-                    payload = driver.set_yaw_pitch(
-                        last_servo_result["yaw"],
-                        last_servo_result["pitch"],
-                        duration_ms=duration_ms,
-                    )
+                    payload = send_arm_result(driver, last_servo_result, duration_ms, active_axes)
                     arm_stop_sent = False
-                    if args.print_cmd and not args.dry_run:
+                    if payload and args.print_cmd and not args.dry_run:
                         print("arm_payload_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
             elif args.enable_arm and (not arm_paused) and (not last_servo_result["active"]):
                 if not arm_stop_sent:
-                    driver.stop()
+                    driver.stop(active_stop_indices)
                     arm_stop_sent = True
                     if args.print_cmd:
                         print("arm inactive: lost_count={}".format(last_servo_result["lost_count"]))
@@ -468,6 +490,7 @@ def run(args):
                     arm_paused,
                     driver.connected,
                 ),
+                "control_axes={}".format(",".join(active_axes) if active_axes else "none"),
                 "q/ESC quit  s snapshot  space pause arm  r reset yaw/pitch",
             ]
             draw_status(visual, status_lines)
@@ -493,12 +516,8 @@ def run(args):
                 if key == ord("r"):
                     servo.reset()
                     if args.enable_arm and not arm_paused:
-                        payload = driver.set_yaw_pitch(
-                            servo.last_result["yaw"],
-                            servo.last_result["pitch"],
-                            duration_ms=duration_ms,
-                        )
-                        if args.print_cmd and not args.dry_run:
+                        payload = send_arm_result(driver, servo.last_result, duration_ms, active_axes)
+                        if payload and args.print_cmd and not args.dry_run:
                             print("arm_reset_pose_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
                         arm_stop_sent = False
                     print("visual servo reset")
@@ -548,7 +567,7 @@ def run(args):
     finally:
         try:
             if args.enable_arm:
-                driver.stop()
+                driver.stop(active_stop_indices)
         except ArmDriverError as exc:
             print("Arm stop warning: {}".format(exc))
         driver.close()

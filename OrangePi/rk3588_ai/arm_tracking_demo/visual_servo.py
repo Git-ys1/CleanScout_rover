@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional, Sequence, Tuple
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -36,11 +36,27 @@ class VisualServoConfig:
     kd_pitch: float = 0.0
     invert_yaw: bool = True
     invert_pitch: bool = True
+    control_axes: Sequence[str] = ("yaw", "pitch")
+
+
+def normalize_control_axes(value) -> Tuple[str, ...]:
+    if isinstance(value, str):
+        raw_axes = value.replace(";", ",").split(",")
+    else:
+        raw_axes = list(value or ())
+
+    axes = []
+    for axis in raw_axes:
+        axis = str(axis).strip().lower()
+        if axis in ("yaw", "pitch") and axis not in axes:
+            axes.append(axis)
+    return tuple(axes)
 
 
 class VisualServo:
     def __init__(self, config: Optional[VisualServoConfig] = None):
         self.config = config or VisualServoConfig()
+        self.control_axes = normalize_control_axes(self.config.control_axes)
         self.yaw = self.config.yaw_init
         self.pitch = self.config.pitch_init
         self.joints = self._make_base_joints()
@@ -116,12 +132,23 @@ class VisualServo:
         effective_x = 0.0 if abs(error_x) < self.config.dead_zone_px else error_x
         effective_y = 0.0 if abs(error_y) < self.config.dead_zone_px else error_y
 
-        self.integral_x += effective_x * dt
-        self.integral_y += effective_y * dt
-        derivative_x = (effective_x - self.prev_error_x) / dt
-        derivative_y = (effective_y - self.prev_error_y) / dt
-        self.prev_error_x = effective_x
-        self.prev_error_y = effective_y
+        if "yaw" in self.control_axes:
+            self.integral_x += effective_x * dt
+            derivative_x = (effective_x - self.prev_error_x) / dt
+            self.prev_error_x = effective_x
+        else:
+            self.integral_x = 0.0
+            derivative_x = 0.0
+            self.prev_error_x = 0.0
+
+        if "pitch" in self.control_axes:
+            self.integral_y += effective_y * dt
+            derivative_y = (effective_y - self.prev_error_y) / dt
+            self.prev_error_y = effective_y
+        else:
+            self.integral_y = 0.0
+            derivative_y = 0.0
+            self.prev_error_y = 0.0
 
         yaw_delta = (
             self.config.kp_yaw * effective_x
@@ -141,8 +168,10 @@ class VisualServo:
 
         yaw_delta = clamp(yaw_delta, -self.config.max_yaw_delta, self.config.max_yaw_delta)
         pitch_delta = clamp(pitch_delta, -self.config.max_pitch_delta, self.config.max_pitch_delta)
-        self.yaw = clamp(self.yaw + yaw_delta, self.config.yaw_min, self.config.yaw_max)
-        self.pitch = clamp(self.pitch + pitch_delta, self.config.pitch_min, self.config.pitch_max)
+        if "yaw" in self.control_axes:
+            self.yaw = clamp(self.yaw + yaw_delta, self.config.yaw_min, self.config.yaw_max)
+        if "pitch" in self.control_axes:
+            self.pitch = clamp(self.pitch + pitch_delta, self.config.pitch_min, self.config.pitch_max)
         self.joints[0] = self.yaw
         self.joints[3] = self.pitch
 
@@ -159,6 +188,7 @@ class VisualServo:
             "should_send": should_send,
             "confirm_count": self.confirm_count,
             "lost_count": self.lost_count,
+            "control_axes": list(self.control_axes),
         }
 
 

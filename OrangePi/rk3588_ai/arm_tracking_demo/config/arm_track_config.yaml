@@ -39,7 +39,6 @@ driver:
   - 1500
   stop_servo_indices:
   - 0
-  - 3
   prepare_tracking_pose: true
   tracking_pose_pwms:
     0: 1500
@@ -64,6 +63,8 @@ driver:
     duration_ms: 1500
     settle_s: 0.8
 visual_servo:
+  control_axes:
+  - yaw
   base_joints:
   - 0.0
   - -0.93
@@ -93,7 +94,7 @@ visual_servo:
   invert_yaw: true
   invert_pitch: true
 target_selector:
-  track_class: any
+  track_class: bottle
   conf: 0.25
   strategy: nearest_center
 yolo:
