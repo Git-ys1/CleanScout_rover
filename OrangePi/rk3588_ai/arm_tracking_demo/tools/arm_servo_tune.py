@@ -4,9 +4,9 @@
 Examples:
   python3 tools/arm_servo_tune.py
   python3 tools/arm_servo_tune.py --read 0-5
-  python3 tools/arm_servo_tune.py --set 2=2000,3=1480 --duration_ms 1200
+  python3 tools/arm_servo_tune.py --set 2=1900,3=900 --duration_ms 1200
   python3 tools/arm_servo_tune.py --nudge 2=-50,3=20
-  python3 tools/arm_servo_tune.py --save-start-pose --ids 1-3
+  python3 tools/arm_servo_tune.py --save-start-pose --ids 0-5
 """
 
 from __future__ import annotations
@@ -149,6 +149,36 @@ def move_servos(serial_obj, assignments: Dict[int, int], duration_ms: int, timeo
         )
     )
     return response
+
+
+def wait_for_motion(duration_ms: int, settle_s: float) -> None:
+    time.sleep(max(0.0, float(duration_ms) / 1000.0) + max(0.0, float(settle_s)))
+
+
+def warn_position_mismatch(targets: Dict[int, int], positions: Dict[int, int], tolerance: int) -> None:
+    mismatches = {}
+    for servo_id, target_pwm in targets.items():
+        actual_pwm = positions.get(servo_id)
+        if actual_pwm is None:
+            continue
+        delta = int(actual_pwm) - int(target_pwm)
+        if abs(delta) > tolerance:
+            mismatches[int(servo_id)] = {
+                "target": int(target_pwm),
+                "actual": int(actual_pwm),
+                "delta": int(delta),
+            }
+    if mismatches:
+        print(
+            json.dumps(
+                {
+                    "warning": "readback differs from requested target; check load, direction, or pose suitability",
+                    "tolerance_pwm": int(tolerance),
+                    "mismatches": mismatches,
+                },
+                ensure_ascii=False,
+            )
+        )
 
 
 def load_yaml(path: Path):
@@ -298,13 +328,15 @@ def main() -> int:
     parser.add_argument("--baudrate", type=int, default=115200)
     parser.add_argument("--timeout", type=float, default=0.8)
     parser.add_argument("--duration_ms", type=int, default=1500)
+    parser.add_argument("--settle_s", type=float, default=0.5)
+    parser.add_argument("--save_tolerance_pwm", type=int, default=30)
     parser.add_argument("--ids", default="1-3")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--read", nargs="?", const="1-3", help="read positions, for example --read 0-5")
-    parser.add_argument("--set", dest="set_values", help="set positions, for example --set 2=2000,3=1480")
+    parser.add_argument("--set", dest="set_values", help="set positions, for example --set 2=1900,3=900")
     parser.add_argument("--nudge", help="nudge positions relative to current, for example --nudge 2=-50")
     parser.add_argument("--save-start-pose", action="store_true", help="read --ids and save them as startup pose")
-    parser.add_argument("--values", help="save explicit startup values, for example --values 1=1700,2=2000,3=1480")
+    parser.add_argument("--values", help="save explicit startup values, for example --values 0=1500,1=1907,2=1900,3=900,4=1500,5=1500")
     args = parser.parse_args()
 
     if args.duration_ms < 100 or args.duration_ms > 10000:
@@ -322,6 +354,7 @@ def main() -> int:
         return 0
 
     with open_serial(args.serial_port, args.baudrate, args.timeout) as serial_obj:
+        last_targets: Dict[int, int] = {}
         if args.read:
             current = read_positions(serial_obj, parse_ids(args.read), timeout_s=args.timeout)
             known_positions.update({servo_id: pwm for servo_id, pwm in current.items() if pwm is not None})
@@ -329,6 +362,7 @@ def main() -> int:
         if args.set_values:
             assignments = parse_assignments(args.set_values)
             move_servos(serial_obj, assignments, args.duration_ms, args.timeout)
+            last_targets.update(assignments)
             known_positions.update(assignments)
         if args.nudge:
             deltas = parse_assignments(args.nudge)
@@ -341,8 +375,11 @@ def main() -> int:
                     raise SystemExit("cannot read current position for servo {}".format(servo_id))
                 assignments[servo_id] = int(base) + int(delta)
             move_servos(serial_obj, assignments, args.duration_ms, args.timeout)
+            last_targets.update(assignments)
             known_positions.update(assignments)
         if args.save_start_pose:
+            if last_targets:
+                wait_for_motion(args.duration_ms, args.settle_s)
             current = read_positions(serial_obj, parse_ids(args.ids), timeout_s=args.timeout)
             positions = {}
             for servo_id, pwm in current.items():
@@ -352,6 +389,8 @@ def main() -> int:
                     positions[servo_id] = known_positions[servo_id]
             if not positions:
                 raise SystemExit("no positions could be read; not saving")
+            if last_targets:
+                warn_position_mismatch(last_targets, positions, args.save_tolerance_pwm)
             save_start_pose(Path(args.config), positions, args.duration_ms)
     return 0
 

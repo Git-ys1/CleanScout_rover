@@ -1,6 +1,6 @@
 # OrangePi
 
-OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Orange Pi 5 Max 8GB / RK3588 / Ubuntu 20.04.6。它和 `Raspberrypi/` 同属上位边缘计算层，但当前职责不同：本目录先冻结 RK3588 NPU、RKNN、YOLO11 和 USB 摄像头实时检测基线，并从 C-5.0.1 开始建立不接 ROS 的机械臂视觉追踪 dry-run 原型。
+OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Orange Pi 5 Max 8GB / RK3588 / Ubuntu 20.04.6。它和 `Raspberrypi/` 同属上位边缘计算层，但当前职责不同：本目录先冻结 RK3588 NPU、RKNN、YOLO11 和 USB 摄像头实时检测基线，并从 C-5.0.1 开始建立不接 ROS 的机械臂视觉追踪原型。
 
 ## 当前状态
 
@@ -10,7 +10,7 @@ OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Ora
 | RKNPU Driver | `0.9.6 20240322`，C API 与 Python RKNNLite 均验证通过 |
 | YOLO11 图片检测 | 官方 `official_yolo11.rknn` 可完成 NPU 推理、后处理和结果图保存 |
 | YOLO11 摄像头检测 | USB 摄像头、OpenCV 窗口、NPU 推理、截图和视频保存均已跑通 |
-| 机械臂视觉追踪 | C-5.0.1 已建立 dry-run demo，真机动作待串口、pyserial 与单关节验证 |
+| 机械臂视觉追踪 | C-5.0.4 已建立总线舵机交互调姿、启动姿态保存、dry-run 与真实追踪命令 |
 | ROS / 机械臂融合 | 暂不接 ROS；当前只做 OrangePi 直连下位机的安全原型 |
 
 ## 目录
@@ -18,6 +18,7 @@ OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Ora
 | 路径 | 说明 |
 | --- | --- |
 | [rk3588_ai/](rk3588_ai/) | OrangePi RK3588 AI 基线、任务书、报告、脚本和 overlay |
+| [rk3588_ai/指令合集.md](rk3588_ai/指令合集.md) | 当前最短可用调试命令：交互调姿、dry-run、真实追踪 |
 | [rk3588_ai/arm_tracking_demo/](rk3588_ai/arm_tracking_demo/) | YOLO11 目标框到 yaw/pitch 的机械臂视觉追踪 dry-run demo |
 | [rk3588_ai/model_zoo_overlay/](rk3588_ai/model_zoo_overlay/) | 对官方 RKNN Model Zoo v2.3.2 的轻量覆盖文件 |
 | [rk3588_ai/UPSTREAMS.md](rk3588_ai/UPSTREAMS.md) | 被忽略的上游仓库、虚拟环境、模型和日志的恢复说明 |

@@ -209,8 +209,14 @@ class ArmDriver:
         pwm = int(pwm)
         if servo_id < 0 or servo_id > 254:
             raise ArmDriverError("servo id out of range: {}".format(servo_id))
-        if pwm < int(self.config["pwm_min"]) or pwm > int(self.config["pwm_max"]):
-            raise ArmDriverError("servo pwm out of configured range: {}".format(pwm))
+        pwm_min = int(self.config["pwm_min"])
+        pwm_max = int(self.config["pwm_max"])
+        if pwm < pwm_min or pwm > pwm_max:
+            raise ArmDriverError(
+                "servo {} pwm out of configured range {}..{}: {}".format(
+                    servo_id, pwm_min, pwm_max, pwm
+                )
+            )
         payload = self._pack_yh_pwm_text_commands([(servo_id, pwm)], duration_ms)
         self.last_payload = payload
         self._write_payload(payload)
@@ -223,8 +229,14 @@ class ArmDriver:
             pwm = int(pwm)
             if servo_id < 0 or servo_id > 254:
                 raise ArmDriverError("servo id out of range: {}".format(servo_id))
-            if pwm < int(self.config["pwm_min"]) or pwm > int(self.config["pwm_max"]):
-                raise ArmDriverError("servo pwm out of configured range: {}".format(pwm))
+            pwm_min = int(self.config["pwm_min"])
+            pwm_max = int(self.config["pwm_max"])
+            if pwm < pwm_min or pwm > pwm_max:
+                raise ArmDriverError(
+                    "servo {} pwm out of configured range {}..{}: {}".format(
+                        servo_id, pwm_min, pwm_max, pwm
+                    )
+                )
             normalized.append((servo_id, pwm))
         if not normalized:
             raise ArmDriverError("at least one servo command is required")
