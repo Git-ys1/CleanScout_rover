@@ -44,7 +44,7 @@ driver:
   - 1500
   - 1500
   stop_servo_indices:
-  - 1
+  - 3
   prepare_tracking_pose: true
   tracking_pose_pwms:
     0: 1500
@@ -70,7 +70,7 @@ driver:
     settle_s: 0.8
 visual_servo:
   control_axes:
-  - lift
+  - pitch
   base_joints:
   - 0.0
   - -0.93
@@ -82,7 +82,7 @@ visual_servo:
   control_rate_hz: 10
   max_yaw_delta: 0.015
   max_lift_delta: 0.01
-  max_pitch_delta: 0.015
+  max_pitch_delta: 0.01
   confirm_frames: 2
   lost_hold_frames: 5
   lost_stop_frames: 15
@@ -101,7 +101,7 @@ visual_servo:
   kp_lift: 0.0007
   ki_lift: 0.0
   kd_lift: 0.0
-  kp_pitch: 0.0008
+  kp_pitch: 0.0006
   ki_pitch: 0.0
   kd_pitch: 0.0
   invert_yaw: true
