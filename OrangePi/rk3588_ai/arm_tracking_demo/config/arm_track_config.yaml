@@ -106,7 +106,7 @@ visual_servo:
   kd_pitch: 0.0
   invert_yaw: true
   invert_lift: true
-  invert_pitch: true
+  invert_pitch: false
 target_selector:
   track_class: bottle
   conf: 0.25
