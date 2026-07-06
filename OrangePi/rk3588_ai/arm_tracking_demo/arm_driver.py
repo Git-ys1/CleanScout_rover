@@ -342,7 +342,7 @@ class ArmDriver:
             indices = (
                 servo_indices
                 if servo_indices is not None
-                else self.config.get("stop_servo_indices", [0, 3])
+                else self.config.get("stop_servo_indices", [0, 1, 3])
             )
             for index in indices:
                 self._write_payload("#{:03d}PDST!".format(int(index)).encode("ascii"))
