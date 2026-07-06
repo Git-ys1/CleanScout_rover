@@ -291,9 +291,11 @@ def arm_stop_indices(driver, axes):
 
 def send_arm_result(driver, result, duration_ms: int, axes):
     axes = set(normalize_control_axes(axes))
+    command_axes = result.get("command_axes") or axes
+    command_axes = set(normalize_control_axes(command_axes))
     values = {}
     for axis in ("yaw", "lift", "pitch"):
-        if axis in axes:
+        if axis in axes and axis in command_axes:
             values[axis] = result[axis]
     return driver.set_axis_values(values, duration_ms=duration_ms)
 
@@ -491,7 +493,10 @@ def run(args):
                     arm_paused,
                     driver.connected,
                 ),
-                "control_axes={}".format(",".join(active_axes) if active_axes else "none"),
+                "control_axes={} command_axes={}".format(
+                    ",".join(active_axes) if active_axes else "none",
+                    ",".join(last_servo_result.get("command_axes", [])) or "none",
+                ),
                 "q/ESC quit  s snapshot  space pause arm  r reset active axes",
             ]
             draw_status(visual, status_lines)

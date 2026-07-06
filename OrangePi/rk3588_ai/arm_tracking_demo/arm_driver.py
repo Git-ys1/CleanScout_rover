@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "pwm_max": 2200,
     "reference_hold_joints": [0.0, -0.930, 1.6, 1.2, 0.0, 0.801],
     "hold_servo_pwms": [1500, 1912, 1915, 884, 1500, 1500],
-    "stop_servo_indices": [0],
+    "stop_servo_indices": [0, 1, 3],
     "prepare_tracking_pose": True,
     "tracking_pose_pwms": {0: 1500, 1: 1912, 2: 1915, 3: 884, 4: 1500, 5: 1500},
     "tracking_pose_duration_ms": 1500,

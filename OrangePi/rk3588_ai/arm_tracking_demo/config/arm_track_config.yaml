@@ -44,6 +44,8 @@ driver:
   - 1500
   - 1500
   stop_servo_indices:
+  - 0
+  - 1
   - 3
   prepare_tracking_pose: true
   tracking_pose_pwms:
@@ -70,6 +72,8 @@ driver:
     settle_s: 0.8
 visual_servo:
   control_axes:
+  - yaw
+  - lift
   - pitch
   base_joints:
   - 0.0
@@ -107,6 +111,8 @@ visual_servo:
   invert_yaw: true
   invert_lift: true
   invert_pitch: false
+  combined_lift_error_px: 90
+  combined_lift_rate_divider: 4
 target_selector:
   track_class: bottle
   conf: 0.25

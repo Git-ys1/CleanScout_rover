@@ -44,7 +44,9 @@ class VisualServoConfig:
     invert_yaw: bool = True
     invert_lift: bool = True
     invert_pitch: bool = True
-    control_axes: Sequence[str] = ("yaw", "pitch")
+    control_axes: Sequence[str] = ("yaw", "lift", "pitch")
+    combined_lift_error_px: int = 90
+    combined_lift_rate_divider: int = 4
 
 
 def normalize_control_axes(value) -> Tuple[str, ...]:
@@ -91,6 +93,10 @@ class VisualServo:
         self.prev_error_x = 0.0
         self.prev_error_lift = 0.0
         self.prev_error_y = 0.0
+        self.control_tick_count = 0
+        self.last_lift_error_y = 0.0
+        self.last_pitch_error_y = 0.0
+        self.last_command_axes = tuple(self.control_axes)
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
 
     def reset(self):
@@ -106,6 +112,10 @@ class VisualServo:
         self.prev_error_x = 0.0
         self.prev_error_lift = 0.0
         self.prev_error_y = 0.0
+        self.control_tick_count = 0
+        self.last_lift_error_y = 0.0
+        self.last_pitch_error_y = 0.0
+        self.last_command_axes = tuple(self.control_axes)
         self.last_control_time = 0.0
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
 
@@ -157,35 +167,45 @@ class VisualServo:
         return self.last_result
 
     def _step(self, error_x: float, error_y: float, dt: float):
+        self.control_tick_count += 1
         effective_x = 0.0 if abs(error_x) < self.config.dead_zone_px else error_x
         effective_y = 0.0 if abs(error_y) < self.config.dead_zone_px else error_y
+        pitch_error_y = effective_y
+        lift_error_y = self._lift_error_for_step(effective_y)
+        self.last_pitch_error_y = pitch_error_y
+        self.last_lift_error_y = lift_error_y
+        command_axes = []
 
         if "yaw" in self.control_axes:
             self.integral_x += effective_x * dt
             derivative_x = (effective_x - self.prev_error_x) / dt
             self.prev_error_x = effective_x
+            command_axes.append("yaw")
         else:
             self.integral_x = 0.0
             derivative_x = 0.0
             self.prev_error_x = 0.0
 
-        if "lift" in self.control_axes:
-            self.integral_lift += effective_y * dt
-            derivative_lift = (effective_y - self.prev_error_lift) / dt
-            self.prev_error_lift = effective_y
+        if "lift" in self.control_axes and lift_error_y != 0.0:
+            self.integral_lift += lift_error_y * dt
+            derivative_lift = (lift_error_y - self.prev_error_lift) / dt
+            self.prev_error_lift = lift_error_y
+            command_axes.append("lift")
         else:
             self.integral_lift = 0.0
             derivative_lift = 0.0
             self.prev_error_lift = 0.0
 
         if "pitch" in self.control_axes:
-            self.integral_y += effective_y * dt
-            derivative_y = (effective_y - self.prev_error_y) / dt
-            self.prev_error_y = effective_y
+            self.integral_y += pitch_error_y * dt
+            derivative_y = (pitch_error_y - self.prev_error_y) / dt
+            self.prev_error_y = pitch_error_y
+            command_axes.append("pitch")
         else:
             self.integral_y = 0.0
             derivative_y = 0.0
             self.prev_error_y = 0.0
+        self.last_command_axes = tuple(command_axes)
 
         yaw_delta = (
             self.config.kp_yaw * effective_x
@@ -193,12 +213,12 @@ class VisualServo:
             + self.config.kd_yaw * derivative_x
         )
         lift_delta = (
-            self.config.kp_lift * effective_y
+            self.config.kp_lift * lift_error_y
             + self.config.ki_lift * self.integral_lift
             + self.config.kd_lift * derivative_lift
         )
         pitch_delta = (
-            self.config.kp_pitch * effective_y
+            self.config.kp_pitch * pitch_error_y
             + self.config.ki_pitch * self.integral_y
             + self.config.kd_pitch * derivative_y
         )
@@ -223,6 +243,24 @@ class VisualServo:
         self.joints[1] = self.lift
         self.joints[3] = self.pitch
 
+    def _lift_error_for_step(self, effective_y: float) -> float:
+        """In combined tracking, Servo003 handles fine pitch first.
+
+        Servo001 changes the whole arm posture and load, so it only joins in
+        for large vertical errors and at a lower update rate. This prevents
+        lift and pitch from fighting over the same camera-space error.
+        """
+        combined_vertical = "lift" in self.control_axes and "pitch" in self.control_axes
+        if not combined_vertical:
+            return effective_y
+        threshold = max(int(self.config.combined_lift_error_px), int(self.config.dead_zone_px))
+        if abs(effective_y) < threshold:
+            return 0.0
+        divider = max(1, int(self.config.combined_lift_rate_divider))
+        if self.control_tick_count % divider != 0:
+            return 0.0
+        return effective_y
+
     def _result(self, cx, cy, error_x, error_y, active: bool, should_send: bool):
         return {
             "yaw": self.yaw,
@@ -238,6 +276,10 @@ class VisualServo:
             "confirm_count": self.confirm_count,
             "lost_count": self.lost_count,
             "control_axes": list(self.control_axes),
+            "command_axes": list(self.last_command_axes),
+            "combined_vertical": "lift" in self.control_axes and "pitch" in self.control_axes,
+            "lift_error_y": self.last_lift_error_y,
+            "pitch_error_y": self.last_pitch_error_y,
         }
 
 
