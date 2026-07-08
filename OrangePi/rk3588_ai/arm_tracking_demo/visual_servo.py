@@ -15,11 +15,12 @@ def clamp(value: float, low: float, high: float) -> float:
 @dataclass
 class VisualServoConfig:
     base_joints: Sequence[float] = (0.0, -0.930, 1.6, 1.2, 0.0, 0.801)
-    dead_zone_px: int = 30
-    control_rate_hz: float = 10.0
-    max_yaw_delta: float = 0.015
-    max_lift_delta: float = 0.010
-    max_pitch_delta: float = 0.015
+    dead_zone_px: int = 42
+    control_rate_hz: float = 12.0
+    max_yaw_delta: float = 0.018
+    max_lift_delta: float = 0.006
+    max_pitch_delta: float = 0.012
+    error_filter_alpha: float = 0.6
     confirm_frames: int = 2
     lost_hold_frames: int = 5
     lost_stop_frames: int = 15
@@ -32,20 +33,20 @@ class VisualServoConfig:
     lift_max: float = -0.65
     pitch_min: float = 0.9
     pitch_max: float = 1.5
-    kp_yaw: float = 0.0008
+    kp_yaw: float = 0.0009
     ki_yaw: float = 0.0
     kd_yaw: float = 0.0
-    kp_lift: float = 0.0007
+    kp_lift: float = 0.00045
     ki_lift: float = 0.0
     kd_lift: float = 0.0
-    kp_pitch: float = 0.0008
+    kp_pitch: float = 0.00065
     ki_pitch: float = 0.0
     kd_pitch: float = 0.0
     invert_yaw: bool = True
     invert_lift: bool = True
-    invert_pitch: bool = True
+    invert_pitch: bool = False
     control_axes: Sequence[str] = ("yaw", "lift", "pitch")
-    combined_lift_error_px: int = 90
+    combined_lift_error_px: int = 80
     combined_lift_rate_divider: int = 4
 
 
@@ -97,6 +98,9 @@ class VisualServo:
         self.last_lift_error_y = 0.0
         self.last_pitch_error_y = 0.0
         self.last_command_axes = tuple(self.control_axes)
+        self.filtered_error_x = 0.0
+        self.filtered_error_y = 0.0
+        self.error_filter_ready = False
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
 
     def reset(self):
@@ -116,6 +120,9 @@ class VisualServo:
         self.last_lift_error_y = 0.0
         self.last_pitch_error_y = 0.0
         self.last_command_axes = tuple(self.control_axes)
+        self.filtered_error_x = 0.0
+        self.filtered_error_y = 0.0
+        self.error_filter_ready = False
         self.last_control_time = 0.0
         self.last_result = self._result(None, None, 0.0, 0.0, False, False)
 
@@ -141,6 +148,8 @@ class VisualServo:
         if target_box is None:
             self.lost_count += 1
             self.confirm_count = 0
+            if self.lost_count >= self.config.lost_hold_frames:
+                self.error_filter_ready = False
             active = self.lost_count < self.config.lost_stop_frames
             self.last_result = self._result(None, None, 0.0, 0.0, active, False)
             return self.last_result
@@ -149,8 +158,9 @@ class VisualServo:
         self.confirm_count += 1
         cx = (float(target_box[0]) + float(target_box[2])) / 2.0
         cy = (float(target_box[1]) + float(target_box[3])) / 2.0
-        error_x = cx - (float(frame_width) / 2.0)
-        error_y = cy - (float(frame_height) / 2.0)
+        raw_error_x = cx - (float(frame_width) / 2.0)
+        raw_error_y = cy - (float(frame_height) / 2.0)
+        error_x, error_y = self._filter_error(raw_error_x, raw_error_y)
 
         target_confirmed = self.confirm_count >= self.config.confirm_frames
         min_period = 1.0 / max(self.config.control_rate_hz, 0.1)
@@ -164,7 +174,20 @@ class VisualServo:
             should_send = True
 
         self.last_result = self._result(cx, cy, error_x, error_y, True, should_send)
+        self.last_result["raw_error_x"] = raw_error_x
+        self.last_result["raw_error_y"] = raw_error_y
         return self.last_result
+
+    def _filter_error(self, raw_error_x: float, raw_error_y: float) -> Tuple[float, float]:
+        alpha = clamp(float(self.config.error_filter_alpha), 0.0, 0.95)
+        if not self.error_filter_ready:
+            self.filtered_error_x = raw_error_x
+            self.filtered_error_y = raw_error_y
+            self.error_filter_ready = True
+        else:
+            self.filtered_error_x = (alpha * self.filtered_error_x) + ((1.0 - alpha) * raw_error_x)
+            self.filtered_error_y = (alpha * self.filtered_error_y) + ((1.0 - alpha) * raw_error_y)
+        return self.filtered_error_x, self.filtered_error_y
 
     def _step(self, error_x: float, error_y: float, dt: float):
         self.control_tick_count += 1
@@ -271,6 +294,8 @@ class VisualServo:
             "cy": cy,
             "error_x": error_x,
             "error_y": error_y,
+            "raw_error_x": error_x,
+            "raw_error_y": error_y,
             "active": active,
             "should_send": should_send,
             "confirm_count": self.confirm_count,

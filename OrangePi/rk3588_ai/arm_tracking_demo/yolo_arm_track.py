@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import json
 import os
 import sys
 import time
@@ -66,6 +67,12 @@ def parse_args():
         default=None,
         help="move Servo001/002 to the configured forward tracking pose before opening the camera",
     )
+    parser.add_argument(
+        "--send_initial_axis_pose",
+        type=str2bool,
+        default=True,
+        help="send the current yaw/lift/pitch neutral command once after camera/model init",
+    )
     parser.add_argument("--control_rate", type=float, default=0.0)
     parser.add_argument("--dead_zone", type=int, default=0)
     parser.add_argument(
@@ -75,6 +82,7 @@ def parse_args():
     )
     parser.add_argument("--save_path", default="")
     parser.add_argument("--snapshot_path", default="")
+    parser.add_argument("--metrics_path", default="")
     parser.add_argument("--print_boxes", action="store_true")
     parser.add_argument("--print_cmd", action="store_true")
     parser.add_argument(
@@ -221,6 +229,122 @@ def smooth(previous, current, alpha=0.15):
     return (1.0 - alpha) * previous + alpha * current
 
 
+class TrackingMetrics:
+    def __init__(self, path: str):
+        self.path = Path(path).expanduser()
+        self.rows = []
+
+    def add(
+        self,
+        frame_count,
+        inference_count,
+        detection_count,
+        target,
+        servo_result,
+        payload,
+        pipeline_fps,
+        yolo_fps,
+        infer_ms,
+    ):
+        row = {
+            "time": time.time(),
+            "frame": int(frame_count),
+            "inference": int(inference_count),
+            "detections": int(detection_count),
+            "target": None if target is None else {
+                "class_name": target["class_name"],
+                "score": float(target["score"]),
+                "cx": float(target["cx"]),
+                "cy": float(target["cy"]),
+                "box": [float(value) for value in target["box"]],
+            },
+            "raw_error_x": float(servo_result.get("raw_error_x", servo_result["error_x"])),
+            "raw_error_y": float(servo_result.get("raw_error_y", servo_result["error_y"])),
+            "error_x": float(servo_result["error_x"]),
+            "error_y": float(servo_result["error_y"]),
+            "yaw": float(servo_result["yaw"]),
+            "lift": float(servo_result["lift"]),
+            "pitch": float(servo_result["pitch"]),
+            "active": bool(servo_result["active"]),
+            "should_send": bool(servo_result["should_send"]),
+            "control_axes": list(servo_result.get("control_axes", [])),
+            "command_axes": list(servo_result.get("command_axes", [])),
+            "lift_error_y": float(servo_result.get("lift_error_y", 0.0)),
+            "pitch_error_y": float(servo_result.get("pitch_error_y", 0.0)),
+            "payload_ascii": payload.decode("ascii", errors="replace") if payload else "",
+            "pipeline_fps": float(pipeline_fps),
+            "yolo_fps": float(yolo_fps),
+            "infer_ms": float(infer_ms),
+        }
+        self.rows.append(row)
+
+    def write(self):
+        if not self.path:
+            return None
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("w", encoding="utf-8") as handle:
+            for row in self.rows:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        summary = self.summary()
+        summary_path = self.path.with_suffix(self.path.suffix + ".summary.json")
+        with summary_path.open("w", encoding="utf-8") as handle:
+            json.dump(summary, handle, ensure_ascii=False, indent=2)
+        print("Metrics saved: {}".format(self.path))
+        print("Metrics summary: {}".format(summary_path))
+        print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
+        return summary
+
+    def summary(self):
+        target_rows = [row for row in self.rows if row["target"] is not None]
+        command_rows = [row for row in self.rows if row["payload_ascii"]]
+        if not target_rows:
+            return {
+                "frames": len(self.rows),
+                "target_frames": 0,
+                "command_frames": len(command_rows),
+                "mean_abs_error_x": None,
+                "mean_abs_error_y": None,
+                "final_abs_error_x": None,
+                "final_abs_error_y": None,
+                "sign_changes_x": 0,
+                "sign_changes_y": 0,
+            }
+
+        def mean_abs(key):
+            return sum(abs(row[key]) for row in target_rows) / float(len(target_rows))
+
+        def sign_changes(key):
+            previous = 0
+            changes = 0
+            for row in target_rows:
+                value = row[key]
+                sign = 1 if value > 0 else (-1 if value < 0 else 0)
+                if sign and previous and sign != previous:
+                    changes += 1
+                if sign:
+                    previous = sign
+            return changes
+
+        tail = target_rows[-min(10, len(target_rows)) :]
+        return {
+            "frames": len(self.rows),
+            "target_frames": len(target_rows),
+            "target_ratio": len(target_rows) / float(max(1, len(self.rows))),
+            "command_frames": len(command_rows),
+            "mean_abs_error_x": mean_abs("error_x"),
+            "mean_abs_error_y": mean_abs("error_y"),
+            "mean_abs_raw_error_x": mean_abs("raw_error_x"),
+            "mean_abs_raw_error_y": mean_abs("raw_error_y"),
+            "final_abs_error_x": sum(abs(row["error_x"]) for row in tail) / float(len(tail)),
+            "final_abs_error_y": sum(abs(row["error_y"]) for row in tail) / float(len(tail)),
+            "sign_changes_x": sign_changes("error_x"),
+            "sign_changes_y": sign_changes("error_y"),
+            "last_yaw": target_rows[-1]["yaw"],
+            "last_lift": target_rows[-1]["lift"],
+            "last_pitch": target_rows[-1]["pitch"],
+        }
+
+
 def draw_detections(image, boxes, scores, classes, class_names, print_boxes=False):
     if boxes is None:
         return
@@ -322,6 +446,7 @@ def run(args):
     capture = None
     writer = None
     model = None
+    metrics = TrackingMetrics(args.metrics_path) if args.metrics_path else None
     last_frame = None
     arm_paused = False
     stop_reason = "unknown"
@@ -356,7 +481,7 @@ def run(args):
 
         duration_ms = int(dict(config.get("driver", {})).get("duration_ms", 200))
         arm_stop_sent = False
-        if args.enable_arm and not arm_paused:
+        if args.enable_arm and not arm_paused and args.send_initial_axis_pose:
             payload = send_arm_result(driver, servo.last_result, duration_ms, active_axes)
             arm_stop_sent = False
             if payload and args.print_cmd and not args.dry_run:
@@ -444,10 +569,12 @@ def run(args):
             last_target = target
             target_box = None if target is None else target["box"]
             last_servo_result = servo.update(target_box, frame.shape[1], frame.shape[0])
+            arm_payload = b""
 
             if args.enable_arm and (not arm_paused) and last_servo_result["should_send"]:
                 if last_servo_result["active"]:
                     payload = send_arm_result(driver, last_servo_result, duration_ms, active_axes)
+                    arm_payload = payload
                     arm_stop_sent = False
                     if payload and args.print_cmd and not args.dry_run:
                         print("arm_payload_hex={}".format(" ".join("{:02x}".format(byte) for byte in payload)))
@@ -504,6 +631,19 @@ def run(args):
 
             if writer is not None:
                 writer.write(visual)
+
+            if metrics is not None:
+                metrics.add(
+                    frame_count,
+                    inference_count,
+                    detection_count,
+                    last_target,
+                    last_servo_result,
+                    arm_payload,
+                    pipeline_fps,
+                    yolo_fps,
+                    infer_ms,
+                )
 
             if not args.no_show:
                 cv2.imshow(WINDOW_NAME, visual)
@@ -568,9 +708,13 @@ def run(args):
                 infer_ms,
             )
         )
+        if metrics is not None:
+            metrics.write()
     except KeyboardInterrupt:
         stop_reason = "KeyboardInterrupt"
         print("Interrupted")
+        if metrics is not None:
+            metrics.write()
     finally:
         try:
             if args.enable_arm:

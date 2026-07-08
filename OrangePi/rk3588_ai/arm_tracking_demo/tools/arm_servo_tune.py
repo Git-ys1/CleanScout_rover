@@ -230,6 +230,8 @@ def save_start_pose(config_path: Path, positions: Dict[int, int], duration_ms: i
 
     if 0 in tracking_pose:
         driver["yaw_pwm_neutral"] = int(tracking_pose[0])
+    if 1 in tracking_pose:
+        driver["lift_pwm_neutral"] = int(tracking_pose[1])
     if 3 in tracking_pose:
         driver["pitch_pwm_neutral"] = int(tracking_pose[3])
 
@@ -244,6 +246,7 @@ def save_start_pose(config_path: Path, positions: Dict[int, int], duration_ms: i
                 "tracking_pose_pwms": tracking_pose,
                 "tracking_pose_stages": driver["tracking_pose_stages"],
                 "yaw_pwm_neutral": driver.get("yaw_pwm_neutral"),
+                "lift_pwm_neutral": driver.get("lift_pwm_neutral"),
                 "pitch_pwm_neutral": driver.get("pitch_pwm_neutral"),
             },
             ensure_ascii=False,
