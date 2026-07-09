@@ -27,6 +27,12 @@ D430 深度预检：
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/d430_depth_smoke.py --frames 80
 ```
 
+如果 `pyrealsense2` 缺失，先在 RKNN 虚拟环境中安装已实测可用版本：
+
+```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 -m pip install pyrealsense2==2.55.1.6486
+```
+
 D435 RGB-D 预检：
 
 ```bash

@@ -25,6 +25,8 @@ def main() -> int:
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--frames", type=int, default=80)
     ap.add_argument("--roi", default="center", help="center or x1,y1,x2,y2")
+    ap.add_argument("--min_depth_m", type=float, default=0.05)
+    ap.add_argument("--max_depth_m", type=float, default=4.0)
     args = ap.parse_args()
 
     try:
@@ -36,6 +38,8 @@ def main() -> int:
         raise
     src.start()
     try:
+        valid_count = 0
+        last_valid = None
         for i in range(args.frames):
             frame = src.read()
             h, w = frame.depth_m.shape[:2]
@@ -46,11 +50,21 @@ def main() -> int:
                 if len(vals) != 4:
                     raise ValueError("--roi must be center or x1,y1,x2,y2")
                 box = BBox(*vals, score=1.0, cls="depth_probe")
-            z = median_depth_in_bbox(frame.depth_m, box, inner_ratio=1.0, min_depth_m=0.05, max_depth_m=3.0)
+            z = median_depth_in_bbox(
+                frame.depth_m,
+                box,
+                inner_ratio=1.0,
+                min_depth_m=args.min_depth_m,
+                max_depth_m=args.max_depth_m,
+            )
+            if z is not None:
+                valid_count += 1
+                last_valid = z
             if i % 10 == 0:
                 p = None if z is None else depth_pixel_to_camera(box.center, z, frame.depth_intrinsics)
                 print(f"frame={i} depth={frame.depth_m.shape} roi_z_m={z} point_cam_m={p} intr={frame.depth_intrinsics}")
             time.sleep(0.02)
+        print(f"summary frames={args.frames} valid_roi_depth_frames={valid_count} last_valid_z_m={last_valid}")
     finally:
         src.stop()
     return 0
