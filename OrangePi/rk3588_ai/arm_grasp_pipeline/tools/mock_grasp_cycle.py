@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import argparse
 import sys
 import numpy as np
 
@@ -11,20 +12,33 @@ from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
 from arm_grasp_pipeline.geometry import CameraIntrinsics
 from arm_grasp_pipeline.target_depth import BBox
 from arm_grasp_pipeline.grasp_state_machine import GraspStateMachine
+from arm_grasp_pipeline.ros_compat import PrintRosBridge
 
-adapter = SerialServoArmAdapter(dry_run=True)
-arm = ArmMotion(adapter)
-intr = CameraIntrinsics(fx=610, fy=610, cx=320, cy=240)
-gsm = GraspStateMachine(arm, intr)
 
-depth = np.zeros((480, 640), dtype=np.float32)
-depth[200:280, 280:360] = 0.32
-for _ in range(6):
-    gsm.update_detection(BBox(280, 200, 360, 280, 0.90, "bottle"))
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--print_ros", action="store_true", help="print ROS-compatible dataclass payloads")
+    args = ap.parse_args()
 
-target = gsm.try_lock_depth(depth)
-print("locked_target_base_from_depth:", target)
-# Hardware-free dry run: use a reachable calibrated target to verify IK + command packing.
-gsm.locked_target_base = np.array([0.16, 0.00, 0.12], dtype=float)
-print("locked_target_base_for_mock_cycle:", gsm.locked_target_base)
-print("execute:", gsm.execute_locked_grasp())
+    adapter = SerialServoArmAdapter(dry_run=True)
+    arm = ArmMotion(adapter)
+    intr = CameraIntrinsics(fx=610, fy=610, cx=320, cy=240)
+    event_sink = PrintRosBridge() if args.print_ros else None
+    gsm = GraspStateMachine(arm, intr, event_sink=event_sink)
+
+    depth = np.zeros((480, 640), dtype=np.float32)
+    depth[200:280, 280:360] = 0.32
+    for _ in range(6):
+        gsm.update_detection(BBox(280, 200, 360, 280, 0.90, "bottle"))
+
+    target = gsm.try_lock_depth(depth)
+    print("locked_target_base_from_depth:", target)
+    # Hardware-free dry run: use a reachable calibrated target to verify IK + command packing.
+    gsm.locked_target_base = np.array([0.16, 0.00, 0.12], dtype=float)
+    print("locked_target_base_for_mock_cycle:", gsm.locked_target_base)
+    print("execute:", gsm.execute_locked_grasp())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

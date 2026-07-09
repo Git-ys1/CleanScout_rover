@@ -18,6 +18,7 @@
 cd ~/rk3588_ai/arm_grasp_pipeline
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/ik_sweep_check.py
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/mock_grasp_cycle.py
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/mock_grasp_cycle.py --print_ros
 ```
 
 D430 深度预检：
