@@ -27,7 +27,13 @@ def main() -> int:
     ap.add_argument("--roi", default="center", help="center or x1,y1,x2,y2")
     args = ap.parse_args()
 
-    src = D430DepthSource(args.width, args.height, args.fps)
+    try:
+        src = D430DepthSource(args.width, args.height, args.fps)
+    except ModuleNotFoundError as exc:
+        if exc.name == "pyrealsense2":
+            print("ERROR: pyrealsense2 is not available. Run tools/realsense_env_check.py first.", file=sys.stderr)
+            return 2
+        raise
     src.start()
     try:
         for i in range(args.frames):

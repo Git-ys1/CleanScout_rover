@@ -23,12 +23,14 @@ cd ~/rk3588_ai/arm_grasp_pipeline
 D430 深度预检：
 
 ```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/realsense_env_check.py
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/d430_depth_smoke.py --frames 80
 ```
 
 D435 RGB-D 预检：
 
 ```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/realsense_env_check.py
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_smoke.py
 ```
 
