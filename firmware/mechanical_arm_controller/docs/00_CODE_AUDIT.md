@@ -2,14 +2,21 @@
 
 日期：2026-06-10
 
+> 2026-07-09 更新：C-5.1.2 已经把 `firmware/mechanical_arm_official_baseline/` 复制为
+> `firmware/mechanical_arm_controller/` 自研工程，并完成 USART3 机械臂入口迁移。
+> 本文件以下内容保留为当时的只读审计记录；当前可编译/可烧录状态以
+> `C-5.1.2_USART3_ARM_PORT_MIGRATION.md` 和本目录源码为准。
+
 ## 1. 结论先行
 
-当前仓库里已经存在两类机械臂相关资产：
+截至 2026-06-10 审计时，仓库里已经存在两类机械臂相关资产：
 
 1. `firmware/mechanical_arm_official_baseline/`：可烧录的官方冻结基线，能解析 `#000P1500T1000!` 这类文本命令，并把结果落到本地舵机输出或串口转发。
-2. `firmware/mechanical_arm_controller/`：目前只有 `.gitkeep`，尚未形成可编译工程、协议层或安全网关层。
+2. `firmware/mechanical_arm_controller/`：当时只有 `.gitkeep`，尚未形成可编译工程、协议层或安全网关层。
 
 因此，`C-5.0.3` 的正确起点不是“改一下现有控制逻辑就完”，而是先明确新网关工程从哪份官方基线复制、哪些旧模块保留、哪些危险命令默认禁用。
+
+截至 C-5.1.2，上述第二点已经完成收口：`mechanical_arm_controller/` 已复制官方基线并完成 USART3 机械臂入口迁移。
 
 ## 2. 当前机械臂官方基线入口
 
@@ -130,7 +137,9 @@ OrangePi 侧当前 demo 的默认协议仍是 `yh_pwm_text`，并直接打包 `#
 - `firmware/mechanical_arm_official_baseline/Output/template.build_log.htm`
 - 日志显示 `0 Error(s), 0 Warning(s)`
 
-但 `firmware/mechanical_arm_controller/` 目前不能直接编译，因为目录里仅有 `.gitkeep`，没有工程文件、`main.c`、`uvprojx` 或源码。
+但在 2026-06-10 审计当时，`firmware/mechanical_arm_controller/` 不能直接编译，因为目录里仅有 `.gitkeep`，没有工程文件、`main.c`、`uvprojx` 或源码。
+
+C-5.1.2 后，`firmware/mechanical_arm_controller/` 已经具备可编译 Keil 工程，当前编译与烧录结果见 `C-5.1.2_USART3_ARM_PORT_MIGRATION.md`。
 
 ## 11. 当前工程烧录后是否有启动日志
 
@@ -203,4 +212,3 @@ OrangePi 侧当前 demo 的默认协议仍是 `yh_pwm_text`，并直接打包 `#
 3. 默认禁止危险配置命令。
 4. 先实现 `PING / STATUS / STOP / RAW_SAFE` 最小闭环，再接 Orange Pi。
 5. 上板前先确认物理接法是本地 PWM 还是 UART 总线链。
-

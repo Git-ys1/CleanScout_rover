@@ -12,8 +12,22 @@ This directory is the first non-ROS prototype for visual tracking on Orange Pi 5
 
 ## Current Default Protocol
 
-The current repository mechanical-arm STM32 baseline is `firmware/mechanical_arm_official_baseline`.
-Its verified command format is the official bus-servo ASCII text protocol:
+The current repository mechanical-arm STM32 self-developed entry is `firmware/mechanical_arm_controller`.
+`firmware/mechanical_arm_official_baseline` remains the frozen vendor/reference baseline.
+
+C-5.1.2 freezes the OrangePi mechanical-arm control entrance to OpenRF1 USART3 / Bluetooth serial H6:
+
+```text
+OrangePi CH340 TX -> OpenRF1 RX3 / PB11
+OrangePi CH340 RX <- OpenRF1 TX3 / PB10
+OrangePi CH340 GND <-> OpenRF1 GND
+baudrate: 115200 8N1
+current board device: /dev/ttyUSB0, VID:PID=1A86:7523
+```
+
+USART2 / user serial H5 is reserved for future Raspberry Pi chassis control and must not be used as the OrangePi arm entrance.
+
+The verified command format remains the official bus-servo ASCII text protocol:
 
 ```text
 #000P1500T0200!

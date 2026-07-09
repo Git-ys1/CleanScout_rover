@@ -34,7 +34,7 @@
 | [docs/](docs/) | 主线文档 | 总述、计划、软件说明、验证记录、硬件速查 |
 | [firmware/openrf1_motion_controller/](firmware/openrf1_motion_controller/) | RF1 正式固件 | STM32F103RCT6 自包含 Keil 工程与唯一底盘源码 |
 | [firmware/mechanical_arm_official_baseline/](firmware/mechanical_arm_official_baseline/) | 机械臂官方冻结基线 | 当前最新官方 STM32 机械臂控制板例程，作为 C-3.7.0 开工基线 |
-| [firmware/mechanical_arm_controller/](firmware/mechanical_arm_controller/) | 机械臂独立开发占位 | 后续先隔离调试基础机械臂控制，再评估与底盘融合 |
+| [firmware/mechanical_arm_controller/](firmware/mechanical_arm_controller/) | 机械臂自研固件 | 可编译/可烧录 Keil 工程；C-5.1.2 起香橙派机械臂控制固定走 OpenRF1 USART3 |
 | [Raspberrypi/](Raspberrypi/) | 树莓派 / ROS 工作区 | ROS 包、launch、脚本与发布目录 |
 | [OrangePi/](OrangePi/) | Orange Pi / RK3588 AI 工作区 | RKNN Runtime、YOLO11 图片检测、USB 摄像头实时检测基线 |
 | [jixiebi/](jixiebi/) | 机械臂历史实验副本 | OpenMV / 视觉抓取旧实验线，不再代表当前 STM32 机械臂基线 |
@@ -54,6 +54,7 @@
 | RF1 平滑调试 | [C-3.1.4D_openrf1_closed_loop_smoothing](docs/VERIFY/C-3.1.4D_openrf1_closed_loop_smoothing.md) | 闭环平顺性调参记录 |
 | RF1 工程收口 | [C-3.6.0_openrf1_firmware_normalization](docs/SOFTWARE/C-3.6.0_openrf1_firmware_normalization.md) | 正式 Keil 工程、增量 PI 参数和迁移纪律 |
 | 机械臂基线 | [C-3.7.0_mechanical_arm_baseline_freeze](docs/SOFTWARE/C-3.7.0_mechanical_arm_baseline_freeze.md) | 官方例程冻结、独立开发目录与后续融合边界 |
+| 机械臂 USART3 迁移 | [C-5.1.2_USART3_ARM_PORT_MIGRATION](firmware/mechanical_arm_controller/docs/C-5.1.2_USART3_ARM_PORT_MIGRATION.md) | USART2 留给树莓派底盘，USART3 固定给香橙派机械臂控制 |
 | 机械臂协议澄清 | [C-5.0.2_arm_bus_servo_protocol_note](docs/VERIFY/C-5.0.2_arm_bus_servo_protocol_note.md) | 总线舵机 ASCII 文本协议、STM32 执行层与 `yh_pwm_text` 语义定版 |
 | OrangePi AI | [OrangePi/README.md](OrangePi/README.md) | Orange Pi 5 Max、RK3588、RKNN、YOLO11 摄像头检测入口 |
 | 树莓派 | [Raspberrypi/README.md](Raspberrypi/README.md) | ROS 上位机入口 |

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [`openrf1_motion_controller/`](openrf1_motion_controller/) | 当前主线 | OpenRF1 / STM32F103RCT6 底盘运动控制器，含自包含 Keil 工程 |
 | [`mechanical_arm_official_baseline/`](mechanical_arm_official_baseline/) | 冻结基线 | 机械臂 STM32F103RC 官方例程基线，当前唯一官方参考，不直接承担日常迭代 |
-| [`mechanical_arm_controller/`](mechanical_arm_controller/) | 新开发占位 | C-3.7.0 起机械臂独立控制开发目录，先与底盘电机控制隔离推进 |
+| [`mechanical_arm_controller/`](mechanical_arm_controller/) | 机械臂自研工程 | 从官方基线复制出的可编译/可烧录工程；C-5.1.2 起固定 USART3 作为香橙派机械臂入口 |
 | [`cj_bridge_f411_cubeide/`](cj_bridge_f411_cubeide/) | 独立历史子项目 | STM32F411 CJ bridge，不属于 RF1 底盘工程 |
 | [`archive/openrf1_keil_overlay/`](archive/openrf1_keil_overlay/) | 历史归档 | 早期 OpenRF1 overlay，禁止作为当前编译入口 |
 

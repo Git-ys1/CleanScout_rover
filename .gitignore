@@ -65,6 +65,17 @@ firmware/mechanical_arm_official_baseline/Output/*
 !firmware/mechanical_arm_official_baseline/Output/template.hex
 !firmware/mechanical_arm_official_baseline/Output/template.build_log.htm
 
+# Mechanical-arm self-developed Keil project local IDE/build artifacts.
+firmware/mechanical_arm_controller/Listing/
+firmware/mechanical_arm_controller/Project/RVMDK（uv5）/DebugConfig/
+firmware/mechanical_arm_controller/Project/RVMDK（uv5）/*.uvguix*
+firmware/mechanical_arm_controller/Project/RVMDK（uv5）/BH-STM32.uvoptx
+firmware/mechanical_arm_controller/Project/RVMDK（uv5）/JLinkLog.txt
+firmware/mechanical_arm_controller/Project/RVMDK（uv5）/JLinkSettings.ini
+firmware/mechanical_arm_controller/Output/*
+!firmware/mechanical_arm_controller/Output/template.hex
+!firmware/mechanical_arm_controller/Output/template.build_log.htm
+
 # OrangePi / RK3588 AI local runtime and vendor artifacts.
 OrangePi/**/rknn_toolkit2_env/
 OrangePi/**/rknn_lite_env/
