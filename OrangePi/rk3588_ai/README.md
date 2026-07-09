@@ -1,6 +1,6 @@
 # RK3588 AI Baseline
 
-本目录记录 Orange Pi 5 Max 8GB 上 RK3588 NPU / RKNN / YOLO11 / USB 摄像头实时检测的已验证基线，并从 C-5.0.1 开始保存机械臂二维视觉追踪 dry-run 原型。这里不是完整 Python 虚拟环境，也不是 RKNN Model Zoo 上游仓库镜像；仓库只保存能复现结论的轻量脚本、报告、任务书、overlay 和安全 demo。
+本目录记录 Orange Pi 5 Max 8GB 上 RK3588 NPU / RKNN / YOLO11 / USB 摄像头实时检测的已验证基线，并从 C-5.0.1 开始保存机械臂二维视觉追踪原型，从 C-5.1.1 开始新增 D430/D435 RGB-D 抓取预研管线。这里不是完整 Python 虚拟环境，也不是 RKNN Model Zoo 上游仓库镜像；仓库只保存能复现结论的轻量脚本、报告、任务书、overlay 和安全 demo。
 
 ## 硬件与系统
 
@@ -22,7 +22,8 @@
 3. 官方 YOLO11 Python demo 的 `dfl()` 晚加载 PyTorch 会触发 aarch64 static TLS / libgomp 问题。
 4. 最终采用 NumPy DFL，和 torch 版输出对比 `max_abs_error: 0.0`，运行不需要 `LD_PRELOAD`。
 5. 新增 `yolo11_camera.py` 后，USB 摄像头实时检测窗口可运行，`q` / ESC 退出、资源释放已验证。
-6. 新增 `arm_tracking_demo/` 后，YOLO11 检测结果可进入 target selector 与 visual servo，默认只 dry-run，不接 ROS。
+6. 新增 `arm_tracking_demo/` 后，YOLO11 检测结果可进入 target selector 与 visual servo，默认先 dry-run，再按单轴/三轴逐步实测。
+7. 新增 `arm_grasp_pipeline/` 后，D430/D435 阶段可以先验证深度、像素反投影、IK 和 mock 抓取状态机；真实 RGB-D 抓取等 D435 到货后再接。
 
 ## 文件说明
 
@@ -43,6 +44,7 @@
 | `UPSTREAMS.md` | 被忽略的上游仓库、虚拟环境、模型和日志恢复说明 |
 | `scripts/apply_model_zoo_overlay.sh` | clone 官方 Model Zoo 并应用 CleanScout overlay |
 | `arm_tracking_demo/` | C-5.0.1 机械臂二维视觉追踪 dry-run demo |
+| `arm_grasp_pipeline/` | C-5.1.1 D430/D435 RGB-D 抓取预研管线 |
 | `*.jpg` | 图片与摄像头验收结果 |
 
 ## 板端使用
@@ -134,6 +136,26 @@ cd ~/rk3588_ai/arm_tracking_demo
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/scan_serial.py
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/bus_servo_probe.py --serial_port /dev/ttyUSB0 --read position --ids 0-5
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_arm_driver_dryrun.py --print_cmd
+```
+
+运行 RGB-D 抓取管线预检：
+
+```bash
+cd ~/rk3588_ai/arm_grasp_pipeline
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/ik_sweep_check.py
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/mock_grasp_cycle.py
+```
+
+D430 depth-only smoke：
+
+```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/d430_depth_smoke.py --frames 80
+```
+
+D435 到货后 RGB-D smoke：
+
+```bash
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_smoke.py
 ```
 
 退出方式：

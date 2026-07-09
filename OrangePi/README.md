@@ -20,6 +20,7 @@ OrangePi 是 CleanScout_rover 的边缘 AI 开发板目录，当前硬件为 Ora
 | [rk3588_ai/](rk3588_ai/) | OrangePi RK3588 AI 基线、任务书、报告、脚本和 overlay |
 | [rk3588_ai/指令合集.md](rk3588_ai/指令合集.md) | 当前最短可用调试命令：交互调姿、dry-run、真实追踪 |
 | [rk3588_ai/arm_tracking_demo/](rk3588_ai/arm_tracking_demo/) | YOLO11 目标框到 000 yaw / 001 lift / 003 pitch 的机械臂视觉追踪 demo |
+| [rk3588_ai/arm_grasp_pipeline/](rk3588_ai/arm_grasp_pipeline/) | C-5.1.1 RGB-D 深度抓取预研管线：D430/D435 smoke、像素反投影、IK、mock 抓取状态机 |
 | [rk3588_ai/model_zoo_overlay/](rk3588_ai/model_zoo_overlay/) | 对官方 RKNN Model Zoo v2.3.2 的轻量覆盖文件 |
 | [rk3588_ai/UPSTREAMS.md](rk3588_ai/UPSTREAMS.md) | 被忽略的上游仓库、虚拟环境、模型和日志的恢复说明 |
 

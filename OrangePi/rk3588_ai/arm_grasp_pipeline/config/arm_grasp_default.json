@@ -1,0 +1,40 @@
+{
+  "serial": {"port": "/dev/ttyUSB0", "baudrate": 115200, "dry_run": true},
+  "current_reference_joints_rad": [0.0, -0.93, 1.6, 1.2, 0.0, 0.801],
+  "realsense": {
+    "mode": "d435_rgbd",
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "today_depth_only_test_mode": "d430_depth_only"
+  },
+  "ros_compat": {
+    "enabled": false,
+    "bridge": "null",
+    "future_topics": {
+      "grasp_event": "/cleanscout/arm/grasp_event",
+      "arm_target": "/cleanscout/arm/target"
+    }
+  },
+  "hand_eye": {
+    "x": -0.055,
+    "y": 0.011,
+    "z": -0.00224,
+    "roll_deg": 0.0,
+    "pitch_deg": 0.0,
+    "yaw_deg": 0.0,
+    "note": "seed from Raspberry Pi ROS2 learning package; must be recalibrated on CleanScout hardware"
+  },
+  "grasp": {
+    "stable_frames": 5,
+    "max_center_jitter_px": 10.0,
+    "pre_grasp_dz_m": 0.055,
+    "descend_dz_m": 0.005,
+    "pitch_deg": 70.0,
+    "open_gripper": 0.80,
+    "close_gripper": -0.020,
+    "rgb_depth_x_correction_m": -0.007,
+    "place_xyz_m": [0.16, -0.12, 0.12],
+    "home_xyz_m": [0.16, 0.00, 0.16]
+  }
+}

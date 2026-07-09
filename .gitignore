@@ -18,6 +18,8 @@ Raspberrypi/catkin_ws/move_base_flex/
 *.img.xz
 *.torrent
 J-jixiebi/
+docs/00最新参考/
+docs/00任务书及代码包/
 docs/STM32F103RCT6/03.源代码程序/
 docs/STM32F103RCT6/03.源代码程序.zip
 docs/STM32F103RCT6/开发资料/
