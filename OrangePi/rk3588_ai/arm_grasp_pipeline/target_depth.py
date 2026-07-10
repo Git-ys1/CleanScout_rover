@@ -26,8 +26,8 @@ def median_depth_in_bbox(
     depth_m: np.ndarray,
     bbox: BBox,
     inner_ratio: float = 0.35,
-    min_depth_m: float = 0.12,
-    max_depth_m: float = 1.50,
+    min_depth_m: Optional[float] = None,
+    max_depth_m: Optional[float] = None,
 ) -> Optional[float]:
     """Return robust target depth from the center ROI of a detection bbox."""
     h, w = depth_m.shape[:2]
@@ -39,7 +39,11 @@ def median_depth_in_bbox(
     y1 = int(max(0, round(cy - bh / 2)))
     y2 = int(min(h, round(cy + bh / 2)))
     roi = np.asarray(depth_m[y1:y2, x1:x2], dtype=float)
-    valid = roi[(roi > min_depth_m) & (roi < max_depth_m) & np.isfinite(roi)]
+    valid = roi[(roi > 0.0) & np.isfinite(roi)]
+    if min_depth_m is not None:
+        valid = valid[valid >= min_depth_m]
+    if max_depth_m is not None:
+        valid = valid[valid <= max_depth_m]
     if valid.size < 6:
         return None
     lo, hi = np.percentile(valid, [15, 85])
