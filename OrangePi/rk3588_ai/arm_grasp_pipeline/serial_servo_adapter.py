@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import time
 from typing import Iterable, List, Optional
 
@@ -99,6 +100,29 @@ class SerialServoArmAdapter:
             raise ValueError("at least one servo assignment is required")
         return normalized[0] if len(normalized) == 1 else "{" + "".join(normalized) + "}"
 
+    @staticmethod
+    def pack_kinematics_command(tool_xyz_m: Iterable[float], duration_ms: int = 1000) -> str:
+        """Pack the official ``$KMS:x,y,z,time!`` command.
+
+        Python uses ``[forward, left, up]`` metres. The official firmware uses
+        ``[left, forward, up]`` millimetres and only moves Servo000..003.
+        """
+        xyz = [float(value) for value in tool_xyz_m]
+        if len(xyz) != 3 or not all(math.isfinite(value) for value in xyz):
+            raise ValueError("tool_xyz_m must contain three finite values")
+        forward, left, up = xyz
+        if forward <= 0.0:
+            raise ValueError("official $KMS requires a positive forward coordinate")
+        duration = int(duration_ms)
+        if duration < 20 or duration > 9999:
+            raise ValueError("official $KMS duration_ms must be in 20..9999")
+        return "$KMS:{:.1f},{:.1f},{:.1f},{}!".format(
+            left * 1000.0,
+            forward * 1000.0,
+            up * 1000.0,
+            duration,
+        )
+
     def send_joint_command(self, joints_rad: Iterable[float], duration_ms: int = 1000) -> str:
         cmd = self.pack_joint_command(joints_rad, duration_ms)
         self.last_joints = list(joints_rad)
@@ -126,6 +150,17 @@ class SerialServoArmAdapter:
         cmd = self.pack_partial_pwm_command(assignments, duration_ms)
         if self.dry_run:
             print("[DRY-RUN CENTER]", cmd)
+            return cmd
+        if self._ser is None:
+            self.connect()
+        self._ser.write(cmd.encode("ascii"))
+        self._ser.flush()
+        return cmd
+
+    def send_kinematics_command(self, tool_xyz_m: Iterable[float], duration_ms: int = 1000) -> str:
+        cmd = self.pack_kinematics_command(tool_xyz_m, duration_ms)
+        if self.dry_run:
+            print("[DRY-RUN KMS]", cmd)
             return cmd
         if self._ser is None:
             self.connect()

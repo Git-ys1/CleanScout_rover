@@ -1,5 +1,8 @@
 # coding: utf-8
-"""5/6DoF arm kinematics ported from the uploaded Raspberry Pi ROS2 package.
+"""Legacy 5/6DoF model retained for ROS2 source comparison only.
+
+Production grasp execution uses ``official_kinematics.py`` and never selects
+this module implicitly.
 
 Important differences from the learning package:
 - No global DH mutation in forward kinematics.

@@ -25,6 +25,7 @@ class GraspState(Enum):
     SEARCH = auto()
     CENTERING = auto()
     DEPTH_LOCK = auto()
+    WRIST_LOCK = auto()
     OPEN = auto()
     PRE_GRASP = auto()
     APPROACH = auto()
@@ -49,6 +50,8 @@ class GraspConfig:
     pitch_deg: float = 70.0
     gripper_open_pwm: int = 600
     gripper_close_pwm: int = 2400
+    wrist_fixed_pwm: int = 1500
+    wrist_lock_ms: int = 1000
     gripper_open_ms: int = 2000
     pre_grasp_ms: int = 1800
     approach_ms: int = 1400
@@ -56,7 +59,7 @@ class GraspConfig:
     lift_ms: int = 1800
     retry_motion_ms: int = 3500
     retry_pose_pwms: Tuple[int, int, int, int, int, int] = (1380, 1909, 1900, 620, 1500, 1500)
-    rgb_depth_x_correction_m: float = -0.007
+    rgb_depth_x_correction_m: float = 0.0
     workspace_min_xyz_m: Tuple[float, float, float] = (0.04, -0.30, 0.015)
     workspace_max_xyz_m: Tuple[float, float, float] = (0.39, 0.30, 0.42)
     motion_settle_s: float = 0.15
@@ -124,12 +127,12 @@ class GraspStateMachine:
         if max(self.depth_history) - min(self.depth_history) > self.cfg.max_depth_jitter_m:
             return None
         depth = float(np.median(np.asarray(self.depth_history, dtype=float)))
-        T_base_ee = self.arm.current_ee_matrix_from_last_command()
+        T_base_tool = self.arm.current_tool_matrix_from_last_command()
         dbg = target_pixel_to_base_point_debug(
             box.center,
             depth,
             self.intr,
-            T_base_ee,
+            T_base_tool,
             self.hand_eye,
             rgb_depth_x_correction_m=self.cfg.rgb_depth_x_correction_m,
         )
@@ -150,7 +153,7 @@ class GraspStateMachine:
             raise ValueError("no locked target")
 
         target = self.locked_target_base.copy()
-        tool = self.arm.current_ee_matrix_from_last_command()[:3, 3]
+        tool = self.arm.current_tool_matrix_from_last_command()[:3, 3]
         target_delta = target - tool
         target_distance = float(np.linalg.norm(target_delta))
         if target_distance <= self.cfg.pre_grasp_standoff_m + 0.01:
@@ -207,6 +210,14 @@ class GraspStateMachine:
         except ValueError as exc:
             return self._fail_and_recover(str(exc))
 
+        # The camera is mounted on the non-rotating Servo004 housing while the
+        # TCP is downstream of its output shaft. T_tool_camera is therefore
+        # constant only at this frozen Servo004 position.
+        self.state = GraspState.WRIST_LOCK
+        self._emit(self.state, True, "locking Servo004 for calibrated camera/TCP geometry")
+        self.arm.adapter.send_partial_pwm_command({4: self.cfg.wrist_fixed_pwm}, self.cfg.wrist_lock_ms)
+        self._wait_motion(self.cfg.wrist_lock_ms)
+
         # 005 must be fully open before any arm axis advances toward the bottle.
         self.state = GraspState.OPEN
         self._emit(self.state, True, "opening gripper before approach", gripper=self.cfg.gripper_open_pwm)
@@ -226,7 +237,6 @@ class GraspStateMachine:
                 pitch_deg=self.cfg.pitch_deg,
                 gripper=0.0,
                 duration_ms=dur,
-                gripper_pwm=hand,
                 include_gripper=False,
             )
             if not res.ok:

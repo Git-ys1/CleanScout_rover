@@ -11,13 +11,16 @@ sys.path.insert(0, str(ROOT.parent))
 from arm_grasp_pipeline.arm_motion import ArmMotion
 from arm_grasp_pipeline.geometry import CameraIntrinsics
 from arm_grasp_pipeline.grasp_state_machine import GraspConfig, GraspState, GraspStateMachine
+from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
 from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
 from arm_grasp_pipeline.target_depth import BBox
 
 
 def make_machine():
     adapter = SerialServoArmAdapter(dry_run=True)
-    arm = ArmMotion(adapter)
+    kin = OfficialArmKinematics()
+    reference = kin.estimate_tool_matrix_from_pwm((1380, 1909, 1900, 620, 1500, 1500))
+    arm = ArmMotion(adapter, kinematics=kin, reference_tool_matrix=reference)
     intr = CameraIntrinsics(fx=610.0, fy=610.0, cx=320.0, cy=240.0)
     cfg = GraspConfig(stable_frames=5, depth_stable_frames=4)
     return GraspStateMachine(arm, intr, cfg=cfg)
@@ -58,7 +61,7 @@ def main() -> int:
     assert [row[0] for row in plan] == [
         GraspState.PRE_GRASP, GraspState.APPROACH, GraspState.CLOSE, GraspState.LIFT]
     pre, grasp = plan[0][1], plan[1][1]
-    tool = machine.arm.current_ee_matrix_from_last_command()[:3, 3]
+    tool = machine.arm.current_tool_matrix_from_last_command()[:3, 3]
     target = machine.locked_target_base
     approach_axis = (target - tool) / np.linalg.norm(target - tool)
     assert np.allclose(pre, target - approach_axis * machine.cfg.pre_grasp_standoff_m)

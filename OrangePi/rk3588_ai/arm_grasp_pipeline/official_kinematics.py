@@ -4,6 +4,10 @@
 The source of truth is firmware/mechanical_arm_official_baseline/User/
 Components/y_kinematics plus its kinematics_move() wrapper. Public XYZ uses
 [forward, left, up] metres; firmware $KMS uses [left, forward, up] millimetres.
+
+The official solver only owns Servo000..003. Servo004 (wrist) and Servo005
+(gripper) are intentionally absent from this result and must be commanded by
+their dedicated control stages.
 """
 from __future__ import annotations
 
@@ -15,21 +19,20 @@ import numpy as np
 
 
 PWM_PER_DEG = 2000.0 / 270.0
-PWM_PER_RAD = PWM_PER_DEG * 180.0 / math.pi
 
 
 @dataclass(frozen=True)
 class OfficialIKResult:
-    joints_rad: Tuple[float, float, float, float, float, float]
+    joints_rad: Tuple[float, float, float, float]
     final_pitch_deg: float
     target_xyz_m: Tuple[float, float, float]
     servo_angles_deg: Tuple[float, float, float, float]
-    servo_pwms: Tuple[int, int, int, int, int, int]
+    servo_pwms: Tuple[int, int, int, int]
     tool_matrix: np.ndarray
 
 
 class OfficialArmKinematics:
-    """Exact Python port of y_kinematics.c with a deterministic forward model."""
+    """Python preflight port of the official 000..003 inverse solver."""
 
     def __init__(self, l0_m: float = 0.100, l1_m: float = 0.105,
                  l2_m: float = 0.088, l3_m: float = 0.155) -> None:
@@ -39,7 +42,7 @@ class OfficialArmKinematics:
         self.l3_m = float(l3_m)
 
     @staticmethod
-    def _pwm_targets(angles_deg, roll_rad: float, gripper: float):
+    def _pwm_targets(angles_deg):
         a0, a1, a2, a3 = [float(value) for value in angles_deg]
         # Servo003 is reversed once by kinematics_move() in the official firmware.
         pwms = [
@@ -47,8 +50,6 @@ class OfficialArmKinematics:
             int(1500.0 + PWM_PER_DEG * a1),
             int(1500.0 + PWM_PER_DEG * a2),
             int(1500.0 + PWM_PER_DEG * a3),
-            int(round(1500.0 - PWM_PER_RAD * float(roll_rad))),
-            int(round(1500.0 - PWM_PER_RAD * float(gripper))),
         ]
         if any(value < 500 or value > 2500 for value in pwms):
             return None
@@ -97,7 +98,10 @@ class OfficialArmKinematics:
     def inverse_pose(self, tool_xyz_m: Iterable[float], pitch_deg: float = 70.0,
                      roll_rad: float = -0.05, gripper: float = 0.80,
                      search_step_deg: int = 1) -> Optional[OfficialIKResult]:
-        del pitch_deg  # Official firmware scans Alpha and selects the deepest valid angle.
+        # The official firmware scans Alpha and selects the deepest valid angle.
+        # It has no roll/gripper arguments; keep these parameters only so the
+        # generic motion interface can call this backend without inventing axes.
+        del pitch_deg, roll_rad, gripper
         xyz = tuple(float(value) for value in tool_xyz_m)
         if len(xyz) != 3 or search_step_deg <= 0:
             raise ValueError("tool_xyz_m must have three values and search_step_deg must be positive")
@@ -112,7 +116,7 @@ class OfficialArmKinematics:
         if chosen is None or chosen_alpha is None:
             return None
 
-        pwms = self._pwm_targets(chosen, roll_rad, gripper)
+        pwms = self._pwm_targets(chosen)
         if pwms is None:
             return None
         phi_rad = math.radians(chosen[0] * 180.0 / 270.0)
@@ -121,8 +125,6 @@ class OfficialArmKinematics:
             math.radians(chosen[1]),
             math.radians(chosen[2]),
             math.radians(chosen[3]),
-            float(roll_rad),
-            float(gripper),
         )
         return OfficialIKResult(
             joints_rad=joints,
@@ -140,13 +142,13 @@ class OfficialArmKinematics:
             phi_rad = math.atan2(left, forward)
         alpha = math.radians(float(alpha_deg))
 
-        z_axis = np.array([
+        x_axis = np.array([
             math.cos(alpha) * math.cos(phi_rad),
             math.cos(alpha) * math.sin(phi_rad),
             math.sin(alpha),
         ], dtype=float)
         y_axis = np.array([-math.sin(phi_rad), math.cos(phi_rad), 0.0], dtype=float)
-        x_axis = np.cross(y_axis, z_axis)
+        z_axis = np.cross(x_axis, y_axis)
         matrix = np.eye(4, dtype=float)
         matrix[:3, 0] = x_axis
         matrix[:3, 1] = y_axis
@@ -154,10 +156,17 @@ class OfficialArmKinematics:
         matrix[:3, 3] = [forward, left, up]
         return matrix
 
-    def forward_matrix_from_pwm(self, servo_pwms: Iterable[int]) -> np.ndarray:
+    def estimate_tool_matrix_from_pwm(self, servo_pwms: Iterable[int]) -> np.ndarray:
+        """Estimate base-to-tool pose from the inverse formulas.
+
+        The vendor firmware does not provide forward kinematics, encoder
+        feedback, joint zero calibration, or a defined TCP. This estimate is
+        suitable for dry-run diagnostics only and must not be treated as a
+        calibrated physical transform.
+        """
         values = [int(value) for value in servo_pwms]
         if len(values) < 4:
-            raise ValueError("forward_matrix_from_pwm expects at least four PWM values")
+            raise ValueError("estimate_tool_matrix_from_pwm expects at least four PWM values")
         p0, p1, p2, p3 = values[:4]
         angle0 = (1500.0 - p0) / PWM_PER_DEG
         angle1 = (p1 - 1500.0) / PWM_PER_DEG
