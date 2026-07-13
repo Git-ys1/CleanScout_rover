@@ -1,8 +1,23 @@
 {
-  "serial": {"port": "/dev/ttyUSB0", "baudrate": 115200, "dry_run": true},
+  "serial": {
+    "port": "/dev/ttyUSB0",
+    "baudrate": 115200,
+    "dry_run": true,
+    "joint_pwm_calibrated": false
+  },
   "current_reference_joints_rad": [0.0, -0.93, 1.6, 1.2, 0.0, 0.801],
+  "kinematics": {
+    "backend": "official_f103",
+    "current_reference_pwms": [1380, 1909, 1900, 620, 1500, 1500],
+    "l0_m": 0.100,
+    "l1_m": 0.105,
+    "l2_m": 0.088,
+    "l3_m": 0.155,
+    "source": "firmware/mechanical_arm_official_baseline/User/Components/y_kinematics"
+  },
   "realsense": {
     "mode": "d435_rgbd",
+    "serial_number": "939622074520",
     "width": 640,
     "height": 480,
     "fps": 30,
@@ -17,6 +32,7 @@
     }
   },
   "hand_eye": {
+    "calibrated": false,
     "x": -0.055,
     "y": 0.011,
     "z": -0.00224,
@@ -25,16 +41,48 @@
     "yaw_deg": 0.0,
     "note": "seed from Raspberry Pi ROS2 learning package; must be recalibrated on CleanScout hardware"
   },
+  "visual_centering": {
+    "dead_zone_px": 36.0,
+    "yaw_servo_id": 0,
+    "pitch_servo_id": 3,
+    "yaw_pwm_per_px": 0.15,
+    "pitch_pwm_per_px": 0.18,
+    "max_pwm_step": 12,
+    "yaw_pwm_min": 1000,
+    "yaw_pwm_max": 2000,
+    "pitch_pwm_min": 500,
+    "pitch_pwm_max": 1100,
+    "duration_ms": 180,
+    "interval_s": 0.22
+  },
   "grasp": {
     "stable_frames": 5,
     "max_center_jitter_px": 10.0,
-    "pre_grasp_dz_m": 0.055,
-    "descend_dz_m": 0.005,
+    "center_tolerance_px": 48.0,
+    "depth_stable_frames": 4,
+    "max_depth_jitter_m": 0.025,
+    "pre_grasp_standoff_m": 0.070,
+    "grasp_insert_m": 0.0,
+    "lift_raise_m": 0.080,
     "pitch_deg": 70.0,
-    "open_gripper": 0.80,
-    "close_gripper": -0.020,
+    "gripper_open_pwm": 600,
+    "gripper_close_pwm": 2400,
+    "gripper_open_ms": 2000,
+    "pre_grasp_ms": 1800,
+    "approach_ms": 1400,
+    "gripper_close_ms": 1800,
+    "lift_ms": 1800,
+    "retry_motion_ms": 3500,
+    "retry_pose_pwms": [1380, 1909, 1900, 620, 1500, 1500],
     "rgb_depth_x_correction_m": -0.007,
-    "place_xyz_m": [0.16, -0.12, 0.12],
-    "home_xyz_m": [0.16, 0.00, 0.16]
+    "workspace_min_xyz_m": [0.04, -0.30, 0.015],
+    "workspace_max_xyz_m": [0.39, 0.30, 0.42],
+    "motion_settle_s": 0.15
+  },
+  "runtime": {
+    "target_class": "bottle",
+    "confidence": 0.25,
+    "selection_strategy": "nearest_center",
+    "note": "Pure-Python D435+RKNN grasp runtime. Real motion remains blocked until hand-eye and joint PWM mapping are calibrated."
   }
 }

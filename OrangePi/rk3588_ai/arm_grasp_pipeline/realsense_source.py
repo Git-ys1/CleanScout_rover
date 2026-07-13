@@ -33,7 +33,8 @@ class RealSenseFrame:
 
 class RealSenseSource:
     def __init__(self, width: int = 640, height: int = 480, fps: int = 30,
-                 enable_color: bool = True, align_depth_to_color: bool = True) -> None:
+                 enable_color: bool = True, align_depth_to_color: bool = True,
+                 serial_number: Optional[str] = None) -> None:
         import pyrealsense2 as rs
         self.rs = rs
         self.width = int(width)
@@ -43,6 +44,8 @@ class RealSenseSource:
         self.align_depth_to_color = bool(align_depth_to_color and enable_color)
         self.pipeline = rs.pipeline()
         self.config = rs.config()
+        if serial_number:
+            self.config.enable_device(str(serial_number))
         self.config.enable_stream(rs.stream.depth, self.width, self.height, rs.format.z16, self.fps)
         if self.enable_color:
             self.config.enable_stream(rs.stream.color, self.width, self.height, rs.format.bgr8, self.fps)
@@ -92,10 +95,14 @@ class RealSenseSource:
 
 
 class D435Source(RealSenseSource):
-    def __init__(self, width: int = 640, height: int = 480, fps: int = 30) -> None:
-        super().__init__(width=width, height=height, fps=fps, enable_color=True, align_depth_to_color=True)
+    def __init__(self, width: int = 640, height: int = 480, fps: int = 30,
+                 serial_number: Optional[str] = None) -> None:
+        super().__init__(width=width, height=height, fps=fps, enable_color=True,
+                         align_depth_to_color=True, serial_number=serial_number)
 
 
 class D430DepthSource(RealSenseSource):
-    def __init__(self, width: int = 640, height: int = 480, fps: int = 30) -> None:
-        super().__init__(width=width, height=height, fps=fps, enable_color=False, align_depth_to_color=False)
+    def __init__(self, width: int = 640, height: int = 480, fps: int = 30,
+                 serial_number: Optional[str] = None) -> None:
+        super().__init__(width=width, height=height, fps=fps, enable_color=False,
+                         align_depth_to_color=False, serial_number=serial_number)

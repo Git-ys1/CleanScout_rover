@@ -31,7 +31,9 @@ def main() -> int:
     for _ in range(6):
         gsm.update_detection(BBox(280, 200, 360, 280, 0.90, "bottle"))
 
-    target = gsm.try_lock_depth(depth)
+    target = None
+    for _ in range(gsm.cfg.depth_stable_frames):
+        target = gsm.try_lock_depth(depth)
     print("locked_target_base_from_depth:", target)
     # Hardware-free dry run: use a reachable calibrated target to verify IK + command packing.
     gsm.locked_target_base = np.array([0.16, 0.00, 0.12], dtype=float)

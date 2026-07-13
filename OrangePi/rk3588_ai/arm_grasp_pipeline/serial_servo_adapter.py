@@ -34,8 +34,8 @@ DEFAULT_JOINT_MAPS = [
     # RF4 y_servo.c already reverses index 3 as aim=3000-aim; keep only one side reversed after RF1实测。
     JointPWMMap(3, center_us=1500, sign=+1),
     JointPWMMap(4, center_us=1500, sign=+1),
-    # gripper in learning package is semantic hand value; calibrate separately if RF1 expects PWM.
-    JointPWMMap(5, center_us=1500, sign=+1),
+    # The official controller exposes the full 005 range through P0600/P2400.
+    JointPWMMap(5, center_us=1500, sign=+1, min_us=500, max_us=2500),
 ]
 
 
@@ -74,6 +74,31 @@ class SerialServoArmAdapter:
         # RF4 USART state machine supports {...} mode3. Use one atomic multi-servo frame.
         return "{" + "".join(frames) + "}"
 
+    def pack_pwm_command(self, servo_pwms: Iterable[int], duration_ms: int = 1000) -> str:
+        values = [int(value) for value in servo_pwms]
+        if len(values) != len(self.joint_maps):
+            raise ValueError("servo_pwms must contain exactly six values")
+        frames = []
+        for value, mapping in zip(values, self.joint_maps):
+            if value < mapping.min_us or value > mapping.max_us:
+                raise ValueError("servo {} PWM outside configured range: {}".format(mapping.servo_id, value))
+            frames.append(f"#{mapping.servo_id:03d}P{value:04d}T{int(duration_ms):04d}!")
+        return "{" + "".join(frames) + "}"
+
+    def pack_partial_pwm_command(self, assignments, duration_ms: int = 1000) -> str:
+        normalized = []
+        maps_by_id = {mapping.servo_id: mapping for mapping in self.joint_maps}
+        for servo_id, value in sorted((int(key), int(value)) for key, value in assignments.items()):
+            mapping = maps_by_id.get(servo_id)
+            if mapping is None:
+                raise ValueError("unknown servo id: {}".format(servo_id))
+            if value < mapping.min_us or value > mapping.max_us:
+                raise ValueError("servo {} PWM outside configured range: {}".format(servo_id, value))
+            normalized.append(f"#{servo_id:03d}P{value:04d}T{int(duration_ms):04d}!")
+        if not normalized:
+            raise ValueError("at least one servo assignment is required")
+        return normalized[0] if len(normalized) == 1 else "{" + "".join(normalized) + "}"
+
     def send_joint_command(self, joints_rad: Iterable[float], duration_ms: int = 1000) -> str:
         cmd = self.pack_joint_command(joints_rad, duration_ms)
         self.last_joints = list(joints_rad)
@@ -86,13 +111,44 @@ class SerialServoArmAdapter:
         self._ser.flush()
         return cmd
 
-    def stop(self) -> None:
-        # Avoid #255PDST! until RF1 all-stop path is proven safe; stop axes one by one.
-        cmd = "".join(f"#{mp.servo_id:03d}PDST!" for mp in self.joint_maps[:6])
+    def send_pwm_command(self, servo_pwms: Iterable[int], duration_ms: int = 1000) -> str:
+        cmd = self.pack_pwm_command(servo_pwms, duration_ms)
         if self.dry_run:
-            print("[DRY-RUN STOP]", cmd)
-            return
+            print("[DRY-RUN ARM]", cmd)
+            return cmd
         if self._ser is None:
             self.connect()
         self._ser.write(cmd.encode("ascii"))
         self._ser.flush()
+        return cmd
+
+    def send_partial_pwm_command(self, assignments, duration_ms: int = 1000) -> str:
+        cmd = self.pack_partial_pwm_command(assignments, duration_ms)
+        if self.dry_run:
+            print("[DRY-RUN CENTER]", cmd)
+            return cmd
+        if self._ser is None:
+            self.connect()
+        self._ser.write(cmd.encode("ascii"))
+        self._ser.flush()
+        return cmd
+
+    def send_stop(self, servo_ids: Optional[Iterable[int]] = None) -> str:
+        """Stop selected servos without using the unsafe global 255 branch."""
+        known_ids = {mapping.servo_id for mapping in self.joint_maps}
+        ids = list(known_ids if servo_ids is None else (int(value) for value in servo_ids))
+        if not ids or any(servo_id not in known_ids for servo_id in ids):
+            raise ValueError("servo_ids must contain known servo ids")
+        cmd = "".join(f"#{servo_id:03d}PDST!" for servo_id in sorted(ids))
+        if self.dry_run:
+            print("[DRY-RUN STOP]", cmd)
+            return cmd
+        if self._ser is None:
+            self.connect()
+        self._ser.write(cmd.encode("ascii"))
+        self._ser.flush()
+        return cmd
+
+    def stop(self) -> None:
+        # Avoid #255PDST! until RF1 all-stop path is proven safe; stop axes one by one.
+        self.send_stop()

@@ -1,14 +1,15 @@
 # Arm Grasp Pipeline
 
-`arm_grasp_pipeline/` 是 C-5.1.1 新增的 RGB-D 抓取预研管线。它和现有 `arm_tracking_demo/` 分开，当前目标是把 D430/D435 深度、像素反投影、5DoF IK、RF1 总线舵机文本协议和后续 ROS 边界先整理清楚。
+`arm_grasp_pipeline/` 是独立于 ROS 的 D435 感知与抓取管线。它和现有 `arm_tracking_demo/` 分开，直接在 Orange Pi 上连接 D435、RKNN YOLO11、像素反投影、手眼变换、5DoF IK 与 RF1 总线舵机文本协议。
 
 ## 当前边界
 
 | 模块 | 状态 |
 | --- | --- |
 | D430 | 深度模组已完成 depth-only smoke |
-| D435 | 重组设备已完成 RGB + aligned depth 真机 smoke |
-| YOLO | 暂不接入本目录，继续沿用 `arm_tracking_demo/` 作为二维视觉追踪基线 |
+| D435 | 原厂完整设备已完成 RGB、深度、双红外和 aligned depth 真机验证 |
+| YOLO | 已接入 RKNN YOLO11，默认目标类为 `bottle` |
+| 抓取 | 已完成感知锁定、官方尺寸 IK 和命令规划；2026-07-13 实机预抓失败，尚未完成一次真实抓取 |
 | ROS | 当前不启动 ROS；`ros_compat.py` 只保留后续 topic/action/service 的数据边界 |
 | RF1 | 只作为总线舵机文本命令执行层，不放 IK、视觉或抓取状态机 |
 
@@ -44,6 +45,25 @@ source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
   --save_dir ~/rk3588_ai/debug_logs/c-5.1.1-d435-transplant
 ```
 
+纯 Python D435 + YOLO 感知 dry-run：
+
+```bash
+cd ~/rk3588_ai/arm_grasp_pipeline
+source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
+~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_yolo_grasp.py \
+  --target_class bottle \
+  --max_frames 300 \
+  --no_show \
+  --save_dir ~/rk3588_ai/debug_logs/c-5.2.0-d435-grasp-dryrun \
+  --metrics_path ~/rk3588_ai/debug_logs/c-5.2.0-d435-grasp-dryrun/metrics.jsonl
+```
+
+如果只想验证锁定后生成的舵机命令序列，在仍保持 dry-run 时增加：
+
+```bash
+--execute_on_lock true
+```
+
 `pyrealsense2` 与 `librealsense2` 必须来自同一个 2.56.5 RSUSB 构建，不能再混用旧的 pip 2.55.1 绑定和系统 2.56.5 运行库。上游源码不入库，需要重建时从 Intel 官方 `librealsense` 仓库检出 `v2.56.5`。
 
 ## 关键原则
@@ -52,6 +72,10 @@ source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
 - 深度层默认不设置人为最近/最远距离，只拒绝 `0`、负值、`NaN` 和 `Inf`；硬件近距能力约 `0.17 m` 仅作设备记录。
 - 机械臂可达范围由后续坐标变换、IK 和安全层判断，不能在深度采集层提前截断。
 - D430 无 RGB，不能完成 YOLO RGB-D 抓取闭环。
-- 重组 D435 已验证彩色流、深度流、对齐、内参、ROI 深度和像素反投影；长 USB 3.0 线到货后再做末端安装与手眼标定。
-- 当前安全起始姿态沿用 C-5.0.9：`0=1500,1=1907,2=1900,3=900,4=1500,5=1500`。
+- 原厂 D435 已验证彩色流、深度流、双红外、对齐、内外参、ROI 深度和像素反投影。
+- 目标必须同时满足框中心稳定、接近画面中心、ROI 深度多帧稳定，才能进入抓取计划。
+- `hand_eye.calibrated` 与 `serial.joint_pwm_calibrated` 默认均为 `false`。两项未完成时，真实串口抓取入口强制拒绝运行。
+- C-5.1.3 失败恢复与重新识别姿态固定为：`0=1380,1=1909,2=1900,3=620,4=1500,5=1500`。
 - `003 pitch` 方向不要随意翻转：现有追踪基线是 `pitch_pwm_sign=-1`、`invert_pitch=false`。
+- 2026-07-13 的预抓实测把 D435 光心推进到了 bottle，证明当前参考手眼矩阵不能代表真实夹爪 TCP；重新设计相机支架并完成标定前，禁止开启真实自动抓取。
+- `005P0600` 已触发夹爪向全开方向运动，位置读回停在约 `1112`；`005P2400` 全闭端尚未在有电状态下验收，不能把配置值当成已标定结果。
