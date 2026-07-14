@@ -21,6 +21,19 @@
     "base_to_tool_rpy_deg": [0.0, 0.0, 0.0],
     "note": "T_base_tool at the fixed retry pose; fill only after the final bracket and TCP are measured/calibrated"
   },
+  "fixed_view_calibration": {
+    "calibrated": false,
+    "reference_servo_pwms": [1380, 1909, 1900, 620, 1500, 1500],
+    "base_to_camera_matrix_4x4": null,
+    "rmse_m": null,
+    "max_error_m": null,
+    "frame": "T_base_camera_color_optical_reference",
+    "note": "Valid only at reference_servo_pwms. Populate with tools/calibrate_base_camera_3d.py."
+  },
+  "object_geometry": {
+    "bottle_radius_m": 0.032,
+    "grasp_height_offset_m": 0.0
+  },
   "camera_mount": {
     "frozen": true,
     "camera_parent": "servo004_stator_housing",
@@ -61,7 +74,7 @@
     "note": "unset identity placeholder; replace with final-bracket calibration before any real grasp"
   },
   "manual_seed": {
-    "enabled": true,
+    "enabled": false,
     "source": "C-5.2.0 measurement sheet; measured with the arm upright after the final D435 bracket move",
     "frame": "T_tool_camera_color_optical",
     "translation_m": [-0.060, 0.032, 0.055],
@@ -79,7 +92,7 @@
       "pitch_deg": 20.0,
       "lift_pitch_deg": 0.0
     },
-    "warning": "experimental seed only; tx uses -60 mm because the camera is above the Servo004 axis behind TCP; validate PRE_GRASP before APPROACH"
+    "warning": "Retired by C-5.2.3 fixed-view calibration. Never use this seed for real grasp."
   },
   "visual_centering": {
     "dead_zone_px": 36.0,
@@ -101,8 +114,10 @@
     "center_tolerance_px": 48.0,
     "depth_stable_frames": 4,
     "max_depth_jitter_m": 0.025,
-    "pre_grasp_standoff_m": 0.040,
+    "pre_grasp_standoff_m": 0.070,
     "grasp_insert_m": 0.0,
+    "approach_waypoint_spacing_m": 0.010,
+    "approach_waypoint_ms": 450,
     "lift_raise_m": 0.080,
     "pitch_deg": 20.0,
     "lift_pitch_deg": 0.0,
@@ -117,6 +132,14 @@
     "lift_ms": 1800,
     "retry_motion_ms": 3500,
     "retry_pose_pwms": [1380, 1909, 1900, 620, 1500, 1500],
+    "servo_pwm_limits": [
+      [1000, 2000],
+      [500, 2200],
+      [500, 2500],
+      [500, 2000],
+      [1500, 1500],
+      [600, 2400]
+    ],
     "rgb_depth_x_correction_m": 0.0,
     "workspace_min_xyz_m": [0.04, -0.30, 0.015],
     "workspace_max_xyz_m": [0.39, 0.30, 0.42],
@@ -126,7 +149,7 @@
     "target_class": "bottle",
     "confidence": 0.25,
     "selection_strategy": "nearest_center",
-    "experimental_grasp_status": "halted_unverified",
-    "note": "C-5.2.2 real grasp did not succeed. Do not run automatic execute until the approach geometry is redesigned and calibrated."
+    "experimental_grasp_status": "fixed_view_calibration_required",
+    "note": "C-5.2.3 fixed-view mode. Real grasp requires the calibrated matrix quality gate and measured PWM bounds."
   }
 }
