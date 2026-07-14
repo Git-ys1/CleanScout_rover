@@ -1,0 +1,47 @@
+{
+  "created_utc": "2026-07-14T17:08:50.419359+00:00",
+  "source": "base_camera_points.no-index3.csv",
+  "source_point_count": 12,
+  "accepted_working_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "rejected_working_indices": [
+    11
+  ],
+  "previously_rejected_original_indices": [
+    3
+  ],
+  "rejected_points": [
+    {
+      "source": "original",
+      "index": 3,
+      "consensus_error_m": 0.064835
+    },
+    {
+      "source": "working",
+      "index": 11,
+      "consensus_error_m": 0.032615,
+      "camera_m": [
+        -0.068631422,
+        0.09726865,
+        0.340000004
+      ],
+      "base_m": [
+        0.245,
+        0.0765,
+        0.008
+      ]
+    }
+  ],
+  "selection": "exact duplicate removal plus maximum-consensus rigid transform, 0.015 m inlier threshold"
+}

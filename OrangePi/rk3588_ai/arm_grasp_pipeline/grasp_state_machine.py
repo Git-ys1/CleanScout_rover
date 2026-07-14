@@ -1,87 +1,57 @@
 # coding: utf-8
-"""YOLO bbox + D435 aligned depth -> robust grasp cycle.
-
-Current stage is non-ROS.  A ROS-compatible event sink is still kept at the
-boundary so this file can later publish/debug the same state transitions through
-ROS2/Noetic without moving IK or geometry out of OrangePi code.
-"""
+"""Fixed-view YOLO + aligned D435 depth grasp state machine."""
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
-from enum import Enum, auto
+import json
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
 from .arm_motion import ArmMotion
-from .geometry import CameraIntrinsics, HandEye, PixelToBaseDebug, target_pixel_to_base_point_debug
+from .fixed_view import (
+    REQUIRED_WRIST_PWM,
+    FixedViewTargetDebug,
+    ObjectGeometry,
+    fixed_view_target_debug,
+)
+from .geometry import CameraIntrinsics, validate_rigid_transform
+from .grasp_planner import (
+    GraspConfig,
+    GraspPlanStep,
+    GraspState,
+    build_fixed_view_grasp_plan,
+    inside_workspace,
+    stage_reached,
+)
 from .ros_compat import ArmTargetMsg, GraspEventMsg, GraspEventSink, NullRosBridge
 from .target_depth import BBox, median_depth_in_bbox, stable_bbox
 
 
-class GraspState(Enum):
-    SEARCH = auto()
-    CENTERING = auto()
-    DEPTH_LOCK = auto()
-    WRIST_LOCK = auto()
-    OPEN = auto()
-    PRE_GRASP = auto()
-    APPROACH = auto()
-    CLOSE = auto()
-    LIFT = auto()
-    RETURN_VERIFY = auto()
-    VERIFY = auto()
-    RETRY = auto()
-    FAILED = auto()
-
-
-@dataclass
-class GraspConfig:
-    stable_frames: int = 5
-    max_center_jitter_px: float = 10.0
-    center_tolerance_px: float = 48.0
-    depth_stable_frames: int = 4
-    max_depth_jitter_m: float = 0.025
-    pre_grasp_standoff_m: float = 0.070
-    grasp_insert_m: float = 0.0
-    lift_raise_m: float = 0.080
-    pitch_deg: float = 20.0
-    lift_pitch_deg: float = 0.0
-    gripper_open_pwm: int = 600
-    gripper_close_pwm: int = 2400
-    wrist_fixed_pwm: int = 1500
-    wrist_lock_ms: int = 1000
-    gripper_open_ms: int = 2000
-    pre_grasp_ms: int = 1800
-    approach_ms: int = 1400
-    gripper_close_ms: int = 1800
-    lift_ms: int = 1800
-    retry_motion_ms: int = 3500
-    retry_pose_pwms: Tuple[int, int, int, int, int, int] = (1380, 1909, 1900, 620, 1500, 1500)
-    rgb_depth_x_correction_m: float = 0.0
-    workspace_min_xyz_m: Tuple[float, float, float] = (0.04, -0.30, 0.015)
-    workspace_max_xyz_m: Tuple[float, float, float] = (0.39, 0.30, 0.42)
-    motion_settle_s: float = 0.15
-
-
 class GraspStateMachine:
-    def __init__(self, arm: ArmMotion, intr: CameraIntrinsics, cfg: Optional[GraspConfig] = None,
-                 hand_eye: HandEye = HandEye(), event_sink: Optional[GraspEventSink] = None) -> None:
+    def __init__(self, arm: ArmMotion, intr: CameraIntrinsics,
+                 T_base_camera_reference, cfg: Optional[GraspConfig] = None,
+                 object_geometry: Optional[ObjectGeometry] = None,
+                 event_sink: Optional[GraspEventSink] = None) -> None:
         self.arm = arm
         self.intr = intr
         self.cfg = cfg or GraspConfig()
-        self.hand_eye = hand_eye
+        self.T_base_camera_reference = validate_rigid_transform(
+            T_base_camera_reference, "T_base_camera_reference"
+        )
+        if object_geometry is None:
+            raise ValueError("fixed-view state machine requires object_geometry from config")
+        self.object_geometry = object_geometry
         self.event_sink = event_sink or NullRosBridge()
         self.state = GraspState.SEARCH
-        self.history: deque[BBox] = deque(maxlen=max(10, self.cfg.stable_frames + 2))
-        self.depth_history: deque[float] = deque(maxlen=max(3, self.cfg.depth_stable_frames))
-        self.locked_target_base: Optional[np.ndarray] = None
-        self.last_lock_debug: Optional[PixelToBaseDebug] = None
+        self.history = deque(maxlen=max(10, self.cfg.stable_frames + 2))
+        self.depth_history = deque(maxlen=max(3, self.cfg.depth_stable_frames))
+        self.locked_target_base = None
+        self.last_lock_debug: Optional[FixedViewTargetDebug] = None
 
-    def _emit(self, state: GraspState, ok: bool, detail: str = "", target_xyz: Optional[np.ndarray] = None,
-              gripper: Optional[float] = None) -> None:
+    def _emit(self, state: GraspState, ok: bool, detail="", target_xyz=None,
+              gripper=None, pitch_deg=None) -> None:
         msg_target = None
         if target_xyz is not None:
             msg_target = ArmTargetMsg(
@@ -89,11 +59,13 @@ class GraspStateMachine:
                 x_m=float(target_xyz[0]),
                 y_m=float(target_xyz[1]),
                 z_m=float(target_xyz[2]),
-                pitch_deg=float(self.cfg.pitch_deg),
+                pitch_deg=float(self.cfg.pitch_deg if pitch_deg is None else pitch_deg),
                 gripper=float(self.cfg.gripper_open_pwm if gripper is None else gripper),
             )
             self.event_sink.publish_arm_target(msg_target)
-        self.event_sink.publish_grasp_event(GraspEventMsg(state=state.name, ok=bool(ok), detail=detail, target=msg_target))
+        self.event_sink.publish_grasp_event(
+            GraspEventMsg(state=state.name, ok=bool(ok), detail=detail, target=msg_target)
+        )
 
     def update_detection(self, bbox: Optional[BBox]) -> None:
         if bbox is not None:
@@ -108,17 +80,16 @@ class GraspStateMachine:
             self.last_lock_debug = None
             self._emit(self.state, False, "bbox lost")
 
-    def try_lock_depth(self, aligned_depth_m: np.ndarray) -> Optional[np.ndarray]:
-        box = stable_bbox(list(self.history), self.cfg.max_center_jitter_px, self.cfg.stable_frames)
+    def try_lock_depth(self, aligned_depth_m: np.ndarray):
+        """Lock a stable bottle center in base coordinates from aligned RGB-D."""
+        box = stable_bbox(
+            list(self.history), self.cfg.max_center_jitter_px, self.cfg.stable_frames
+        )
         if box is None:
             return None
-        height, width = aligned_depth_m.shape[:2]
-        center_x, center_y = box.center
-        if abs(center_x - width / 2.0) > self.cfg.center_tolerance_px or \
-                abs(center_y - height / 2.0) > self.cfg.center_tolerance_px:
-            self.depth_history.clear()
-            return None
-        depth = median_depth_in_bbox(aligned_depth_m, box)
+        depth = median_depth_in_bbox(
+            aligned_depth_m, box, inner_ratio=self.cfg.depth_roi_inner_ratio
+        )
         if depth is None:
             self.depth_history.clear()
             return None
@@ -127,70 +98,43 @@ class GraspStateMachine:
             return None
         if max(self.depth_history) - min(self.depth_history) > self.cfg.max_depth_jitter_m:
             return None
+
         depth = float(np.median(np.asarray(self.depth_history, dtype=float)))
-        T_base_tool = self.arm.current_tool_matrix_from_last_command()
-        dbg = target_pixel_to_base_point_debug(
+        debug = fixed_view_target_debug(
             box.center,
             depth,
             self.intr,
-            T_base_tool,
-            self.hand_eye,
-            rgb_depth_x_correction_m=self.cfg.rgb_depth_x_correction_m,
+            self.T_base_camera_reference,
+            self.object_geometry,
         )
-        target = np.array(dbg.point_base_m, dtype=float)
-        self.last_lock_debug = dbg
+        target = np.asarray(debug.bottle_center_base_m, dtype=float)
+        self.last_lock_debug = debug
         self.locked_target_base = target
         self.state = GraspState.DEPTH_LOCK
-        self._emit(self.state, True, f"depth locked: {dbg}", target)
-        return target
+        self._emit(self.state, True, "fixed-view depth locked", target)
+        return target.copy()
 
-    def _inside_workspace(self, xyz: np.ndarray) -> bool:
-        low = np.asarray(self.cfg.workspace_min_xyz_m, dtype=float)
-        high = np.asarray(self.cfg.workspace_max_xyz_m, dtype=float)
-        return bool(np.all(xyz >= low) and np.all(xyz <= high))
+    def _inside_workspace(self, xyz) -> bool:
+        return inside_workspace(xyz, self.cfg)
 
     def plan_locked_grasp(self):
         if self.locked_target_base is None:
             raise ValueError("no locked target")
-
-        target = self.locked_target_base.copy()
-        # Grasp from the bottle's front at a fixed body height. Following the
-        # full camera-to-target vector produces a top-down dive and cannot put
-        # the two fingers around the bottle.
-        target_xy = target[:2]
-        horizontal_distance = float(np.linalg.norm(target_xy))
-        if horizontal_distance <= self.cfg.pre_grasp_standoff_m + 0.01:
-            raise ValueError(f"target too close for horizontal pre-grasp: {horizontal_distance:.4f}m")
-        approach_axis = np.array(
-            [target[0] / horizontal_distance, target[1] / horizontal_distance, 0.0],
-            dtype=float,
+        return build_fixed_view_grasp_plan(
+            self.locked_target_base, self.arm.kin, self.cfg
         )
-        pre = target - approach_axis * self.cfg.pre_grasp_standoff_m
-        grasp = target + approach_axis * self.cfg.grasp_insert_m
-        lift = grasp.copy()
-        lift[2] += self.cfg.lift_raise_m
-        sequence = [
-            (GraspState.PRE_GRASP, pre, self.cfg.gripper_open_pwm, self.cfg.pre_grasp_ms),
-            (GraspState.APPROACH, grasp, self.cfg.gripper_open_pwm, self.cfg.approach_ms),
-            (GraspState.CLOSE, grasp, self.cfg.gripper_close_pwm, self.cfg.gripper_close_ms),
-            (GraspState.LIFT, lift, self.cfg.gripper_close_pwm, self.cfg.lift_ms),
-        ]
-        for state, xyz, gripper, _ in sequence:
-            if not self._inside_workspace(xyz):
-                raise ValueError(f"{state.name} target outside workspace: {xyz.tolist()}")
-            stage_pitch = self.cfg.lift_pitch_deg if state == GraspState.LIFT else self.cfg.pitch_deg
-            if self.arm.kin.inverse_pose(xyz, pitch_deg=stage_pitch, gripper=0.0) is None:
-                raise ValueError(f"{state.name} target has no IK solution: {xyz.tolist()}")
-        return sequence
 
-    def _wait_motion(self, duration_ms: int) -> None:
+    def _wait_motion(self, duration_ms) -> None:
         if not self.arm.adapter.dry_run:
-            time.sleep(duration_ms / 1000.0 + self.cfg.motion_settle_s)
+            time.sleep(float(duration_ms) / 1000.0 + self.cfg.motion_settle_s)
 
     def recover_for_retry(self) -> str:
-        """Return to the user-fixed retry pose and clear the stale target lock."""
         self.state = GraspState.RETRY
         values = list(self.cfg.retry_pose_pwms)
+        if len(values) != 6 or values[4] != REQUIRED_WRIST_PWM:
+            raise ValueError("retry pose must keep Servo004 at PWM {}".format(
+                REQUIRED_WRIST_PWM
+            ))
         command = self.arm.adapter.send_pwm_command(values, self.cfg.retry_motion_ms)
         self._wait_motion(self.cfg.retry_motion_ms)
         self.history.clear()
@@ -198,20 +142,20 @@ class GraspStateMachine:
         self.locked_target_base = None
         self.last_lock_debug = None
         self.state = GraspState.SEARCH
-        self._emit(self.state, True, "retry pose reached; detection reset")
+        self._emit(self.state, True, "fixed reference pose reached; detection reset")
         return command
 
-    def _fail_and_recover(self, reason: str) -> bool:
+    def _fail(self, reason) -> bool:
         self.state = GraspState.FAILED
-        self._emit(self.state, False, reason)
-        try:
-            self.recover_for_retry()
-        except Exception as exc:
-            self.state = GraspState.FAILED
-            self._emit(self.state, False, f"retry recovery failed: {exc}")
+        self._emit(self.state, False, str(reason))
+        print("[GRASP FAILED] {}".format(reason))
         return False
 
-    def execute_locked_grasp(self, max_stage: str = "LIFT") -> bool:
+    @staticmethod
+    def _print_step(step: GraspPlanStep) -> None:
+        print("GRASP_STAGE_PREFLIGHT " + json.dumps(step.as_dict(), ensure_ascii=False))
+
+    def execute_locked_grasp(self, max_stage="LIFT") -> bool:
         max_stage = str(max_stage).strip().upper()
         allowed_stages = {"OPEN", "PRE_GRASP", "APPROACH", "CLOSE", "LIFT"}
         if max_stage not in allowed_stages:
@@ -219,60 +163,54 @@ class GraspStateMachine:
         try:
             sequence = self.plan_locked_grasp()
         except ValueError as exc:
-            return self._fail_and_recover(str(exc))
+            return self._fail(exc)
 
-        # The camera is mounted on the non-rotating Servo004 housing while the
-        # TCP is downstream of its output shaft. T_tool_camera is therefore
-        # constant only at this frozen Servo004 position.
         self.state = GraspState.WRIST_LOCK
-        self._emit(self.state, True, "locking Servo004 for calibrated camera/TCP geometry")
-        self.arm.adapter.send_partial_pwm_command({4: self.cfg.wrist_fixed_pwm}, self.cfg.wrist_lock_ms)
+        self._emit(
+            self.state, True,
+            "locking Servo004 at calibrated PWM {}".format(REQUIRED_WRIST_PWM),
+        )
+        self.arm.adapter.send_partial_pwm_command(
+            {4: REQUIRED_WRIST_PWM}, self.cfg.wrist_lock_ms
+        )
         self._wait_motion(self.cfg.wrist_lock_ms)
 
-        # 005 must be fully open before any arm axis advances toward the bottle.
-        self.state = GraspState.OPEN
-        self._emit(self.state, True, "opening gripper before approach", gripper=self.cfg.gripper_open_pwm)
-        self.arm.adapter.send_partial_pwm_command({5: self.cfg.gripper_open_pwm}, self.cfg.gripper_open_ms)
-        self._wait_motion(self.cfg.gripper_open_ms)
-        self.arm.adapter.send_stop([5])
-        if max_stage == "OPEN":
-            self.state = GraspState.VERIFY
-            self._emit(self.state, True, "OPEN stage complete; holding for inspection")
-            return True
-
-        for st, xyz, hand, dur in sequence:
-            self.state = st
-            self._emit(st, True, "commanding motion", xyz, hand)
-            if st == GraspState.CLOSE:
-                self.arm.adapter.send_partial_pwm_command({5: self.cfg.gripper_close_pwm}, dur)
-                self._wait_motion(dur)
-                if max_stage == st.name:
-                    self.state = GraspState.VERIFY
-                    self._emit(self.state, True, "{} stage complete; holding for inspection".format(st.name))
-                    return True
-                continue
-            res = self.arm.move_xyz(
-                xyz,
-                pitch_deg=self.cfg.lift_pitch_deg if st == GraspState.LIFT else self.cfg.pitch_deg,
-                gripper=0.0,
-                duration_ms=dur,
-                include_gripper=False,
+        for index, step in enumerate(sequence):
+            next_state = sequence[index + 1].state if index + 1 < len(sequence) else None
+            self.state = step.state
+            self._print_step(step)
+            self._emit(
+                step.state,
+                True,
+                "preflight passed; commanding stage",
+                None if step.xyz_m is None else np.asarray(step.xyz_m, dtype=float),
+                step.gripper_pwm,
+                step.pitch_deg,
             )
-            if not res.ok:
-                print("[GRASP FAILED]", res.reason)
-                return self._fail_and_recover(res.reason)
-            self._wait_motion(dur)
-            if max_stage == st.name and st != GraspState.LIFT:
+
+            if step.state == GraspState.OPEN:
+                self.arm.adapter.send_partial_pwm_command(
+                    {5: step.gripper_pwm}, step.duration_ms
+                )
+            elif step.state == GraspState.CLOSE:
+                self.arm.adapter.send_partial_pwm_command(
+                    {5: step.gripper_pwm}, step.duration_ms
+                )
+            else:
+                result = self.arm.execute_ik(step.ik, step.duration_ms)
+                if not result.ok:
+                    return self._fail(result.reason)
+            self._wait_motion(step.duration_ms)
+
+            if stage_reached(step.state, next_state, max_stage):
                 self.state = GraspState.VERIFY
-                self._emit(self.state, True, "{} stage complete; holding for inspection".format(st.name))
+                self._emit(
+                    self.state,
+                    True,
+                    "{} stage complete; holding for inspection".format(max_stage),
+                )
                 return True
 
-        # Keep the claw closed while returning to the fixed observation pose.
-        self.state = GraspState.RETURN_VERIFY
-        verify_pose = list(self.cfg.retry_pose_pwms)
-        verify_pose[5] = self.cfg.gripper_close_pwm
-        self.arm.adapter.send_pwm_command(verify_pose, self.cfg.retry_motion_ms)
-        self._wait_motion(self.cfg.retry_motion_ms)
         self.state = GraspState.VERIFY
-        self._emit(self.state, True, "hold closed at retry pose; verify bottle in RGB-D")
+        self._emit(self.state, True, "LIFT complete; holding the current pose")
         return True

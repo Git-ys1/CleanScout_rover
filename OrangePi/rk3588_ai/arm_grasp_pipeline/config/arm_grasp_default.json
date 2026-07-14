@@ -7,19 +7,83 @@
   },
   "kinematics": {
     "backend": "official_f103",
-    "l0_m": 0.100,
-    "l1_m": 0.105,
-    "l2_m": 0.088,
-    "l3_m": 0.155,
-    "source": "firmware/mechanical_arm_official_baseline/User/Components/y_kinematics"
+    "calibrated": false,
+    "l0_m": 0.1,
+    "l1_m": 0.13,
+    "l2_m": 0.065,
+    "l3_m": 0.177,
+    "source": "docs/VERIFY/C-5.2.0_arm_camera_tcp_measurement_sheet.md",
+    "note": "Local measurements only; confirm L3 TCP meaning and PWM-angle zero calibration before setting calibrated=true"
   },
   "tool_reference": {
     "calibrated": false,
-    "at_servo_pwms": [1380, 1909, 1900, 620, 1500, 1500],
+    "at_servo_pwms": [
+      1380,
+      1909,
+      1900,
+      620,
+      1500,
+      1500
+    ],
     "base_to_tool_matrix_4x4": null,
-    "base_to_tool_xyz_m": [0.0, 0.0, 0.0],
-    "base_to_tool_rpy_deg": [0.0, 0.0, 0.0],
-    "note": "T_base_tool at the fixed retry pose; fill only after the final bracket and TCP are measured/calibrated"
+    "base_to_tool_xyz_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "base_to_tool_rpy_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "note": "Legacy dynamic-FK field; ignored by the C-5.2.4 fixed-view runtime"
+  },
+  "fixed_view_calibration": {
+    "calibrated": true,
+    "reference_servo_pwms": [
+      1380,
+      1909,
+      1900,
+      620,
+      1500,
+      1500
+    ],
+    "base_to_camera_matrix_4x4": [
+      [
+        -0.07200238368214469,
+        -0.4630936982946097,
+        0.8833798069595604,
+        0.016635206774849143
+      ],
+      [
+        -0.9931025137917506,
+        -0.048884687825174494,
+        -0.10657243732194957,
+        0.04829421497697736
+      ],
+      [
+        0.09253677022997328,
+        -0.8849601764464075,
+        -0.4563797018485254,
+        0.2487978962082768
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "rmse_m": 0.005847911769639443,
+    "max_error_m": 0.00971011361754861,
+    "max_rmse_m": 0.01,
+    "max_point_error_m": 0.015,
+    "frame": "T_base_camera_color_optical_reference",
+    "note": "Valid only at reference_servo_pwms; populate with tools/calibrate_base_camera_3d.py"
+  },
+  "object_geometry": {
+    "bottle_radius_m": 0.032,
+    "grasp_height_offset_m": 0.0
   },
   "camera_mount": {
     "frozen": true,
@@ -58,28 +122,7 @@
     "yaw_deg": 0.0,
     "matrix_4x4": null,
     "frame": "T_tool_camera_color_optical",
-    "note": "unset identity placeholder; replace with final-bracket calibration before any real grasp"
-  },
-  "manual_seed": {
-    "enabled": true,
-    "source": "C-5.2.0 measurement sheet; measured with the arm upright after the final D435 bracket move",
-    "frame": "T_tool_camera_color_optical",
-    "translation_m": [-0.060, 0.032, 0.055],
-    "orientation_assumption": "camera optical +Z is parallel to tool +X; image right maps to tool -Y; image down maps to tool -Z",
-    "hand_eye_matrix_4x4": [
-      [0.0, 0.0, 1.0, -0.060],
-      [-1.0, 0.0, 0.0, 0.032],
-      [0.0, -1.0, 0.0, 0.055],
-      [0.0, 0.0, 0.0, 1.0]
-    ],
-    "tool_reference_mode": "official_fk_seed",
-    "grasp_overrides": {
-      "pre_grasp_standoff_m": 0.040,
-      "grasp_insert_m": -0.020,
-      "pitch_deg": 20.0,
-      "lift_pitch_deg": 0.0
-    },
-    "warning": "experimental seed only; tx uses -60 mm because the camera is above the Servo004 axis behind TCP; validate PRE_GRASP before APPROACH"
+    "note": "Legacy dynamic hand-eye field; ignored by the C-5.2.4 fixed-view runtime"
   },
   "visual_centering": {
     "dead_zone_px": 36.0,
@@ -98,13 +141,14 @@
   "grasp": {
     "stable_frames": 5,
     "max_center_jitter_px": 10.0,
-    "center_tolerance_px": 48.0,
     "depth_stable_frames": 4,
     "max_depth_jitter_m": 0.025,
-    "pre_grasp_standoff_m": 0.040,
-    "grasp_insert_m": 0.0,
-    "lift_raise_m": 0.080,
-    "pitch_deg": 20.0,
+    "depth_roi_inner_ratio": 0.35,
+    "pre_grasp_standoff_m": 0.07,
+    "approach_waypoint_spacing_m": 0.01,
+    "approach_waypoint_ms": 450,
+    "lift_raise_m": 0.08,
+    "pitch_deg": 35.0,
     "lift_pitch_deg": 0.0,
     "gripper_open_pwm": 600,
     "gripper_close_pwm": 2400,
@@ -112,21 +156,60 @@
     "wrist_lock_ms": 1000,
     "gripper_open_ms": 2000,
     "pre_grasp_ms": 1800,
-    "approach_ms": 1400,
     "gripper_close_ms": 1800,
     "lift_ms": 1800,
     "retry_motion_ms": 3500,
-    "retry_pose_pwms": [1380, 1909, 1900, 620, 1500, 1500],
-    "rgb_depth_x_correction_m": 0.0,
-    "workspace_min_xyz_m": [0.04, -0.30, 0.015],
-    "workspace_max_xyz_m": [0.39, 0.30, 0.42],
+    "retry_pose_pwms": [
+      1380,
+      1909,
+      1900,
+      620,
+      1500,
+      1500
+    ],
+    "servo_pwm_limits": [
+      [
+        500,
+        2200
+      ],
+      [
+        500,
+        2200
+      ],
+      [
+        500,
+        2200
+      ],
+      [
+        500,
+        2200
+      ],
+      [
+        1500,
+        1500
+      ],
+      [
+        600,
+        2400
+      ]
+    ],
+    "workspace_min_xyz_m": [
+      0.04,
+      -0.3,
+      0.015
+    ],
+    "workspace_max_xyz_m": [
+      0.39,
+      0.3,
+      0.42
+    ],
     "motion_settle_s": 0.15
   },
   "runtime": {
     "target_class": "bottle",
     "confidence": 0.25,
     "selection_strategy": "nearest_center",
-    "experimental_grasp_status": "halted_unverified",
-    "note": "C-5.2.2 real grasp did not succeed. Do not run automatic execute until the approach geometry is redesigned and calibrated."
+    "experimental_grasp_status": "fixed_view_calibrated_dry_run_validated",
+    "note": "C-5.2.4 fixed-view calibration passed; real output still requires measured kinematics and joint PWM calibration"
   }
 }

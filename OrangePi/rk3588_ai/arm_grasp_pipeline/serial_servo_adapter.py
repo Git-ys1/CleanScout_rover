@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import re
 import time
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 try:
     import serial
@@ -39,6 +40,8 @@ DEFAULT_JOINT_MAPS = [
     JointPWMMap(5, center_us=1500, sign=+1, min_us=500, max_us=2500),
 ]
 
+POSITION_RE = re.compile(r"#(?P<id>\d{3})P(?P<pwm>\d{4})!")
+
 
 class SerialServoArmAdapter:
     def __init__(self, port: str = "/dev/ttyUSB0", baudrate: int = 115200, dry_run: bool = True,
@@ -66,6 +69,61 @@ class SerialServoArmAdapter:
         if self._ser is not None:
             self._ser.close()
             self._ser = None
+
+    def _read_response(self, timeout_s: float = 0.8, idle_s: float = 0.08) -> bytes:
+        if self._ser is None:
+            raise RuntimeError("serial is not connected")
+        deadline = time.time() + float(timeout_s)
+        last_rx = time.time()
+        chunks = []
+        while time.time() < deadline:
+            waiting = int(getattr(self._ser, "in_waiting", 0))
+            if waiting:
+                chunks.append(self._ser.read(waiting))
+                last_rx = time.time()
+            elif chunks and time.time() - last_rx >= float(idle_s):
+                break
+            else:
+                time.sleep(0.01)
+        return b"".join(chunks)
+
+    def transact_ascii(self, command: str, timeout_s: float = 0.8,
+                       delay_s: float = 0.05) -> str:
+        """Send one official text command and collect its ASCII reply."""
+        if self.dry_run:
+            print("[DRY-RUN QUERY]", command)
+            return ""
+        if self._ser is None:
+            self.connect()
+        if hasattr(self._ser, "reset_input_buffer"):
+            self._ser.reset_input_buffer()
+        self._ser.write(str(command).encode("ascii"))
+        self._ser.flush()
+        time.sleep(float(delay_s))
+        return self._read_response(timeout_s=timeout_s).decode(
+            "ascii", errors="replace"
+        )
+
+    def read_pwm(self, servo_id: int, timeout_s: float = 0.8) -> Optional[int]:
+        """Read one bus servo position using the documented ``PRAD`` command."""
+        servo_id = int(servo_id)
+        if servo_id < 0 or servo_id > 253:
+            raise ValueError("servo_id must be in 0..253")
+        response = self.transact_ascii(
+            "#{:03d}PRAD!".format(servo_id), timeout_s=timeout_s
+        )
+        for match in POSITION_RE.finditer(response):
+            if int(match.group("id")) == servo_id:
+                return int(match.group("pwm"))
+        return None
+
+    def read_pwms(self, servo_ids: Iterable[int],
+                  timeout_s: float = 0.8) -> Dict[int, Optional[int]]:
+        """Read several positions sequentially so replies cannot be interleaved."""
+        return {
+            int(servo_id): self.read_pwm(int(servo_id), timeout_s=timeout_s)
+            for servo_id in servo_ids
+        }
 
     def pack_joint_command(self, joints_rad: Iterable[float], duration_ms: int = 1000) -> str:
         js = list(joints_rad)

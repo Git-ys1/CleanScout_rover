@@ -67,6 +67,35 @@ def parse_assignments(text: str) -> Dict[int, int]:
     return result
 
 
+def parse_deltas(text: str) -> Dict[int, int]:
+    """Parse signed PWM increments used by the nudge command."""
+    result: Dict[int, int] = {}
+    for part in text.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise ValueError("delta must look like 2=-50")
+        key, value = part.split("=", 1)
+        servo_id = int(key.strip(), 10)
+        delta = int(value.strip(), 10)
+        if servo_id < 0 or servo_id > 253:
+            raise ValueError("servo id out of range: {}".format(servo_id))
+        if delta < -1000 or delta > 1000:
+            raise ValueError("nudge delta out of safe range -1000..1000: {}".format(delta))
+        result[servo_id] = delta
+    if not result:
+        raise ValueError("no deltas found")
+    return result
+
+
+def apply_delta(base_pwm: int, delta: int) -> int:
+    target = int(base_pwm) + int(delta)
+    if target < 500 or target > 2500:
+        raise ValueError("nudged pwm out of safe tuning range 500..2500: {}".format(target))
+    return target
+
+
 def hex_bytes(payload: bytes) -> str:
     return " ".join("{:02x}".format(byte) for byte in payload)
 
@@ -295,7 +324,7 @@ def interactive(args) -> int:
                         print("usage: nudge 2=-50,3=20 [duration_ms]")
                         continue
                     duration_ms = int(parts[2]) if len(parts) > 2 else args.duration_ms
-                    deltas = parse_assignments(parts[1])
+                    deltas = parse_deltas(parts[1])
                     current = read_positions(serial_obj, deltas.keys(), timeout_s=args.timeout)
                     known_positions.update({servo_id: pwm for servo_id, pwm in current.items() if pwm is not None})
                     assignments = {}
@@ -303,7 +332,7 @@ def interactive(args) -> int:
                         base = current[servo_id] if current[servo_id] is not None else known_positions.get(servo_id)
                         if base is None:
                             raise RuntimeError("cannot read current position for servo {}".format(servo_id))
-                        assignments[servo_id] = int(base) + int(delta)
+                        assignments[servo_id] = apply_delta(base, delta)
                     move_servos(serial_obj, assignments, duration_ms, args.timeout)
                     known_positions.update(assignments)
                 elif command == "save":
@@ -368,7 +397,7 @@ def main() -> int:
             last_targets.update(assignments)
             known_positions.update(assignments)
         if args.nudge:
-            deltas = parse_assignments(args.nudge)
+            deltas = parse_deltas(args.nudge)
             current = read_positions(serial_obj, deltas.keys(), timeout_s=args.timeout)
             known_positions.update({servo_id: pwm for servo_id, pwm in current.items() if pwm is not None})
             assignments = {}
@@ -376,7 +405,7 @@ def main() -> int:
                 base = current[servo_id] if current[servo_id] is not None else known_positions.get(servo_id)
                 if base is None:
                     raise SystemExit("cannot read current position for servo {}".format(servo_id))
-                assignments[servo_id] = int(base) + int(delta)
+                assignments[servo_id] = apply_delta(base, delta)
             move_servos(serial_obj, assignments, args.duration_ms, args.timeout)
             last_targets.update(assignments)
             known_positions.update(assignments)

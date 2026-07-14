@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT.parent))
 
 from arm_grasp_pipeline.arm_motion import ArmMotion
 from arm_grasp_pipeline.geometry import CameraIntrinsics
+from arm_grasp_pipeline.fixed_view import ObjectGeometry
 from arm_grasp_pipeline.grasp_state_machine import GraspConfig, GraspState, GraspStateMachine
 from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
 from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
@@ -19,12 +20,19 @@ from arm_grasp_pipeline.target_depth import BBox
 def make_machine():
     adapter = SerialServoArmAdapter(dry_run=True)
     kin = OfficialArmKinematics()
-    reference = kin.estimate_tool_matrix_from_pwm((1380, 1909, 1900, 620, 1500, 1500))
-    arm = ArmMotion(adapter, kinematics=kin, reference_tool_matrix=reference)
+    arm = ArmMotion(adapter, kinematics=kin)
     intr = CameraIntrinsics(fx=610.0, fy=610.0, cx=320.0, cy=240.0)
     cfg = GraspConfig(stable_frames=5, depth_stable_frames=4,
-                      pre_grasp_standoff_m=0.04, pitch_deg=20.0, lift_pitch_deg=0.0)
-    return GraspStateMachine(arm, intr, cfg=cfg)
+                      pre_grasp_standoff_m=0.07, pitch_deg=20.0, lift_pitch_deg=0.0)
+    T_base_camera = np.array([
+        [0.0, 0.0, 1.0, -0.120],
+        [-1.0, 0.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0, 0.120],
+        [0.0, 0.0, 0.0, 1.0],
+    ], dtype=float)
+    return GraspStateMachine(
+        arm, intr, T_base_camera, cfg=cfg, object_geometry=ObjectGeometry()
+    )
 
 
 def feed_boxes(machine, box):
@@ -41,9 +49,9 @@ def depth_frame(value):
 def main() -> int:
     machine = make_machine()
 
-    feed_boxes(machine, BBox(20, 180, 120, 300, 0.9, "bottle"))
+    feed_boxes(machine, BBox(280, 200, 360, 280, 0.9, "bottle"))
     for _ in range(machine.cfg.depth_stable_frames):
-        assert machine.try_lock_depth(depth_frame(0.32)) is None
+        assert machine.try_lock_depth(depth_frame(0.0)) is None
 
     machine.update_detection(None)
     feed_boxes(machine, BBox(280, 200, 360, 280, 0.9, "bottle"))
@@ -57,18 +65,23 @@ def main() -> int:
         target = machine.try_lock_depth(depth_frame(value))
     assert target is not None
 
-    machine.locked_target_base = np.array([0.28, 0.04, 0.12], dtype=float)
+    machine.locked_target_base = np.array([0.25, 0.00, 0.18], dtype=float)
     plan = machine.plan_locked_grasp()
-    assert [row[0] for row in plan] == [
-        GraspState.PRE_GRASP, GraspState.APPROACH, GraspState.CLOSE, GraspState.LIFT]
-    pre, grasp = plan[0][1], plan[1][1]
+    states = [row.state for row in plan]
+    assert states[0] == GraspState.OPEN
+    assert states[1] == GraspState.PRE_GRASP
+    assert GraspState.APPROACH in states
+    assert states[-2:] == [GraspState.CLOSE, GraspState.LIFT]
+    pre = np.asarray(plan[1].xyz_m)
+    grasp = np.asarray([row for row in plan if row.state == GraspState.APPROACH][-1].xyz_m)
     target = machine.locked_target_base
     approach_axis = np.array([target[0], target[1], 0.0], dtype=float)
     approach_axis /= np.linalg.norm(approach_axis)
     assert np.allclose(pre, target - approach_axis * machine.cfg.pre_grasp_standoff_m)
-    assert np.allclose(grasp, target + approach_axis * machine.cfg.grasp_insert_m)
+    assert np.allclose(grasp, target)
     assert pre[2] == target[2] and grasp[2] == target[2]
-    assert plan[0][2] == 600 and plan[2][2] == 2400
+    assert plan[0].gripper_pwm == 600 and plan[-2].gripper_pwm == 2400
+    assert all(row.servo_pwms[4] == 1500 for row in plan)
 
     machine.locked_target_base = np.array([0.80, 0.0, 0.12], dtype=float)
     try:

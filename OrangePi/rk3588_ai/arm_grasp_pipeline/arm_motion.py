@@ -69,6 +69,28 @@ class ArmMotion:
         self.reference_tool_matrix = np.asarray(matrix, dtype=float).copy()
         self.last_ik = None
 
+    def execute_ik(self, ik, duration_ms: int) -> MotionResult:
+        """Execute an already preflighted IK result without solving it again."""
+        if ik is None:
+            return MotionResult(False, None, reason="cannot execute an empty IK result")
+        if isinstance(ik, OfficialIKResult):
+            assignments = {servo_id: pwm for servo_id, pwm in enumerate(ik.servo_pwms)}
+            command = self.adapter.send_partial_pwm_command(assignments, duration_ms)
+        else:
+            servo_pwms = getattr(ik, "servo_pwms", None)
+            if servo_pwms is not None:
+                command = self.adapter.send_partial_pwm_command(
+                    dict(enumerate(list(servo_pwms)[:5])), duration_ms
+                )
+            else:
+                assignments = {
+                    mapping.servo_id: mapping.to_pwm(rad)
+                    for rad, mapping in zip(ik.joints_rad[:5], self.adapter.joint_maps[:5])
+                }
+                command = self.adapter.send_partial_pwm_command(assignments, duration_ms)
+        self.last_ik = ik
+        return MotionResult(True, ik, command=command)
+
     def move_xyz(self, xyz_m: Iterable[float], pitch_deg: float = 70.0, roll_rad: float = -0.05,
                  gripper: float = 0.80, duration_ms: int = 1000,
                  gripper_pwm: Optional[int] = None, include_gripper: bool = True) -> MotionResult:
@@ -82,11 +104,7 @@ class ArmMotion:
                     ik,
                     reason="official IK controls only Servo000..003; command Servo005 separately",
                 )
-            # The real C-5.2.2 board accepts $KMS but silently leaves 000..003
-            # unchanged. Keep the vendor-equivalent Python IK, then send its
-            # proven bus-servo PWM targets atomically instead.
-            assignments = {servo_id: pwm for servo_id, pwm in enumerate(ik.servo_pwms)}
-            cmd = self.adapter.send_partial_pwm_command(assignments, duration_ms)
+            return self.execute_ik(ik, duration_ms)
         else:
             servo_pwms = getattr(ik, "servo_pwms", None)
             if servo_pwms is not None:

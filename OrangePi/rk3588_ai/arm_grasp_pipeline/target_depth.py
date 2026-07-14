@@ -39,7 +39,8 @@ def median_depth_in_bbox(
     y1 = int(max(0, round(cy - bh / 2)))
     y2 = int(min(h, round(cy + bh / 2)))
     roi = np.asarray(depth_m[y1:y2, x1:x2], dtype=float)
-    valid = roi[(roi > 0.0) & np.isfinite(roi)]
+    valid = roi[np.isfinite(roi)]
+    valid = valid[valid > 0.0]
     if min_depth_m is not None:
         valid = valid[valid >= min_depth_m]
     if max_depth_m is not None:
