@@ -22,7 +22,8 @@ def make_machine():
     reference = kin.estimate_tool_matrix_from_pwm((1380, 1909, 1900, 620, 1500, 1500))
     arm = ArmMotion(adapter, kinematics=kin, reference_tool_matrix=reference)
     intr = CameraIntrinsics(fx=610.0, fy=610.0, cx=320.0, cy=240.0)
-    cfg = GraspConfig(stable_frames=5, depth_stable_frames=4)
+    cfg = GraspConfig(stable_frames=5, depth_stable_frames=4,
+                      pre_grasp_standoff_m=0.04, pitch_deg=20.0, lift_pitch_deg=0.0)
     return GraspStateMachine(arm, intr, cfg=cfg)
 
 
@@ -56,16 +57,17 @@ def main() -> int:
         target = machine.try_lock_depth(depth_frame(value))
     assert target is not None
 
-    machine.locked_target_base = np.array([0.16, 0.0, 0.12], dtype=float)
+    machine.locked_target_base = np.array([0.28, 0.04, 0.12], dtype=float)
     plan = machine.plan_locked_grasp()
     assert [row[0] for row in plan] == [
         GraspState.PRE_GRASP, GraspState.APPROACH, GraspState.CLOSE, GraspState.LIFT]
     pre, grasp = plan[0][1], plan[1][1]
-    tool = machine.arm.current_tool_matrix_from_last_command()[:3, 3]
     target = machine.locked_target_base
-    approach_axis = (target - tool) / np.linalg.norm(target - tool)
+    approach_axis = np.array([target[0], target[1], 0.0], dtype=float)
+    approach_axis /= np.linalg.norm(approach_axis)
     assert np.allclose(pre, target - approach_axis * machine.cfg.pre_grasp_standoff_m)
     assert np.allclose(grasp, target + approach_axis * machine.cfg.grasp_insert_m)
+    assert pre[2] == target[2] and grasp[2] == target[2]
     assert plan[0][2] == 600 and plan[2][2] == 2400
 
     machine.locked_target_base = np.array([0.80, 0.0, 0.12], dtype=float)

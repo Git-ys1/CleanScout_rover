@@ -25,6 +25,7 @@ from arm_grasp_pipeline.grasp_state_machine import GraspConfig, GraspStateMachin
 from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
 from arm_grasp_pipeline.realsense_source import D435Source
 from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
+from arm_grasp_pipeline.target_depth import median_depth_in_bbox
 from arm_grasp_pipeline.visual_centering import CenteringConfig, PWMVisualCentering
 
 
@@ -65,6 +66,15 @@ def parse_args():
     parser.add_argument("--hand_eye_calibrated", action="store_true")
     parser.add_argument("--tool_frame_calibrated", action="store_true")
     parser.add_argument("--joint_pwm_calibrated", action="store_true")
+    parser.add_argument("--allow_manual_seed", action="store_true",
+                        help="explicitly allow the C-5.2.0 measured experimental geometry seed")
+    parser.add_argument("--max_stage", choices=("open", "pre_grasp", "approach", "close", "lift"),
+                        default="lift")
+    parser.add_argument("--max_attempts", type=int, default=1)
+    parser.add_argument("--verify_frames", type=int, default=45)
+    parser.add_argument("--verify_min_same_frames", type=int, default=5)
+    parser.add_argument("--verify_center_tolerance_px", type=float, default=80.0)
+    parser.add_argument("--verify_depth_tolerance_m", type=float, default=0.050)
     parser.add_argument("--serial_port", default="")
     parser.add_argument("--baudrate", type=int, default=0)
     parser.add_argument("--current_pwms", default="", help="six comma-separated live servo PWM values")
@@ -121,10 +131,22 @@ def draw_overlay(color_bgr, depth_m, detections, target, state, infer_ms):
     return np.concatenate([color, depth], axis=1)
 
 
+def same_target_observation(reference_center, reference_depth_m, target, target_depth_m,
+                            center_tolerance_px, depth_tolerance_m):
+    if target is None or target_depth_m is None:
+        return False
+    dx = float(target.center[0]) - float(reference_center[0])
+    dy = float(target.center[1]) - float(reference_center[1])
+    center_shift = float(np.hypot(dx, dy))
+    depth_shift = abs(float(target_depth_m) - float(reference_depth_m))
+    return center_shift <= float(center_tolerance_px) and depth_shift <= float(depth_tolerance_m)
+
+
 def plan_as_json(machine):
     rows = []
     for state, xyz, gripper, duration_ms in machine.plan_locked_grasp():
-        ik = machine.arm.kin.inverse_pose(xyz, pitch_deg=machine.cfg.pitch_deg, gripper=0.0)
+        stage_pitch = machine.cfg.lift_pitch_deg if state.name == "LIFT" else machine.cfg.pitch_deg
+        ik = machine.arm.kin.inverse_pose(xyz, pitch_deg=stage_pitch, gripper=0.0)
         if state.name == "CLOSE":
             command = machine.arm.adapter.pack_partial_pwm_command({5: gripper}, duration_ms)
         else:
@@ -135,6 +157,7 @@ def plan_as_json(machine):
             "xyz_m": [float(value) for value in xyz],
             "gripper": float(gripper),
             "duration_ms": int(duration_ms),
+            "pitch_deg": float(stage_pitch),
             "joints_rad": [float(value) for value in ik.joints_rad],
             "arm_servo_pwms_000_003": servo_pwms,
             "gripper_pwm_005": int(gripper),
@@ -145,18 +168,24 @@ def plan_as_json(machine):
 
 def main() -> int:
     args = parse_args()
-    if args.skip < 0 or args.max_frames < 0:
-        raise ValueError("--skip and --max_frames must be non-negative")
+    if args.skip < 0 or args.max_frames < 0 or args.verify_frames < 1:
+        raise ValueError("--skip/--max_frames must be non-negative and --verify_frames must be positive")
+    if args.max_attempts < 1 or args.max_attempts > 20:
+        raise ValueError("--max_attempts must be in 1..20")
+    if args.verify_min_same_frames < 1 or args.verify_min_same_frames > args.verify_frames:
+        raise ValueError("--verify_min_same_frames must be in 1..verify_frames")
+    if args.max_attempts > 1 and args.max_stage != "lift":
+        raise ValueError("repeated attempts require --max_stage lift")
     if not args.dry_run:
         if not args.enable_arm:
             raise ValueError("real output requires --enable_arm")
         if not args.auto_center and not args.execute_on_lock:
             raise ValueError("real output must enable bounded centering or execute a calibrated grasp")
-        if args.execute_on_lock and not args.hand_eye_calibrated:
+        if args.execute_on_lock and not args.allow_manual_seed and not args.hand_eye_calibrated:
             raise ValueError("real grasp is blocked until --hand_eye_calibrated is explicitly provided")
-        if args.execute_on_lock and not args.tool_frame_calibrated:
+        if args.execute_on_lock and not args.allow_manual_seed and not args.tool_frame_calibrated:
             raise ValueError("real grasp is blocked until --tool_frame_calibrated is explicitly provided")
-        if args.execute_on_lock and not args.joint_pwm_calibrated:
+        if args.execute_on_lock and not args.allow_manual_seed and not args.joint_pwm_calibrated:
             raise ValueError("real grasp is blocked until --joint_pwm_calibrated is explicitly provided")
         if args.execute_on_lock and args.auto_center:
             raise ValueError("real grasp and auto-centering cannot run together until dynamic FK is calibrated")
@@ -166,16 +195,27 @@ def main() -> int:
     runtime_cfg = dict(config.get("runtime", {}))
     grasp_cfg = dict(config.get("grasp", {}))
     hand_eye_cfg = dict(config.get("hand_eye", {}))
+    manual_seed_cfg = dict(config.get("manual_seed", {}))
     realsense_cfg = dict(config.get("realsense", {}))
     kinematics_cfg = dict(config.get("kinematics", {}))
     tool_reference_cfg = dict(config.get("tool_reference", {}))
     camera_mount_cfg = dict(config.get("camera_mount", {}))
     centering_cfg = dict(config.get("visual_centering", {}))
 
-    if not args.dry_run and args.execute_on_lock and not bool(hand_eye_cfg.get("calibrated", False)):
-        raise ValueError("config hand_eye.calibrated is false; refusing real grasp")
-    if not args.dry_run and args.execute_on_lock and not bool(tool_reference_cfg.get("calibrated", False)):
-        raise ValueError("config tool_reference.calibrated is false; refusing real grasp")
+    calibrated_geometry = bool(
+        hand_eye_cfg.get("calibrated", False)
+        and tool_reference_cfg.get("calibrated", False)
+        and serial_cfg.get("joint_pwm_calibrated", False)
+    )
+    manual_seed_geometry = bool(
+        args.allow_manual_seed
+        and manual_seed_cfg.get("enabled", False)
+        and manual_seed_cfg.get("hand_eye_matrix_4x4") is not None
+        and manual_seed_cfg.get("tool_reference_mode") == "official_fk_seed"
+    )
+    geometry_available = calibrated_geometry or manual_seed_geometry
+    if not args.dry_run and args.execute_on_lock and not geometry_available:
+        raise ValueError("no calibrated geometry or explicitly allowed manual seed; refusing real grasp")
     if not args.dry_run and args.execute_on_lock:
         if not bool(camera_mount_cfg.get("frozen", False)):
             raise ValueError("camera mount relation is not frozen; refusing real grasp")
@@ -185,8 +225,19 @@ def main() -> int:
             raise ValueError("camera mount and grasp config disagree on the fixed Servo004 PWM")
         if list(tool_reference_cfg.get("at_servo_pwms", [])) != list(grasp_cfg.get("retry_pose_pwms", [])):
             raise ValueError("tool reference and retry pose PWM values must match")
-    if not args.dry_run and args.execute_on_lock and not bool(serial_cfg.get("joint_pwm_calibrated", False)):
+    if not args.dry_run and args.execute_on_lock and not manual_seed_geometry and not bool(serial_cfg.get("joint_pwm_calibrated", False)):
         raise ValueError("config serial.joint_pwm_calibrated is false; refusing real grasp")
+
+    if manual_seed_geometry:
+        grasp_cfg.update(dict(manual_seed_cfg.get("grasp_overrides", {})))
+        print("EXPERIMENTAL_GEOMETRY " + json.dumps({
+            "source": manual_seed_cfg.get("source"),
+            "frame": manual_seed_cfg.get("frame"),
+            "translation_m": manual_seed_cfg.get("translation_m"),
+            "orientation_assumption": manual_seed_cfg.get("orientation_assumption"),
+            "max_stage": args.max_stage,
+            "max_attempts": args.max_attempts,
+        }, ensure_ascii=False))
 
     target_class = args.target_class or runtime_cfg.get("target_class", "bottle")
     confidence = args.conf if args.conf is not None else float(runtime_cfg.get("confidence", 0.25))
@@ -236,11 +287,16 @@ def main() -> int:
     last_center_command_time = 0.0
     grasp_names = set(GraspConfig.__dataclass_fields__.keys())
     machine_cfg = GraspConfig(**dataclass_kwargs(grasp_cfg, grasp_names))
+    if manual_seed_geometry:
+        # Centering may change Servo000/003 before a grasp. Retry to that live
+        # observation pose rather than returning to the stale pre-centering pose.
+        machine_cfg.retry_pose_pwms = tuple(reference_pwms)
     hand_names = {"x", "y", "z", "roll_deg", "pitch_deg", "yaw_deg", "matrix_4x4"}
-    hand_eye = HandEye(**dataclass_kwargs(hand_eye_cfg, hand_names))
-    geometry_calibrated = bool(
-        hand_eye_cfg.get("calibrated", False) and tool_reference_cfg.get("calibrated", False)
-    )
+    active_hand_eye_cfg = dict(hand_eye_cfg)
+    if manual_seed_geometry:
+        active_hand_eye_cfg["matrix_4x4"] = manual_seed_cfg["hand_eye_matrix_4x4"]
+    hand_eye = HandEye(**dataclass_kwargs(active_hand_eye_cfg, hand_names))
+    geometry_calibrated = calibrated_geometry
 
     if cv2 is None:
         raise RuntimeError("opencv-python is required to run the D435 YOLO grasp pipeline")
@@ -269,6 +325,8 @@ def main() -> int:
     detections = []
     infer_ms = 0.0
     locked = False
+    attempt_count = 0
+    grasp_result = "not_executed"
 
     try:
         detector.start()
@@ -367,7 +425,7 @@ def main() -> int:
                         "point_tool_m": None if lock_debug is None else list(lock_debug.point_tool_m),
                     }
                     print("GRASP_LOCK " + json.dumps(lock_record, ensure_ascii=False))
-                    if not geometry_calibrated:
+                    if not geometry_available:
                         plan = None
                         print("GRASP_PLAN_BLOCKED " + json.dumps({
                             "reason": "hand-eye and tool reference are not calibrated",
@@ -382,8 +440,78 @@ def main() -> int:
                     if plan is not None:
                         print("GRASP_PLAN " + json.dumps(plan, ensure_ascii=False))
                         if args.execute_on_lock:
-                            ok = machine.execute_locked_grasp()
-                            print("GRASP_EXECUTE {} dry_run={}".format(ok, args.dry_run))
+                            attempt_count += 1
+                            reference_center = tuple(lock_debug.pixel_xy)
+                            reference_depth = float(lock_debug.depth_m)
+                            ok = machine.execute_locked_grasp(max_stage=args.max_stage)
+                            print("GRASP_EXECUTE {} dry_run={} attempt={} max_stage={}".format(
+                                ok, args.dry_run, attempt_count, args.max_stage))
+                            if not ok:
+                                grasp_result = "motion_failed"
+                                if attempt_count < args.max_attempts:
+                                    arm.set_reference_tool_matrix(reference_matrix)
+                                    continue
+                            elif args.max_stage != "lift":
+                                grasp_result = "partial_stage_complete"
+                            else:
+                                same_count = 0
+                                seen_count = 0
+                                verification_visual = None
+                                for verify_index in range(args.verify_frames):
+                                    verify_frame = source.read()
+                                    verify_detections, verify_infer_ms = detector.infer(verify_frame.color_bgr)
+                                    verify_target = detector.select_target(
+                                        verify_detections,
+                                        verify_frame.color_bgr.shape,
+                                        target_class,
+                                        confidence,
+                                        strategy,
+                                    )
+                                    verify_depth = None
+                                    if verify_target is not None:
+                                        seen_count += 1
+                                        verify_depth = median_depth_in_bbox(verify_frame.depth_m, verify_target)
+                                        if same_target_observation(
+                                                reference_center, reference_depth, verify_target, verify_depth,
+                                                args.verify_center_tolerance_px, args.verify_depth_tolerance_m):
+                                            same_count += 1
+                                    verification_visual = draw_overlay(
+                                        verify_frame.color_bgr,
+                                        verify_frame.depth_m,
+                                        verify_detections,
+                                        verify_target,
+                                        "VERIFY_ATTEMPT_{}".format(attempt_count),
+                                        verify_infer_ms,
+                                    )
+                                target_still_present = same_count >= args.verify_min_same_frames
+                                verification = {
+                                    "attempt": attempt_count,
+                                    "seen_frames": seen_count,
+                                    "same_target_frames": same_count,
+                                    "required_same_frames": args.verify_min_same_frames,
+                                    "target_still_present": target_still_present,
+                                }
+                                print("GRASP_VERIFY " + json.dumps(verification, ensure_ascii=False))
+                                if output_dir is not None and verification_visual is not None:
+                                    output_dir.mkdir(parents=True, exist_ok=True)
+                                    cv2.imwrite(str(output_dir / "attempt_{:02d}_verify.png".format(attempt_count)),
+                                                verification_visual)
+                                last_visual = verification_visual or last_visual
+                                if target_still_present:
+                                    grasp_result = "failed_target_still_present"
+                                    if attempt_count < args.max_attempts:
+                                        payload = machine.recover_for_retry()
+                                        arm.set_reference_tool_matrix(reference_matrix)
+                                        current_pwms = list(reference_pwms)
+                                        selected = None
+                                        detections = []
+                                        print("GRASP_RETRY " + json.dumps({
+                                            "next_attempt": attempt_count + 1,
+                                            "payload": payload,
+                                        }, ensure_ascii=False))
+                                        continue
+                                else:
+                                    grasp_result = "candidate_success_or_scene_changed"
                     if args.stop_on_lock:
                         last_visual = draw_overlay(
                             frame.color_bgr, frame.depth_m, detections, selected, machine.state.name, infer_ms)
@@ -416,10 +544,11 @@ def main() -> int:
         detector.close()
         cv2.destroyAllWindows()
 
-    print("SUMMARY frames={} inferences={} locked={} center_commands={} dry_run={} hand_eye_calibrated={} tool_frame_calibrated={} geometry_calibrated={}".format(
+    print("SUMMARY frames={} inferences={} locked={} center_commands={} attempts={} grasp_result={} dry_run={} hand_eye_calibrated={} tool_frame_calibrated={} geometry_calibrated={} manual_seed={}".format(
         frame_count, inference_count, locked, center_command_count,
+        attempt_count, grasp_result,
         args.dry_run, bool(hand_eye_cfg.get("calibrated", False)),
-        bool(tool_reference_cfg.get("calibrated", False)), geometry_calibrated))
+        bool(tool_reference_cfg.get("calibrated", False)), geometry_calibrated, manual_seed_geometry))
     return 0
 
 

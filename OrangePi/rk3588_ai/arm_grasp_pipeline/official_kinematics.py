@@ -95,24 +95,30 @@ class OfficialArmKinematics:
             return None
         return (theta6, theta5 - 90.0, theta4, theta3)
 
-    def inverse_pose(self, tool_xyz_m: Iterable[float], pitch_deg: float = 70.0,
+    def inverse_pose(self, tool_xyz_m: Iterable[float], pitch_deg: Optional[float] = None,
                      roll_rad: float = -0.05, gripper: float = 0.80,
                      search_step_deg: int = 1) -> Optional[OfficialIKResult]:
-        # The official firmware scans Alpha and selects the deepest valid angle.
-        # It has no roll/gripper arguments; keep these parameters only so the
-        # generic motion interface can call this backend without inventing axes.
-        del pitch_deg, roll_rad, gripper
+        # Positive pitch means downward from horizontal. When pitch is omitted,
+        # retain the vendor scan behavior for diagnostics and compatibility.
+        del roll_rad, gripper
         xyz = tuple(float(value) for value in tool_xyz_m)
         if len(xyz) != 3 or search_step_deg <= 0:
             raise ValueError("tool_xyz_m must have three values and search_step_deg must be positive")
 
-        chosen = None
-        chosen_alpha = None
-        for alpha_deg in range(0, -136, -int(search_step_deg)):
-            angles = self._solve_alpha(xyz, float(alpha_deg))
-            if angles is not None:
-                chosen = angles
-                chosen_alpha = float(alpha_deg)
+        if pitch_deg is None:
+            chosen = None
+            chosen_alpha = None
+            for alpha_deg in range(0, -136, -int(search_step_deg)):
+                angles = self._solve_alpha(xyz, float(alpha_deg))
+                if angles is not None:
+                    chosen = angles
+                    chosen_alpha = float(alpha_deg)
+        else:
+            requested_pitch = float(pitch_deg)
+            if not math.isfinite(requested_pitch) or requested_pitch < -90.0 or requested_pitch > 135.0:
+                raise ValueError("pitch_deg must be finite and in -90..135")
+            chosen_alpha = -requested_pitch
+            chosen = self._solve_alpha(xyz, chosen_alpha)
         if chosen is None or chosen_alpha is None:
             return None
 
@@ -128,7 +134,7 @@ class OfficialArmKinematics:
         )
         return OfficialIKResult(
             joints_rad=joints,
-            final_pitch_deg=abs(chosen_alpha),
+            final_pitch_deg=-chosen_alpha,
             target_xyz_m=xyz,
             servo_angles_deg=tuple(float(value) for value in chosen),
             servo_pwms=pwms,

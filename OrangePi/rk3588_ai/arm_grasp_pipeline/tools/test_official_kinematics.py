@@ -23,6 +23,10 @@ def main() -> int:
         assert np.linalg.norm(forward[:3, 3] - np.asarray(xyz)) < 0.003, (xyz, forward[:3, 3])
         assert all(500 <= value <= 2500 for value in result.servo_pwms)
 
+    fixed_pitch = kin.inverse_pose((0.25, 0.04, 0.13), pitch_deg=20.0)
+    assert fixed_pitch is not None
+    assert abs(fixed_pitch.final_pitch_deg - 20.0) < 1e-9
+
     assert kin.inverse_pose((0.50, 0.0, 0.10)) is None
     level_tool = kin._tool_matrix((0.20, 0.0, 0.10), 0.0)
     assert np.allclose(level_tool[:3, :3], np.eye(3), atol=1e-9)
@@ -36,7 +40,12 @@ def main() -> int:
     arm = ArmMotion(adapter, kinematics=kin, reference_tool_matrix=reference)
     result = kin.inverse_pose((0.180, 0.0, 0.120))
     command = arm.pack_ik_command(result, 1000, include_gripper=False)
-    assert command == "$KMS:0.0,180.0,120.0,1000!"
+    expected = adapter.pack_partial_pwm_command(
+        {servo_id: pwm for servo_id, pwm in enumerate(result.servo_pwms)},
+        1000,
+    )
+    assert command == expected
+    assert command.startswith("{#000P") and "#003P" in command
     assert "#004" not in command and "#005" not in command
 
     try:
@@ -44,7 +53,7 @@ def main() -> int:
     except ValueError as exc:
         assert "Servo000..003" in str(exc)
     else:
-        raise AssertionError("official $KMS unexpectedly accepted a gripper command")
+        raise AssertionError("official IK unexpectedly accepted a gripper command")
     print("OFFICIAL_KINEMATICS_OK")
     return 0
 

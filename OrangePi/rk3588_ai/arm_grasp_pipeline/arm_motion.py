@@ -1,5 +1,5 @@
 # coding: utf-8
-"""High-level arm motion: base xyz -> IK -> RF1 serial text protocol."""
+"""High-level arm motion: base xyz -> IK -> bus-servo text protocol."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -46,8 +46,9 @@ class ArmMotion:
                         include_gripper: bool = True) -> str:
         if isinstance(ik, OfficialIKResult):
             if include_gripper or gripper_pwm is not None:
-                raise ValueError("official $KMS controls only Servo000..003; command Servo005 separately")
-            return self.adapter.pack_kinematics_command(ik.target_xyz_m, duration_ms)
+                raise ValueError("official IK controls only Servo000..003; command Servo005 separately")
+            assignments = {servo_id: pwm for servo_id, pwm in enumerate(ik.servo_pwms)}
+            return self.adapter.pack_partial_pwm_command(assignments, duration_ms)
         servo_pwms = getattr(ik, "servo_pwms", None)
         if servo_pwms is not None:
             values = list(servo_pwms)
@@ -79,9 +80,13 @@ class ArmMotion:
                 return MotionResult(
                     False,
                     ik,
-                    reason="official $KMS controls only Servo000..003; command Servo005 separately",
+                    reason="official IK controls only Servo000..003; command Servo005 separately",
                 )
-            cmd = self.adapter.send_kinematics_command(ik.target_xyz_m, duration_ms)
+            # The real C-5.2.2 board accepts $KMS but silently leaves 000..003
+            # unchanged. Keep the vendor-equivalent Python IK, then send its
+            # proven bus-servo PWM targets atomically instead.
+            assignments = {servo_id: pwm for servo_id, pwm in enumerate(ik.servo_pwms)}
+            cmd = self.adapter.send_partial_pwm_command(assignments, duration_ms)
         else:
             servo_pwms = getattr(ik, "servo_pwms", None)
             if servo_pwms is not None:

@@ -47,7 +47,8 @@ class GraspConfig:
     pre_grasp_standoff_m: float = 0.070
     grasp_insert_m: float = 0.0
     lift_raise_m: float = 0.080
-    pitch_deg: float = 70.0
+    pitch_deg: float = 20.0
+    lift_pitch_deg: float = 0.0
     gripper_open_pwm: int = 600
     gripper_close_pwm: int = 2400
     wrist_fixed_pwm: int = 1500
@@ -153,12 +154,17 @@ class GraspStateMachine:
             raise ValueError("no locked target")
 
         target = self.locked_target_base.copy()
-        tool = self.arm.current_tool_matrix_from_last_command()[:3, 3]
-        target_delta = target - tool
-        target_distance = float(np.linalg.norm(target_delta))
-        if target_distance <= self.cfg.pre_grasp_standoff_m + 0.01:
-            raise ValueError(f"target too close for pre-grasp standoff: {target_distance:.4f}m")
-        approach_axis = target_delta / target_distance
+        # Grasp from the bottle's front at a fixed body height. Following the
+        # full camera-to-target vector produces a top-down dive and cannot put
+        # the two fingers around the bottle.
+        target_xy = target[:2]
+        horizontal_distance = float(np.linalg.norm(target_xy))
+        if horizontal_distance <= self.cfg.pre_grasp_standoff_m + 0.01:
+            raise ValueError(f"target too close for horizontal pre-grasp: {horizontal_distance:.4f}m")
+        approach_axis = np.array(
+            [target[0] / horizontal_distance, target[1] / horizontal_distance, 0.0],
+            dtype=float,
+        )
         pre = target - approach_axis * self.cfg.pre_grasp_standoff_m
         grasp = target + approach_axis * self.cfg.grasp_insert_m
         lift = grasp.copy()
@@ -172,7 +178,8 @@ class GraspStateMachine:
         for state, xyz, gripper, _ in sequence:
             if not self._inside_workspace(xyz):
                 raise ValueError(f"{state.name} target outside workspace: {xyz.tolist()}")
-            if self.arm.kin.inverse_pose(xyz, pitch_deg=self.cfg.pitch_deg, gripper=0.0) is None:
+            stage_pitch = self.cfg.lift_pitch_deg if state == GraspState.LIFT else self.cfg.pitch_deg
+            if self.arm.kin.inverse_pose(xyz, pitch_deg=stage_pitch, gripper=0.0) is None:
                 raise ValueError(f"{state.name} target has no IK solution: {xyz.tolist()}")
         return sequence
 
@@ -204,7 +211,11 @@ class GraspStateMachine:
             self._emit(self.state, False, f"retry recovery failed: {exc}")
         return False
 
-    def execute_locked_grasp(self) -> bool:
+    def execute_locked_grasp(self, max_stage: str = "LIFT") -> bool:
+        max_stage = str(max_stage).strip().upper()
+        allowed_stages = {"OPEN", "PRE_GRASP", "APPROACH", "CLOSE", "LIFT"}
+        if max_stage not in allowed_stages:
+            raise ValueError("max_stage must be one of {}".format(sorted(allowed_stages)))
         try:
             sequence = self.plan_locked_grasp()
         except ValueError as exc:
@@ -224,6 +235,10 @@ class GraspStateMachine:
         self.arm.adapter.send_partial_pwm_command({5: self.cfg.gripper_open_pwm}, self.cfg.gripper_open_ms)
         self._wait_motion(self.cfg.gripper_open_ms)
         self.arm.adapter.send_stop([5])
+        if max_stage == "OPEN":
+            self.state = GraspState.VERIFY
+            self._emit(self.state, True, "OPEN stage complete; holding for inspection")
+            return True
 
         for st, xyz, hand, dur in sequence:
             self.state = st
@@ -231,10 +246,14 @@ class GraspStateMachine:
             if st == GraspState.CLOSE:
                 self.arm.adapter.send_partial_pwm_command({5: self.cfg.gripper_close_pwm}, dur)
                 self._wait_motion(dur)
+                if max_stage == st.name:
+                    self.state = GraspState.VERIFY
+                    self._emit(self.state, True, "{} stage complete; holding for inspection".format(st.name))
+                    return True
                 continue
             res = self.arm.move_xyz(
                 xyz,
-                pitch_deg=self.cfg.pitch_deg,
+                pitch_deg=self.cfg.lift_pitch_deg if st == GraspState.LIFT else self.cfg.pitch_deg,
                 gripper=0.0,
                 duration_ms=dur,
                 include_gripper=False,
@@ -243,6 +262,10 @@ class GraspStateMachine:
                 print("[GRASP FAILED]", res.reason)
                 return self._fail_and_recover(res.reason)
             self._wait_motion(dur)
+            if max_stage == st.name and st != GraspState.LIFT:
+                self.state = GraspState.VERIFY
+                self._emit(self.state, True, "{} stage complete; holding for inspection".format(st.name))
+                return True
 
         # Keep the claw closed while returning to the fixed observation pose.
         self.state = GraspState.RETURN_VERIFY
