@@ -76,6 +76,20 @@ firmware/mechanical_arm_controller/Output/*
 !firmware/mechanical_arm_controller/Output/template.hex
 !firmware/mechanical_arm_controller/Output/template.build_log.htm
 
+# Combined motion/arm controller: keep release artifacts, ignore local build state.
+firmware/cleanscout_combined_controller/DebugConfig/
+firmware/cleanscout_combined_controller/*.uvguix.*
+firmware/cleanscout_combined_controller/*.uvoptx
+firmware/cleanscout_combined_controller/Build/*
+!firmware/cleanscout_combined_controller/Build/build.log
+!firmware/cleanscout_combined_controller/Build/Objects/
+firmware/cleanscout_combined_controller/Build/Objects/*
+!firmware/cleanscout_combined_controller/Build/Objects/CleanScout_Combined.hex
+!firmware/cleanscout_combined_controller/Build/Objects/CleanScout_Combined.axf
+!firmware/cleanscout_combined_controller/Build/Listings/
+firmware/cleanscout_combined_controller/Build/Listings/*
+!firmware/cleanscout_combined_controller/Build/Listings/CleanScout_Combined.map
+
 # OrangePi / RK3588 AI local runtime and vendor artifacts.
 OrangePi/**/rknn_toolkit2_env/
 OrangePi/**/rknn_lite_env/
