@@ -1,0 +1,272 @@
+CleanScout 常用指令合集
+
+说明：
+- 现在电脑终端打开后会自动加载 `use_cleanscout_pc.sh`。
+- 现在电脑终端打开后会自动进入工作区：`/home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws`
+- 如果你发现没有切过去，手动执行：`cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws`
+
+一、导航与多功能
+
+树莓派：
+```bash
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+read -rsp 'EDGE_DEVICE_TOKEN: ' EDGE_DEVICE_TOKEN
+echo
+export EDGE_DEVICE_TOKEN
+bash ./run_nav_and_multifunction_demo.sh
+```
+
+电脑：
+```bash
+rviz
+```
+
+用途：
+- 旧的成熟联合演示链
+- 树莓派同时跑导航、多功能、edge-relay
+- 后端和导航可共存
+
+
+二、导航与多功能第二模式
+
+树莓派清理脚本
+bash /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/clean_mapping_nav_sessions.sh
+
+
+树莓派：
+```bash
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+read -rsp 'EDGE_DEVICE_TOKEN: ' EDGE_DEVICE_TOKEN
+echo
+export EDGE_DEVICE_TOKEN
+./run_robot_hardware_multifunction.sh
+```
+
+电脑：
+```bash
+./start_pc_full_navigation.sh
+```
+
+用途：
+- 当前新阶段模式
+- 树莓派只负责硬件、安全门控、edge-relay
+- 电脑负责编码器 odom 导航解算和 RViz
+- 电脑默认启动 TEB，正式链不再切换到 laser_scan_matcher
+- 后端与导航共用 `/cmd_vel_nav`
+- 当前默认导航地图已切换为：`clbrobot/maps/407-5.22-2120.yaml`
+- MPU6050 已退出正式运行链，没有 `/imu/*` 话题是正常状态
+
+常用检查（逐条执行，`rostopic hz` 用 Ctrl+C 退出）：
+```bash
+rostopic echo -n 1 /rf1/ready
+rostopic hz /rf1/ack
+rostopic hz /rf1/vel
+rostopic hz /scan
+rostopic list | grep -E '^/imu' || true
+```
+
+第二模式后端控制说明：
+- 使用翻转式控制
+- 再次点击同方向会停下
+- 停下时只发送一次 0，之后不持续发送 0
+
+
+三、laser_scan_matcher 旧切换说明
+
+说明：
+- `USE_LASER_SCAN_MATCHER=1 ./start_pc_full_navigation.sh` 已失效，不再使用。
+- 当前正式导航固定使用 RF1 编码器 `/odom`，默认启动 TEB。
+- laser_scan_matcher 只保留纯激光历史备线，不再接入正式导航入口。
+
+
+四、建图第二模式
+
+树莓派：
+```bash
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+read -rsp 'EDGE_DEVICE_TOKEN: ' EDGE_DEVICE_TOKEN
+echo
+export EDGE_DEVICE_TOKEN
+./run_robot_hardware_multifunction.sh
+```
+
+电脑：
+```bash
+cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./start_pc_mapping_mode2.sh
+```
+
+建图第二模式说明：
+- 树莓派只跑硬件、安全门控、edge-relay
+- 电脑端使用编码器 `/odom` 发布 `odom -> base_link`
+- 电脑端启动 gmapping 建图
+- 后端和电脑共用 `/cmd_vel_nav`
+- 建图时保留第二模式的后端兼容逻辑
+- MPU6050 已从正式硬件与运行链移除，当前不会启动、等待、订阅或模拟 `/imu/data`
+
+建图保存：
+```bash
+./save_map.sh
+```
+
+说明：
+- 在当前电脑端建图模式下，地图默认保存在电脑本地工作区的 `clbrobot/maps` 目录。
+- 默认文件名会自动带日期时间，例如：`407-5.22-1945.yaml` 和 `407-5.22-1945.pgm`
+- 也可以手动指定名字，例如：`./save_map.sh 407-5.22`
+
+
+五、路线工具（基于成熟导航第二模式）
+
+说明：
+- 这一套不是新的导航基线。
+- 先启动“导航与多功能第二模式”，确认 `/amcl_pose` 和 `move_base` 都在线后，再挂路线工具。
+- 路线工具当前只是在成熟第二模式上新增：录当前定位点、顺序发送导航点。
+
+先启动成熟导航第二模式：
+
+树莓派：
+```bash
+cd /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws
+source ./use_cleanscout_pi.sh
+read -rsp 'EDGE_DEVICE_TOKEN: ' EDGE_DEVICE_TOKEN
+echo
+export EDGE_DEVICE_TOKEN
+./run_robot_hardware_multifunction.sh
+```
+
+电脑：
+```bash
+./start_pc_full_navigation.sh
+```
+
+再启动路线工具：
+
+电脑：
+```bash
+roslaunch cleanscout_navigation route_tools.launch
+```
+
+录当前点为 home：
+```bash
+rosrun cleanscout_navigation record_current_pose.py _routes_file:="$(pwd)/src/cleanscout_navigation/config/routes.yaml" _route_name:=lab_test_2point _point_name:=home
+```
+
+录当前点为 point_A：
+```bash
+rosrun cleanscout_navigation record_current_pose.py _routes_file:="$(pwd)/src/cleanscout_navigation/config/routes.yaml" _route_name:=lab_test_2point _point_name:=point_A
+```
+
+录当前点为 home_return：
+```bash
+rosrun cleanscout_navigation record_current_pose.py _routes_file:="$(pwd)/src/cleanscout_navigation/config/routes.yaml" _route_name:=lab_test_2point _point_name:=home_return _pause_sec:=1.0
+```
+
+启动默认测试路线（当前默认是 `lab_test_2point`）：
+```bash
+rosservice call /start_route
+```
+
+查询路线执行状态：
+```bash
+rosservice call /get_route_status
+```
+
+取消当前路线：
+```bash
+rosservice call /cancel_route
+```
+
+当前路线文件位置：
+```text
+/home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/cleanscout_navigation/config/routes.yaml
+```
+
+用途：
+- 读取当前 `/amcl_pose` 保存关键 waypoint
+- 顺序发送 `move_base` action goal
+- 用于先做 `home -> point_A -> home` 的人工验证路线
+
+
+六、UbuntuPC camera worker 后台运行
+
+用途：
+- UbuntuPC 从 ESP32-CAM 拉取 MJPEG 图传
+- 后台静默运行，供后端/H5 使用
+
+后台启动：
+```bash
+cd /home/yusu/Work/CleanScout_rover/tools/pc-camera-worker
+bash ./run-background.sh
+```
+
+查看状态：
+```bash
+cd /home/yusu/Work/CleanScout_rover/tools/pc-camera-worker
+bash ./status-background.sh
+```
+
+停止：
+```bash
+cd /home/yusu/Work/CleanScout_rover/tools/pc-camera-worker
+bash ./stop-background.sh
+```
+
+日志位置：
+```text
+/home/yusu/Work/CleanScout_rover/tools/pc-camera-worker/.runtime/pc-camera-worker.log
+```
+
+
+七、导航第二模式下手动发速度（找起步阈值）
+
+用途：
+- 在成熟导航第二模式已经启动的前提下
+- 电脑端直接向 `/cmd_vel_nav` 发送一个固定速度
+- 用于验证“规划器给出的某个速度，车到底动不动”
+
+命令格式：
+```bash
+cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./send_nav_cmd.sh vx [vy] [wz] [seconds] [topic]
+```
+
+说明：
+- 默认 topic 是 `/cmd_vel_nav`
+- 默认持续时间是 2 秒
+- 这个脚本适用于当前成熟导航第二模式，不是树莓派最小 `/cmd_vel` 自检链
+
+前进 2 秒（测试前进起步阈值）：
+```bash
+cd /home/yusu/Work/CleanScout_rover/Raspberrypi/catkin_ws
+./send_nav_cmd.sh 0.05 0 0 2
+```
+
+再大一点前进 2 秒：
+```bash
+./send_nav_cmd.sh 0.08 0 0 2
+```
+
+原地旋转 2 秒：
+```bash
+./send_nav_cmd.sh 0 0 0.20 2
+```
+
+横移 2 秒（如果当前链路允许）：
+```bash
+./send_nav_cmd.sh 0 0.05 0 2
+```
+
+如果你想直接对 `/cmd_vel` 发：
+```bash
+./send_nav_cmd.sh 0.08 0 0 2 /cmd_vel
+```
+
+机械臂串口控制指令
+ ls -l /dev/serial/by-id/
+查看串口插入日志
+
+minicom -D /dev/ttyUSB2 -b 115200
+打开串口

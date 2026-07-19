@@ -24,6 +24,7 @@
 | 路径 | 内容 | 维护建议 |
 | --- | --- | --- |
 | [`catkin_ws/`](catkin_ws/) | ROS 工作空间和全部运行入口 | 日常启动从这里开始 |
+| [`指令合集.txt`](指令合集.txt) | 从桌面常用清单纳入仓库的操作指令 | 数月后恢复现场操作时优先查看 |
 | [`catkin_ws/NETWORK.md`](catkin_ws/NETWORK.md) | 随身 Wi-Fi 与旧手机热点网络基线 | 切换网络或排查 ROS master 时先读 |
 | [`catkin_ws/src/`](catkin_ws/src/) | 自研与 vendored ROS 包 | 新包必须在 `src/README.md` 登记 |
 | [`catkin_ws/src/clbrobot_project/clbrobot/`](catkin_ws/src/clbrobot_project/clbrobot/) | 整车 launch、参数、地图、URDF | 导航配置的主要入口 |
