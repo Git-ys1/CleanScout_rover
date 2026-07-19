@@ -80,9 +80,15 @@
 | `CLEANSCOUT_PC_HOST` | 空 | 显式覆盖 Pi 使用的本地 backend 主机 |
 | `NAV_LAUNCH` | `navigation_406_rf1_teb.launch` | PC 导航入口，可切传统规划器 |
 | `MAP_FILE` | `407-5.22-2120.yaml` | 导航地图 |
-| `ODOM_K_M` | `0.1987` | PC 端轮速反解角速度 |
-| `RF1_CMD_K_M` | `0.1987` | 树莓派命令侧转向几何 |
+| `ODOM_K_M` | `0.342587` | PC 端轮速反解角速度；C-4.1.8 无 IMU 实测值 |
+| `RF1_CMD_K_M` | `0.342587` | 树莓派命令侧转向几何；与本轮里程计统一 |
 | `START_RVIZ` | `1` | 是否启动 RViz |
+
+`0.342587 m` 来自 2026-07-20 新车体左右对称原地转向：四轮编码器速度积分作为
+路程项，纯激光 scan matcher 作为角度项，全程未使用 IMU。半视场雷达在部分朝向会
+出现匹配失真，因此封存值采用左右一致的成对样本，异常样本不参与计算。复核步骤、
+原始结果和适用边界见
+[`../docs/teb_rear_blind_sector_and_km_recalibration.md`](../docs/teb_rear_blind_sector_and_km_recalibration.md)。
 
 ## C-4.1.7 无 IMU 正式数据链
 

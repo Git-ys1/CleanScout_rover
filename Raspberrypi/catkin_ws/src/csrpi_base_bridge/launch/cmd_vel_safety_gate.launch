@@ -12,8 +12,14 @@
   <arg name="timeout" default="0.4" />
   <arg name="rate" default="30" />
 
-  <!-- 最终执行侧硬限幅：vx/vy 单位 m/s，wz 单位 rad/s。 -->
+  <!--
+    最终执行侧硬限幅：vx/vy 单位 m/s，wz 单位 rad/s。
+    当前雷达后半场被机械结构遮挡，因此默认 min_vx=0，自动链不能倒车。
+    麦克纳姆横移保持启用；关闭横移会同时失去斜向全向运动能力。
+  -->
+  <arg name="min_vx" default="0.0" />
   <arg name="max_vx" default="0.20" />
+  <arg name="allow_lateral" default="true" />
   <arg name="max_vy" default="0.15" />
   <arg name="max_wz" default="0.5" />
 
@@ -22,7 +28,9 @@
     <param name="output_topic" value="$(arg output_topic)" />
     <param name="timeout" value="$(arg timeout)" />
     <param name="rate" value="$(arg rate)" />
+    <param name="min_vx" value="$(arg min_vx)" />
     <param name="max_vx" value="$(arg max_vx)" />
+    <param name="allow_lateral" value="$(arg allow_lateral)" />
     <param name="max_vy" value="$(arg max_vy)" />
     <param name="max_wz" value="$(arg max_wz)" />
   </node>

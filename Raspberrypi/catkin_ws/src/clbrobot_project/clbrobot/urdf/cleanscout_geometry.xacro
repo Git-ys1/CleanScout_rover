@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cleanscout">
 
-  <!-- Base geometry uses the current navigation convention:
-       base_link is the center of the four-wheel rectangle. -->
-  <xacro:property name="base_length" value="0.353" />
-  <xacro:property name="base_width" value="0.217" />
+  <!-- New body outline measured on 2026-07-20. Until an offset is measured,
+       navigation treats base_link as the geometric center of this box. -->
+  <xacro:property name="base_length" value="0.244" />
+  <xacro:property name="base_width" value="0.255" />
   <xacro:property name="base_height" value="0.024" />
 
   <xacro:property name="wheel_diameter" value="0.08" />
@@ -16,7 +16,7 @@
 
   <link name="base_link">
     <visual>
-      <origin xyz="0.0415 0 ${base_height / 2.0}" rpy="0 0 0" />
+      <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
       <geometry>
         <box size="${base_length} ${base_width} ${base_height}" />
       </geometry>
@@ -25,7 +25,7 @@
       </material>
     </visual>
     <collision>
-      <origin xyz="0.0415 0 ${base_height / 2.0}" rpy="0 0 0" />
+      <origin xyz="0 0 ${base_height / 2.0}" rpy="0 0 0" />
       <geometry>
         <box size="${base_length} ${base_width} ${base_height}" />
       </geometry>

@@ -14,10 +14,10 @@
   <arg name="publish_odom_tf" default="true" />
 
   <!--
-    C-4.1.2 封存的等效转向几何杠杆臂，单位 m。
+    C-4.1.8 无 IMU 实车左右对称转向封存的等效转向几何杠杆臂，单位 m。
     k_m 同时影响角速度到四轮目标速度的换算，不等同于单纯轮距。
   -->
-  <arg name="k_m" default="0.1987" />
+  <arg name="k_m" default="0.342587" />
 
   <!-- 轮速死区补偿。当前 0.0 表示不强行抬高低速轮目标。 -->
   <arg name="min_wheel_ms" default="0.0" />

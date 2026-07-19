@@ -12,7 +12,7 @@ from tf2_ros import TransformBroadcaster
 
 class Rf1VelToOdom:
     def __init__(self):
-        self.k_m = float(rospy.get_param("~k_m", 0.1987))
+        self.k_m = float(rospy.get_param("~k_m", 0.342587))
         self.odom_frame = rospy.get_param("~odom_frame", "odom")
         self.base_frame = rospy.get_param("~base_frame", "base_link")
         self.publish_tf = bool(rospy.get_param("~publish_tf", False))

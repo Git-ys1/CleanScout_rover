@@ -24,6 +24,7 @@ conservative_reset_dist: 0.3
 base_global_planner: global_planner/GlobalPlanner
 base_local_planner: teb_local_planner/TebLocalPlannerROS
 
-# 保留 move_base 标准恢复行为，并允许原地旋转清障。
+# 保留清图等标准恢复行为，但关闭自动原地旋转清障。
+# 后半场没有实时感知时，旋转中的车体扫掠可能先碰到尚未进入前视区的障碍。
 recovery_behavior_enabled: true
-clearing_rotation_allowed: true
+clearing_rotation_allowed: false

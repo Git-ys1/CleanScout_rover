@@ -33,6 +33,18 @@ move_base/TEB
   -> RF1
 ```
 
+当前雷达后半场被机械结构遮挡，活动安全策略为：
+
+- TEB 不以倒车方向初始化，并强烈惩罚反向轨迹
+- `cmd_vel_safety_gate` 默认硬裁掉全部负 `vx`
+- 麦克纳姆横移和 `vx/vy` 组合斜向运动保持启用
+- `move_base` 不执行自动原地旋转清障
+- 正常路径转向仍然保留，启动前必须人工确认车体四周有完整旋转余量
+
+`costmap_obstacles_behind_robot_dist` 只会使用已经进入 costmap 的障碍，不能让
+物理盲区获得感知能力。完整实测证据见
+[`../../../../../../docs/teb_rear_blind_sector_and_km_recalibration.md`](../../../../../../docs/teb_rear_blind_sector_and_km_recalibration.md)。
+
 传统 `TrajectoryPlannerROS` 仅作为回退链保留：
 
 ```bash
@@ -91,7 +103,7 @@ teb_local_planner_params.yaml: min_obstacle_dist, inflation_dist
 修改任意一项后，至少回归：
 
 - 正向通过窄道
-- 横移靠近障碍
+- 横移与斜向靠近障碍，重点检查盲区边界回波
 - 原地旋转四角碰撞风险
 - 局部绕障后回归全局路径
 
@@ -118,7 +130,8 @@ start_pc_full_navigation.sh: ODOM_TOPIC, ODOM_K_M
 navigation_406_rf1_teb.launch: odom_frame_id, odom_topic
 ```
 
-麦克纳姆底盘当前使用 `omni-corrected`。切回 `diff` 会忽略横移运动模型。
+麦克纳姆底盘使用 `omni-corrected`，TEB 与安全门保留横移和斜向能力。
+切回 `diff` 会忽略横向运动模型。
 
 ### TEB 多拓扑
 
@@ -147,8 +160,9 @@ roadmap_graph_no_samples
 YAML 的 `#` 注释和 XML 的 `<!-- -->` 注释不会进入 ROS 参数值。ROS Noetic
 在 Ubuntu 20.04/Python 3 环境能够读取 UTF-8 注释。
 
-本轮只修改 PC 仓库，没有向树莓派同步这些文件。以后若要部署到其他机器，
-应先执行：
+本轮没有向树莓派同步带中文注释的导航 YAML/TEB/URDF；板端只同步了不含中文的
+`cmd_vel_safety_gate.py`，并最小更新 RF1 活动入口中的 `K_M` 默认值。以后若要部署
+PC 导航参数到其他机器，应先执行：
 
 ```bash
 python3 -c 'import yaml; yaml.safe_load(open("teb_local_planner_params.yaml", encoding="utf-8"))'

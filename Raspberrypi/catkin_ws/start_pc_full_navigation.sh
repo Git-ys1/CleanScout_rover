@@ -18,7 +18,7 @@ MAP_FILE="${MAP_FILE:-$(rospack find clbrobot)/maps/407-5.22-2120.yaml}"
 NAV_LAUNCH="${NAV_LAUNCH:-navigation_406_rf1_teb.launch}"
 # Effective yaw lever arm used to reconstruct angular velocity from measured
 # wheel linear speeds. This is independent from command-side turn tuning.
-ODOM_K_M="${ODOM_K_M:-0.1987}"
+ODOM_K_M="${ODOM_K_M:-0.342587}"
 
 wait_for_topic() {
   local topic="$1"

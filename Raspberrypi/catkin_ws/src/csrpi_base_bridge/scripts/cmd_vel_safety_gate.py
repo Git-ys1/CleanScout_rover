@@ -10,9 +10,16 @@ class CmdVelSafetyGate:
         self.output_topic = rospy.get_param("~output_topic", "/cmd_vel")
         self.timeout = float(rospy.get_param("~timeout", 0.4))
         self.rate_hz = float(rospy.get_param("~rate", 30.0))
+        self.min_vx = float(rospy.get_param("~min_vx", 0.0))
         self.max_vx = float(rospy.get_param("~max_vx", 0.20))
         self.max_vy = float(rospy.get_param("~max_vy", 0.15))
         self.max_wz = float(rospy.get_param("~max_wz", 0.35))
+        self.allow_lateral = bool(rospy.get_param("~allow_lateral", True))
+
+        if self.min_vx > 0.0 or self.min_vx > self.max_vx:
+            raise ValueError("~min_vx must be <= 0 and <= ~max_vx")
+        if self.max_vx < 0.0 or self.max_vy < 0.0 or self.max_wz < 0.0:
+            raise ValueError("velocity limits must be non-negative")
 
         self.last_cmd = Twist()
         self.last_cmd_time = None
@@ -29,6 +36,20 @@ class CmdVelSafetyGate:
     def clamp(value, limit):
         return max(-limit, min(limit, value))
 
+    @staticmethod
+    def clamp_range(value, lower, upper):
+        return max(lower, min(upper, value))
+
+    def apply_limits(self, source):
+        cmd = Twist()
+        cmd.linear.x = self.clamp_range(
+            source.linear.x, self.min_vx, self.max_vx
+        )
+        lateral_limit = self.max_vy if self.allow_lateral else 0.0
+        cmd.linear.y = self.clamp(source.linear.y, lateral_limit)
+        cmd.angular.z = self.clamp(source.angular.z, self.max_wz)
+        return cmd
+
     def zero_twist(self):
         return Twist()
 
@@ -40,11 +61,7 @@ class CmdVelSafetyGate:
         if age > self.timeout:
             return self.zero_twist()
 
-        cmd = Twist()
-        cmd.linear.x = self.clamp(self.last_cmd.linear.x, self.max_vx)
-        cmd.linear.y = self.clamp(self.last_cmd.linear.y, self.max_vy)
-        cmd.angular.z = self.clamp(self.last_cmd.angular.z, self.max_wz)
-        return cmd
+        return self.apply_limits(self.last_cmd)
 
     def publish_stop(self):
         self.pub.publish(self.zero_twist())

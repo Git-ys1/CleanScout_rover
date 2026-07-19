@@ -13,9 +13,10 @@ local_costmap:
   rolling_window: true
 
   # 局部窗口尺寸与分辨率，单位分别为 m 和 m/cell。
-  # 2.5 m 窗口在当前室内速度下兼顾前视距离和 CPU/内存开销。
-  width: 2.5
-  height: 2.5
+  # Noetic costmap 的动态重配置把 width/height 定义为整数米；旧值 2.5
+  # 运行时实际会变成 3。这里显式写 3，保证源码、参数服务器和 RViz 一致。
+  width: 3
+  height: 3
   resolution: 0.05
 
   # 等待 odom/base_link/laser TF 的最大容差，单位 s。

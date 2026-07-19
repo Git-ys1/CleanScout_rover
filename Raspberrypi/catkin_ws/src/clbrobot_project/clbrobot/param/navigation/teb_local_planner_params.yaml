@@ -9,6 +9,13 @@ TebLocalPlannerROS:
   # 全局路径所在坐标系，应与 map_server 和 AMCL 的 global_frame_id 一致。
   map_frame: map
 
+  # TEB 优化器不会自动继承 costmap footprint；缺省时会把整车当成一个点。
+  # 新车体实测长 0.244 m、宽 0.255 m，base_link 按车体几何中心处理。
+  # 本处必须与 costmap_mecanum_params.yaml 保持完全一致。
+  footprint_model:
+    type: polygon
+    vertices: [[-0.122, -0.1275], [-0.122, 0.1275], [0.122, 0.1275], [0.122, -0.1275]]
+
   # =========================
   # 2. 机器人速度/加速度限制
   # =========================
@@ -19,9 +26,11 @@ TebLocalPlannerROS:
   # safety_gate 当前 max_vx=0.20，因此 TEB 的 max_vel_x=0.25 是优化模型上限，
   # 不是车轮最终一定能执行的速度。若统一两侧上限，需要重新做整条路线回归。
   max_vel_x: 0.25
-  max_vel_x_backwards: 0.10
+  # 后半场雷达被机械结构遮挡。TEB 要求本值大于 penalty_epsilon，不能用 0；
+  # 0.05 仅用于保持优化器数值有效，执行层 safety_gate 会把所有负 vx 硬裁为 0。
+  max_vel_x_backwards: 0.05
 
-  # 麦克纳姆横移速度上限；设为 0 会失去横移能力。
+  # 保留麦克纳姆横移，才能组合 vx/vy 形成全向斜向运动。
   max_vel_y: 0.10
 
   # x/y 合成平移速度上限，防止斜向运动时合速度超过预期。
@@ -65,6 +74,9 @@ TebLocalPlannerROS:
   # 使用全局路径方向初始化 TEB，可减少路径方向与局部轨迹冲突。
   global_plan_overwrite_orientation: true
 
+  # 没有后向传感器时不得用倒车方向初始化局部轨迹。
+  allow_init_with_backwards_motion: false
+
   # TEB 每轮只看前方 1.5 m 的全局路径，适合当前室内低速与局部窗口尺寸。
   max_global_plan_lookahead_dist: 1.5
 
@@ -91,7 +103,8 @@ TebLocalPlannerROS:
   # 从局部 costmap 直接提取障碍物，不额外依赖 costmap_converter 插件输出。
   include_costmap_obstacles: true
 
-  # 仍考虑机器人后方 0.60 m 内障碍，避免倒车或旋转时忽略后侧碰撞。
+  # 仍考虑 costmap 中已经存在的后方 0.60 m 障碍。
+  # 注意：本参数不会凭空补出被雷达遮挡的障碍，不能把盲区变成已知安全区。
   costmap_obstacles_behind_robot_dist: 0.60
 
   # 每个障碍物影响的相邻轨迹位姿数；越大越平滑，但优化边数量也越多。
@@ -129,10 +142,10 @@ TebLocalPlannerROS:
 
   #
   # 全向底盘关键项：
-  # weight_kinematics_nh 过大，会强行压制横移并把麦克纳姆当差速车。
-  # turning_radius 保持 0；forward_drive 较低，允许必要的倒车与侧移。
+  # 保持低非完整约束权重以允许横移；高 forward_drive 权重只压制倒车。
+  # safety_gate 的 min_vx=0 仍是倒车最终硬约束。
   weight_kinematics_nh: 1.0
-  weight_kinematics_forward_drive: 0.3
+  weight_kinematics_forward_drive: 1000.0
   weight_kinematics_turning_radius: 0.0
 
   #
@@ -160,6 +173,9 @@ TebLocalPlannerROS:
   # 最多保留 3 个拓扑类别；当前最佳类别内部最多尝试 2 条轨迹以跳出局部最优。
   max_number_classes: 3
   max_number_plans_in_current_class: 2
+
+  # 丢弃相对最佳方案向后绕行的候选轨迹。
+  delete_detours_backwards: true
 
   #
   # 候选轨迹选择：

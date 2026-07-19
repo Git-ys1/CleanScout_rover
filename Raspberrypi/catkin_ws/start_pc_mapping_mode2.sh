@@ -17,7 +17,7 @@ ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 MAP_ODOM_FRAME="${MAP_ODOM_FRAME:-odom}"
 # Effective yaw lever arm used to reconstruct angular velocity from measured
 # wheel linear speeds. This is independent from command-side turn tuning.
-ODOM_K_M="${ODOM_K_M:-0.1987}"
+ODOM_K_M="${ODOM_K_M:-0.342587}"
 
 wait_for_topic() {
   local topic="$1"

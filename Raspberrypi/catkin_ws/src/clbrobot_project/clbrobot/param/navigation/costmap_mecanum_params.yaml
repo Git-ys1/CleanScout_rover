@@ -8,14 +8,15 @@ obstacle_range: 2.5
 raytrace_range: 3.0
 
 #
-# 机器人二维轮廓，坐标相对 base_link，单位 m，点序为逆时针。
-# 当前 C-4.1.4 使用以 base_link 为中心的 0.270 x 0.217 m 矩形。
+# 机器人二维轮廓，坐标相对 base_link，单位 m，各点按矩形边界连续排列。
+# 2026-07-20 新车体实测长 0.244 m、宽 0.255 m，本轮按 base_link 位于
+# 车体几何中心封存二维矩形。若 base_link 实际存在偏置，必须改成非对称边界。
 # 修改轮廓必须同步核对：
 #   1. base_link 的真实定义；
 #   2. TEB min_obstacle_dist；
 #   3. 全局/局部 inflation_radius；
 #   4. 窄通道实车通过能力。
-footprint: [[-0.135, -0.1085], [-0.135, 0.1085], [0.135, 0.1085], [0.135, -0.1085]]
+footprint: [[-0.122, -0.1275], [-0.122, 0.1275], [0.122, 0.1275], [0.122, -0.1275]]
 
 # 共用默认膨胀半径。后加载的 global/local 文件会分别覆盖该值。
 inflation_radius: 0.2
@@ -32,6 +33,10 @@ scan:
   # marking=true：激光命中写入障碍；clearing=true：射线穿过区域清除障碍。
   marking: true
   clearing: true
+
+  # 被遮挡方向返回 inf。保持 false，禁止把无穷远量测当作有效自由射线清空盲区。
+  # 这只能避免错误清障；它不会自动把后半场标记为未知或障碍。
+  inf_is_valid: false
 
 # 使用标准二维栅格代价地图。
 map_type: costmap

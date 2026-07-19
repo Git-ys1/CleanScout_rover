@@ -21,7 +21,7 @@ EDGE_TOGGLE_MOTION_ENABLED="${EDGE_TOGGLE_MOTION_ENABLED:-true}"
 EDGE_ALLOW_FAN_CONTROL="${EDGE_ALLOW_FAN_CONTROL:-true}"
 # Command-side yaw gain. Keep it explicit because encoder odom on the PC uses
 # a separately calibrated ODOM_K_M to reconstruct actual angular velocity.
-RF1_CMD_K_M="${RF1_CMD_K_M:-0.1987}"
+RF1_CMD_K_M="${RF1_CMD_K_M:-0.342587}"
 RF1_MIN_WHEEL_MS="${RF1_MIN_WHEEL_MS:-0.0}"
 
 if [ -z "${EDGE_DEVICE_TOKEN}" ]; then
