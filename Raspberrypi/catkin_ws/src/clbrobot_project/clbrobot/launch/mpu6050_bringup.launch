@@ -1,3 +1,4 @@
 <launch>
+    <!-- LEGACY C-4.1.7: 不得由当前硬件、建图或导航入口引用。 -->
     <include file="$(find clbrobot)/launch/include/imu/mpu6050_chain.launch" />
 </launch>

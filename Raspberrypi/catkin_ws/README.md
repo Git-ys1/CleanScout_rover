@@ -33,7 +33,7 @@
 | --- | --- | --- | --- |
 | [`cleanscout_network.sh`](cleanscout_network.sh) | 双端 | 统一解析随身 Wi-Fi 与手机热点地址 | 可直接运行做只读检查 |
 | [`use_cleanscout_pi.sh`](use_cleanscout_pi.sh) | 树莓派 | 加载 Noetic/catkin，设置本机 ROS master | 应使用 `source` |
-| [`run_robot_hardware_multifunction.sh`](run_robot_hardware_multifunction.sh) | 树莓派 | RF1、IMU、雷达、安全门、风机/顶盖、edge relay | 当前硬件主入口 |
+| [`run_robot_hardware_multifunction.sh`](run_robot_hardware_multifunction.sh) | 树莓派 | RF1、雷达、安全门、风机/顶盖、edge relay | 当前硬件主入口；要求注入 edge token |
 | [`use_cleanscout_pc.sh`](use_cleanscout_pc.sh) | PC | 发现 PC/Pi 地址并设置分布式 ROS 环境 | 可由 PC 入口自动加载 |
 | [`start_pc_full_navigation.sh`](start_pc_full_navigation.sh) | PC | 启动 odom、地图、AMCL、move_base/TEB、RViz | 当前导航主入口 |
 | [`start_pc_mapping_mode2.sh`](start_pc_mapping_mode2.sh) | PC | 启动 odom、gmapping 和 RViz | 当前建图主入口 |
@@ -43,11 +43,11 @@
 
 | 文件 | 运行端 | 用途 | 风险 / 前提 |
 | --- | --- | --- | --- |
-| [`calibrate_rf1_turn.sh`](calibrate_rf1_turn.sh) | PC | 对比编码器、IMU、激光匹配角度并录包 | 会控制小车转动 |
+| [`calibrate_rf1_turn.sh`](calibrate_rf1_turn.sh) | PC | 对比编码器、生产 odom 与纯激光匹配角度 | 会控制小车转动 |
 | [`send_nav_cmd.sh`](send_nav_cmd.sh) | PC | 向指定速度话题发送有限时长 Twist | 会控制小车运动 |
 | [`test_rf1_cmd_vel.sh`](test_rf1_cmd_vel.sh) | 树莓派 | 拉起 RF1 最小链并做速度自检 | 会控制车轮 |
-| [`record_bench_stack.sh`](record_bench_stack.sh) | 树莓派 | 记录雷达、IMU、TF、RF1 调试话题 | 输出到 `bags/` |
-| [`run_rf1_core_stack.sh`](run_rf1_core_stack.sh) | 树莓派 | 分阶段启动 RF1 核心与 IMU | 不含完整导航 |
+| [`record_bench_stack.sh`](record_bench_stack.sh) | 树莓派 | 记录雷达、TF、RF1 调试话题 | 输出到 `bags/` |
+| [`run_rf1_core_stack.sh`](run_rf1_core_stack.sh) | 树莓派 | 分阶段启动 RF1 核心 | 不含完整导航 |
 | [`run_edge_relay.sh`](run_edge_relay.sh) | 树莓派 | 单独启动 edge relay | 依赖已有 ROS master |
 | [`run_edge_relay_remote_only.sh`](run_edge_relay_remote_only.sh) | 树莓派 | RF1 + edge relay 远程控制链 | 专项远程模式 |
 
@@ -83,7 +83,33 @@
 | `ODOM_K_M` | `0.1987` | PC 端轮速反解角速度 |
 | `RF1_CMD_K_M` | `0.1987` | 树莓派命令侧转向几何 |
 | `START_RVIZ` | `1` | 是否启动 RViz |
-| `USE_LASER_SCAN_MATCHER` | `0` | 导航时是否额外启用 LSM |
+
+## C-4.1.7 无 IMU 正式数据链
+
+MPU6050 已因机械结构调整永久退出正式硬件。当前入口不会等待 `/imu/data`，也不会
+发布虚假 IMU 数据。树莓派硬件主入口保持以下顺序：
+
+```text
+清理旧会话 -> roscore -> robot_state_publisher -> RF1 -> 等待 /rf1/vel
+-> RPLIDAR -> 等待 /scan -> cmd_vel_safety_gate -> 风机/顶盖 -> edge-relay
+```
+
+PC 建图：
+
+```text
+/rf1/vel -> rf1_vel_to_odom.py -> /odom + odom->base_link
+/scan + TF + /odom -> gmapping -> /map
+```
+
+PC 导航：
+
+```text
+/rf1/vel -> rf1_vel_to_odom.py -> /odom + odom->base_link
+/map + /scan + TF + /odom -> AMCL -> move_base/TEB -> /cmd_vel_nav
+```
+
+`EDGE_DEVICE_TOKEN` 只能由本机安全配置注入；为空时硬件主入口会在启动任何 ROS
+进程前明确退出。
 
 ## 维护规则
 

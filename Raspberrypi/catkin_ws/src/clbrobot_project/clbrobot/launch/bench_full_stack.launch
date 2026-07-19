@@ -1,7 +1,6 @@
 <launch>
     <arg name="use_rviz" default="false" />
     <arg name="use_lidar" default="true" />
-    <arg name="use_imu" default="true" />
     <arg name="use_base_bridge" default="true" />
 
     <group if="$(arg use_lidar)">
@@ -16,10 +15,6 @@
             <param name="shield_start_angle" type="int" value="0" />
             <param name="shield_end_angle" type="int" value="45" />
         </node>
-    </group>
-
-    <group if="$(arg use_imu)">
-        <include file="$(find clbrobot)/launch/include/imu/mpu6050_chain.launch" />
     </group>
 
     <group if="$(arg use_base_bridge)">

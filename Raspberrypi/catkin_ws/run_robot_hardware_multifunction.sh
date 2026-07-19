@@ -11,8 +11,8 @@ EDGE_FALLBACK_HOST_SUFFIX="${EDGE_FALLBACK_HOST_SUFFIX:-190}"
 EDGE_FALLBACK_HOST="${EDGE_FALLBACK_HOST:-$(cleanscout_pc_host "${CURRENT_IP}" "${EDGE_FALLBACK_HOST_SUFFIX}")}"
 EDGE_FALLBACK_URL="${EDGE_FALLBACK_URL:-ws://${EDGE_FALLBACK_HOST}:3000/edge/ros}"
 EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK="3"
-EDGE_DEVICE_ID="csrpi-001"
-EDGE_DEVICE_TOKEN="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2"
+EDGE_DEVICE_ID="${EDGE_DEVICE_ID:-csrpi-001}"
+EDGE_DEVICE_TOKEN="${EDGE_DEVICE_TOKEN:-}"
 EDGE_CMD_TOPIC="${EDGE_CMD_TOPIC:-/cmd_vel_nav}"
 EDGE_ODOM_TOPIC="${EDGE_ODOM_TOPIC:-/odom}"
 EDGE_ALLOW_MANUAL_CONTROL="${EDGE_ALLOW_MANUAL_CONTROL:-true}"
@@ -23,6 +23,11 @@ EDGE_ALLOW_FAN_CONTROL="${EDGE_ALLOW_FAN_CONTROL:-true}"
 # a separately calibrated ODOM_K_M to reconstruct actual angular velocity.
 RF1_CMD_K_M="${RF1_CMD_K_M:-0.1987}"
 RF1_MIN_WHEEL_MS="${RF1_MIN_WHEEL_MS:-0.0}"
+
+if [ -z "${EDGE_DEVICE_TOKEN}" ]; then
+  echo "EDGE_DEVICE_TOKEN is required; inject it through the environment" >&2
+  exit 1
+fi
 
 source "${SCRIPT_DIR}/use_cleanscout_pi.sh"
 
@@ -44,13 +49,13 @@ wait_for_topic() {
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
+  if [ -n "${RSP_PID:-}" ] && kill -0 "${RSP_PID}" 2>/dev/null; then
+    kill "${RSP_PID}" 2>/dev/null || true
+    wait "${RSP_PID}" 2>/dev/null || true
+  fi
   if [ -n "${BRINGUP_PID:-}" ] && kill -0 "${BRINGUP_PID}" 2>/dev/null; then
     kill "${BRINGUP_PID}" 2>/dev/null || true
     wait "${BRINGUP_PID}" 2>/dev/null || true
-  fi
-  if [ -n "${IMU_PID:-}" ] && kill -0 "${IMU_PID}" 2>/dev/null; then
-    kill "${IMU_PID}" 2>/dev/null || true
-    wait "${IMU_PID}" 2>/dev/null || true
   fi
   if [ -n "${LIDAR_PID:-}" ] && kill -0 "${LIDAR_PID}" 2>/dev/null; then
     kill "${LIDAR_PID}" 2>/dev/null || true
@@ -98,10 +103,6 @@ roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/bringup_rf1_min.la
 BRINGUP_PID=$!
 wait_for_topic "/rf1/vel"
 
-roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/core/imu_only.launch" publish_static_tf:=false &
-IMU_PID=$!
-wait_for_topic "/imu/data"
-
 roslaunch "${SCRIPT_DIR}/src/clbrobot_project/clbrobot/launch/lidar/rplidar.launch" publish_static_tf:=false &
 LIDAR_PID=$!
 wait_for_topic "/scan"
@@ -127,4 +128,4 @@ roslaunch "${SCRIPT_DIR}/src/csrpi_edge_relay/launch/edge_relay.launch" \
   allow_fan_control:="${EDGE_ALLOW_FAN_CONTROL}" &
 EDGE_PID=$!
 
-wait "${BRINGUP_PID}" "${IMU_PID}" "${LIDAR_PID}" "${GATE_PID}" "${FAN_PID}" "${EDGE_PID}"
+wait "${BRINGUP_PID}" "${LIDAR_PID}" "${GATE_PID}" "${FAN_PID}" "${EDGE_PID}"

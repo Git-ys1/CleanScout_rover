@@ -11,10 +11,6 @@
   <xacro:property name="wheel_radius" value="0.04" />
   <xacro:property name="wheel_thickness" value="0.03" />
 
-  <xacro:property name="imu_length" value="0.02" />
-  <xacro:property name="imu_width" value="0.015" />
-  <xacro:property name="imu_height" value="0.001" />
-
   <xacro:property name="laser_radius" value="0.04" />
   <xacro:property name="laser_height" value="0.04" />
 
@@ -51,23 +47,6 @@
     <parent link="base_link" />
     <child link="laser" />
     <origin xyz="0.0745 0.0065 0.592" rpy="0 0 0" />
-  </joint>
-
-  <link name="imu_link">
-    <visual>
-      <geometry>
-        <box size="${imu_length} ${imu_width} ${imu_height}" />
-      </geometry>
-      <material name="green">
-        <color rgba="0.2 0.8 0.3 1.0" />
-      </material>
-    </visual>
-  </link>
-
-  <joint name="base_link_to_imu_joint" type="fixed">
-    <parent link="base_link" />
-    <child link="imu_link" />
-    <origin xyz="0.093 0.072 0.0725" rpy="0 0 0" />
   </joint>
 
   <xacro:macro name="wheel_link" params="name x y">

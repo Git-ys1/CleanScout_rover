@@ -13,7 +13,7 @@
 | [`csrpi_edge_relay`](csrpi_edge_relay/) | `0.0.1` | ROS 与后端 WebSocket 中继 | 核心 |
 | [`csrpi_fan_bridge`](csrpi_fan_bridge/) | `0.0.1` | 风机、继电器、顶盖执行器桥接 | 核心 |
 | [`csrpi_openmv_bridge`](csrpi_openmv_bridge/) | `0.1.0` | OpenMV 串口数据桥接 | 可选感知 |
-| [`mpu6050_i2c_bridge`](mpu6050_i2c_bridge/) | `0.0.1` | MPU6050 I2C 原始 IMU 发布 | 核心传感器 |
+| [`mpu6050_i2c_bridge`](mpu6050_i2c_bridge/) | `0.0.1` | MPU6050 I2C 原始 IMU 发布 | `C-4.1.7` 已退役，仅历史复现 |
 
 ## 传感器与感知依赖
 
@@ -22,7 +22,7 @@
 | [`rplidar_ros`](rplidar_ros/) | `1.10.0` | RPLIDAR A3 `/scan` 驱动 | vendored |
 | [`depth_camera`](depth_camera/) | Astra `0.3.0/0.2.2` | Astra 深度相机驱动与启动 | vendored |
 | [`depthimage_to_laserscan`](depth_camera/depthimage_to_laserscan/) | `1.0.8` | 深度图转 LaserScan | vendored |
-| [`imu_tools`](imu_tools/) | `1.2.7` | Madgwick/互补滤波、RViz IMU | vendored |
+| [`imu_tools`](imu_tools/) | `1.2.7` | Madgwick/互补滤波、RViz IMU | vendored，当前正式链不调用 |
 | [`opencv_apps`](opencv_apps/) | `2.0.2` | OpenCV ROS 节点集合 | vendored |
 
 ## 导航与 SLAM 依赖
@@ -55,7 +55,7 @@ TEB 固定依赖说明见 [`TEB_DEPENDENCY_LOCK.md`](TEB_DEPENDENCY_LOCK.md)。
 | 整车启动编排 | `clbrobot_project/clbrobot/launch/` |
 | RF1、odom、安全门 | `csrpi_base_bridge/` |
 | 雷达 | `rplidar_ros/` 与 `clbrobot/.../launch/lidar/` |
-| IMU | `mpu6050_i2c_bridge/`、`imu_tools/` 与 `clbrobot/.../launch/core/` |
+| 旧 IMU 历史代码 | `mpu6050_i2c_bridge/`、`imu_tools/` 与 `clbrobot/.../launch/core/`；不得接入当前入口 |
 | 深度相机 | `depth_camera/` |
 | 后端远控 | `csrpi_edge_relay/` |
 | 风机与顶盖 | `csrpi_fan_bridge/` |

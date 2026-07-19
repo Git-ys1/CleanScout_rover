@@ -13,21 +13,15 @@ The architecture is:
 
 ## Current endpoint
 
-- https api: `https://api.hzhhds.top`
-- portable Wi-Fi local relay: `ws://192.168.8.222:3000/edge/ros`
-
-The old phone-hotspot rule derived the backend as current subnet + `.190`. It is
-now available only through `CLEANSCOUT_NETWORK_MODE=phone_hotspot`.
-
-For current local V-line backend testing, use the portable Wi-Fi address above
-or an explicit `EDGE_RELAY_URL` override.
+Inject the endpoint through `EDGE_RELAY_URL`. Network-mode address selection is
+documented in the top-level `NETWORK.md`; this package does not store credentials.
 
 ## Current behavior
 
 - Pi actively creates a long-lived WSS connection
 - first frame is `hello`
 - heartbeat every `5s`
-- telemetry summary uploads `odom`, `imu`, and `scanSummary`
+- telemetry summary uploads `odom`, `scanSummary`, and multifunction state
 - backend `manual_control` is converted into local `/cmd_vel`
 - backend `stop` immediately publishes zero velocity
 
@@ -37,7 +31,6 @@ or an explicit `EDGE_RELAY_URL` override.
   - `/cmd_vel`
 - subscribe:
   - `/odom`
-  - `/imu/data`
   - `/scan`
 
 ## Current safety limits
@@ -56,7 +49,6 @@ or an explicit `EDGE_RELAY_URL` override.
 - `EDGE_DEVICE_TOKEN`
 - `EDGE_HEARTBEAT_MS`
 - `EDGE_ODOM_HZ`
-- `EDGE_IMU_HZ`
 - `EDGE_SCAN_HZ`
 - `EDGE_CMD_REPEAT_HZ`
 - `EDGE_CMD_DEFAULT_HOLD_MS`

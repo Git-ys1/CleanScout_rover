@@ -9,7 +9,7 @@ import time
 import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Imu, LaserScan
+from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool, Float32, String
 
 try:
@@ -27,7 +27,6 @@ class EdgeRelay:
         self.device_token = rospy.get_param("~device_token", "")
         self.heartbeat_ms = int(rospy.get_param("~heartbeat_ms", 5000))
         self.odom_hz = float(rospy.get_param("~odom_hz", 5.0))
-        self.imu_hz = float(rospy.get_param("~imu_hz", 5.0))
         self.scan_hz = float(rospy.get_param("~scan_hz", 1.0))
         self.cmd_repeat_hz = float(rospy.get_param("~cmd_repeat_hz", 50.0))
         self.default_hold_ms = int(rospy.get_param("~default_hold_ms", 1000))
@@ -40,7 +39,6 @@ class EdgeRelay:
 
         self.cmd_vel_topic = rospy.get_param("~cmd_vel_topic", "/cmd_vel")
         self.odom_topic = rospy.get_param("~odom_topic", "/odom_lsm")
-        self.imu_topic = rospy.get_param("~imu_topic", "/imu/data")
         self.scan_topic = rospy.get_param("~scan_topic", "/scan")
         self.fans_enable_topic = rospy.get_param("~fans_enable_topic", "/fans/enable")
         self.fan_a_pwm_topic = rospy.get_param("~fan_a_pwm_topic", "/fan_a/pwm_percent")
@@ -66,7 +64,6 @@ class EdgeRelay:
         self.primary_connect_failures = 0
 
         self.last_odom = None
-        self.last_imu = None
         self.last_scan = None
         self.last_fans_enabled = False
         self.last_fan_a_pwm = 0.0
@@ -100,7 +97,6 @@ class EdgeRelay:
         self.fan_b_pwm_pub = rospy.Publisher(self.fan_b_pwm_topic, Float32, queue_size=10)
 
         rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=20)
-        rospy.Subscriber(self.imu_topic, Imu, self.imu_callback, queue_size=20)
         rospy.Subscriber(self.scan_topic, LaserScan, self.scan_callback, queue_size=5)
         rospy.Subscriber(self.fans_enable_topic, Bool, self.fans_enable_callback, queue_size=10)
         rospy.Subscriber(self.fan_a_pwm_topic, Float32, self.fan_a_pwm_callback, queue_size=10)
@@ -122,9 +118,6 @@ class EdgeRelay:
 
     def odom_callback(self, msg):
         self.last_odom = msg
-
-    def imu_callback(self, msg):
-        self.last_imu = msg
 
     def scan_callback(self, msg):
         self.last_scan = msg
@@ -160,19 +153,6 @@ class EdgeRelay:
             "vx": msg.twist.twist.linear.x,
             "vy": msg.twist.twist.linear.y,
             "wz": msg.twist.twist.angular.z,
-        }
-
-    def imu_payload(self):
-        if self.last_imu is None:
-            return None
-        msg = self.last_imu
-        return {
-            "ax": msg.linear_acceleration.x,
-            "ay": msg.linear_acceleration.y,
-            "az": msg.linear_acceleration.z,
-            "gx": msg.angular_velocity.x,
-            "gy": msg.angular_velocity.y,
-            "gz": msg.angular_velocity.z,
         }
 
     def scan_summary_payload(self):
@@ -227,7 +207,7 @@ class EdgeRelay:
         return abs(((a - b + 180.0) % 360.0) - 180.0)
 
     def hello_payload(self):
-        capabilities = ["odom", "imu", "scan_summary"]
+        capabilities = ["odom", "scan_summary"]
         if self.allow_manual_control and self.publish_cmd_vel:
             capabilities.append("manual_control")
         if self.allow_fan_control:
@@ -241,7 +221,6 @@ class EdgeRelay:
             "topics": {
                 "cmd_vel": self.cmd_vel_topic if self.publish_cmd_vel else None,
                 "odom": self.odom_topic,
-                "imu": self.imu_topic,
                 "scan": self.scan_topic,
             },
             "capabilities": capabilities,
@@ -259,7 +238,6 @@ class EdgeRelay:
             "op": "telemetry",
             "deviceId": self.device_id,
             "odom": self.odom_payload(),
-            "imu": self.imu_payload(),
             "scanSummary": self.scan_summary_payload(),
             "fans": self.fan_payload(),
             "ts": self.now_ms(),
@@ -470,7 +448,7 @@ class EdgeRelay:
             self.send_json(self.heartbeat_payload())
             self.last_heartbeat_sent = now
 
-        telemetry_rate = max(self.odom_hz, self.imu_hz, self.scan_hz, 0.1)
+        telemetry_rate = max(self.odom_hz, self.scan_hz, 0.1)
         min_period = 1.0 / telemetry_rate
         if now - self.last_telemetry_sent >= min_period:
             self.send_json(self.telemetry_payload())
@@ -479,7 +457,7 @@ class EdgeRelay:
     def spin_rate_hz(self):
         if self.publish_cmd_vel:
             return max(self.cmd_repeat_hz, 1.0)
-        return max(max(self.odom_hz, self.imu_hz, self.scan_hz), 1.0)
+        return max(max(self.odom_hz, self.scan_hz), 1.0)
 
     def spin(self):
         reconnect_delay = max(1.0, self.reconnect_delay_ms / 1000.0)

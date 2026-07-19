@@ -9,11 +9,12 @@
 | --- | --- |
 | 操作系统 / ROS | Ubuntu + ROS Noetic |
 | 构建系统 | catkin |
-| 树莓派职责 | RF1 底盘、雷达、IMU、安全门、多功能硬件、edge relay |
+| 树莓派职责 | RF1 底盘、雷达、安全门、多功能硬件、edge relay |
 | PC 职责 | 里程计解算、建图、AMCL、move_base、TEB、RViz |
 | 导航基线 | `C-4.1.4` 参数，TEB 多拓扑为默认局部规划器 |
 | 文档治理基线 | `C-4.1.5` |
 | 网络基线 | `C-4.1.6`，默认随身 Wi-Fi 固定拓扑 |
+| 无 IMU 硬件基线 | `C-4.1.7`，MPU6050 永久退出正式运行链 |
 | 默认地址 | Pi `.108`、OrangePi `.148`、PC `.222`，网段 `192.168.8.0/24` |
 | 速度安全链 | `/cmd_vel_nav -> cmd_vel_safety_gate -> /cmd_vel -> RF1` |
 | 转向几何基线 | `RF1_CMD_K_M=0.1987`，`ODOM_K_M=0.1987` |
@@ -56,6 +57,9 @@
 | 导航 | move_base/TEB -> `/cmd_vel_nav` |
 | 建图 | `/scan` + odom TF -> gmapping -> `/map` |
 
+MPU6050 已因机械结构调整从实车正式硬件中移除。当前入口不会启动、等待、订阅或
+模拟 `/imu/data`；硬件主链启动前必须从本机安全配置向环境注入 `EDGE_DEVICE_TOKEN`。
+
 ## 状态约定
 
 | 标记 | 含义 |
@@ -83,4 +87,4 @@
 3. [`catkin_ws/NETWORK.md`](catkin_ws/NETWORK.md)
 4. [`catkin_ws/src/README.md`](catkin_ws/src/README.md)
 5. [`catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md`](catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md)
-6. [`releases/C-4.1.6/C-4.1.6_portable_wifi_network_baseline.md`](releases/C-4.1.6/C-4.1.6_portable_wifi_network_baseline.md)
+6. [`releases/C-4.1.7/C-4.1.7_remove_mpu6050_from_active_stack.md`](releases/C-4.1.7/C-4.1.7_remove_mpu6050_from_active_stack.md)

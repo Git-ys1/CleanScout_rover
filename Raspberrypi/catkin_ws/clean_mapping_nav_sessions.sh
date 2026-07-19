@@ -9,7 +9,6 @@ for pattern in \
   cmdvel_to_rf1.py \
   cmd_vel_safety_gate.py \
   rf1_vel_to_odom.py \
-  mpu6050_node.py \
   rplidarNode \
   slam_gmapping \
   map_server \
@@ -28,7 +27,6 @@ for pattern in \
   cmdvel_to_rf1.py \
   cmd_vel_safety_gate.py \
   rf1_vel_to_odom.py \
-  mpu6050_node.py \
   rplidarNode \
   slam_gmapping \
   map_server \
@@ -39,4 +37,4 @@ done
 
 sleep 1
 
-ps -ef | grep -E 'roscore|rosmaster|roslaunch|rf1_serial_bridge.py|cmdvel_to_rf1.py|cmd_vel_safety_gate.py|rf1_vel_to_odom.py|mpu6050_node.py|rplidarNode|slam_gmapping|map_server|amcl|move_base' | grep -v grep || true
+ps -ef | grep -E 'roscore|rosmaster|roslaunch|rf1_serial_bridge.py|cmdvel_to_rf1.py|cmd_vel_safety_gate.py|rf1_vel_to_odom.py|rplidarNode|slam_gmapping|map_server|amcl|move_base' | grep -v grep || true

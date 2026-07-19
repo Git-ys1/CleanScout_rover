@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
 ROSCORE_LOG="/tmp/c331_roscore.log"
 RF1_LOG="/tmp/c331_rf1_min.log"
-IMU_LOG="/tmp/c331_imu.log"
 LIDAR_LOG="/tmp/c331_lidar.log"
 LSM_LOG="/tmp/c331_lsm.log"
 MAPPING_LOG="/tmp/c331_mapping_406.log"
@@ -22,7 +21,6 @@ EDGE_DEVICE_ID="${EDGE_DEVICE_ID:-csrpi-001}"
 EDGE_DEVICE_TOKEN="${EDGE_DEVICE_TOKEN:-}"
 EDGE_HEARTBEAT_MS="${EDGE_HEARTBEAT_MS:-5000}"
 EDGE_ODOM_HZ="${EDGE_ODOM_HZ:-5}"
-EDGE_IMU_HZ="${EDGE_IMU_HZ:-5}"
 EDGE_SCAN_HZ="${EDGE_SCAN_HZ:-1}"
 EDGE_CMD_REPEAT_HZ="${EDGE_CMD_REPEAT_HZ:-10}"
 EDGE_CMD_DEFAULT_HOLD_MS="${EDGE_CMD_DEFAULT_HOLD_MS:-400}"
@@ -110,7 +108,7 @@ start_edge_relay() {
 
   bash "$ROOT/clean_edge_relay_sessions.sh" || true
 
-  EDGE_RELAY_PID=$(launch_bg "$EDGE_RELAY_LOG" "source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && export ROS_PACKAGE_PATH=\"/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src:/opt/ros/noetic/share\" && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch enabled:=true url:=\"$EDGE_RELAY_URL\" device_id:=\"$EDGE_DEVICE_ID\" device_token:=\"$EDGE_DEVICE_TOKEN\" heartbeat_ms:=\"$EDGE_HEARTBEAT_MS\" odom_hz:=\"$EDGE_ODOM_HZ\" imu_hz:=\"$EDGE_IMU_HZ\" scan_hz:=\"$EDGE_SCAN_HZ\" cmd_repeat_hz:=\"$EDGE_CMD_REPEAT_HZ\" default_hold_ms:=\"$EDGE_CMD_DEFAULT_HOLD_MS\" reconnect_delay_ms:=\"$EDGE_RECONNECT_DELAY_MS\"")
+  EDGE_RELAY_PID=$(launch_bg "$EDGE_RELAY_LOG" "source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && export ROS_PACKAGE_PATH=\"/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src:/opt/ros/noetic/share\" && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/csrpi_edge_relay/launch/edge_relay.launch enabled:=true url:=\"$EDGE_RELAY_URL\" device_id:=\"$EDGE_DEVICE_ID\" device_token:=\"$EDGE_DEVICE_TOKEN\" heartbeat_ms:=\"$EDGE_HEARTBEAT_MS\" odom_hz:=\"$EDGE_ODOM_HZ\" scan_hz:=\"$EDGE_SCAN_HZ\" cmd_repeat_hz:=\"$EDGE_CMD_REPEAT_HZ\" default_hold_ms:=\"$EDGE_CMD_DEFAULT_HOLD_MS\" reconnect_delay_ms:=\"$EDGE_RECONNECT_DELAY_MS\"")
 
   echo "[c331-mapping] edge-relay 已启动，日志: $EDGE_RELAY_LOG"
   echo "[c331-mapping] 前端控制链: frontend -> backend -> edge-relay -> /cmd_vel -> RF1"
@@ -139,18 +137,6 @@ if ! wait_for_topic /rf1/vel 8; then
   echo "[c331-mapping] ERROR: /rf1/vel 未就绪"
   if ! kill -0 "$RF1_PID" 2>/dev/null; then
     echo "[c331-mapping] ERROR: bringup_rf1_min.launch 已退出，请检查 $RF1_LOG"
-  fi
-  exit 1
-fi
-
-echo "[c331-mapping] 启动 imu_only.launch"
-IMU_PID=$(launch_bg "$IMU_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch')
-
-echo "[c331-mapping] 等待 /imu/data"
-if ! wait_for_topic /imu/data 8; then
-  echo "[c331-mapping] ERROR: /imu/data 未就绪"
-  if ! kill -0 "$IMU_PID" 2>/dev/null; then
-    echo "[c331-mapping] ERROR: imu_only.launch 已退出，请检查 $IMU_LOG"
   fi
   exit 1
 fi

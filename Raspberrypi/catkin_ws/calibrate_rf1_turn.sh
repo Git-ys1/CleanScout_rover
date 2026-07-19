@@ -93,7 +93,7 @@ fi
 rosbag record --buffsize=256 \
   -O "${OUTPUT_DIR}/turn.bag" \
   /cmd_vel_nav /cmd_vel /rf1/wheel_target_ms /rf1/vel \
-  /imu/data_raw /scan /pose2D_turn_calib /odom \
+  /scan /pose2D_turn_calib /odom \
   >"${OUTPUT_DIR}/rosbag.log" 2>&1 &
 BAG_PID=$!
 

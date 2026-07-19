@@ -12,10 +12,9 @@
 | [`amcl.launch`](amcl.launch) | 统一 AMCL 参数 | 当前共享组件 |
 | [`bringup_rf1_min.launch`](bringup_rf1_min.launch) | RF1 串口和 Twist 到四轮速度 | 当前硬件组件 |
 | [`robot_state_publisher.launch`](robot_state_publisher.launch) | 加载 CleanScout URDF/xacro | 当前几何组件 |
-| [`core/imu_only.launch`](core/imu_only.launch) | MPU6050 + Madgwick | 当前 IMU 组件 |
 | [`lidar/rplidar.launch`](lidar/rplidar.launch) | RPLIDAR A3 驱动 | 当前雷达组件 |
 | [`slam/slam_406_lsm.launch`](slam/slam_406_lsm.launch) | LSM 可选 + gmapping | 当前建图组件 |
-| [`slam/laser_scan_matcher_406.launch`](slam/laser_scan_matcher_406.launch) | 激光匹配里程计 | 可选 / 标定 |
+| [`slam/laser_scan_matcher_406.launch`](slam/laser_scan_matcher_406.launch) | 纯激光匹配里程计，`use_imu=false` | 旧备线 / 标定 |
 | [`slam/mapping_406_rf1.launch`](slam/mapping_406_rf1.launch) | 建图组件薄封装 | 兼容入口 |
 
 ## 专项与历史链路
@@ -23,12 +22,13 @@
 | 文件 | 原用途 | 当前状态 |
 | --- | --- | --- |
 | [`core/bringup_rf1_core.launch`](core/bringup_rf1_core.launch) | RF1 + RF1 内置 odom | 旧核心链，几何值早于 C-4.1.2 |
-| [`bringup_rf1_web.launch`](bringup_rf1_web.launch) | RF1、传感器、rosbridge、edge 一体化 | 旧 Web 联调链 |
+| [`bringup_rf1_web.launch`](bringup_rf1_web.launch) | RF1、雷达、rosbridge、edge 一体化 | 旧 Web 联调链，已移除 IMU |
 | [`demo/multi_function_demo.launch`](demo/multi_function_demo.launch) | RF1 + 多功能 + edge | 旧联合演示组件 |
-| [`bench_full_stack.launch`](bench_full_stack.launch) | UNO 轮桥、EKF、雷达、IMU 台架 | 旧台架链 |
-| [`mpu6050_bringup.launch`](mpu6050_bringup.launch) | 包装旧 IMU include | 兼容入口 |
-| [`include/imu/imu.launch`](include/imu/imu.launch) | IMU 子链 | 历史 include |
-| [`include/imu/mpu6050_chain.launch`](include/imu/mpu6050_chain.launch) | 旧 MPU6050 滤波链 | 历史 include |
+| [`bench_full_stack.launch`](bench_full_stack.launch) | UNO 轮桥、EKF、雷达台架 | 旧台架链，已移除 IMU |
+| [`core/imu_only.launch`](core/imu_only.launch) | MPU6050 + Madgwick | `C-4.1.7` 已退役，仅历史复现 |
+| [`mpu6050_bringup.launch`](mpu6050_bringup.launch) | 包装旧 IMU include | `C-4.1.7` 已退役，仅历史复现 |
+| [`include/imu/imu.launch`](include/imu/imu.launch) | IMU 子链 | `C-4.1.7` 已退役，仅历史复现 |
+| [`include/imu/mpu6050_chain.launch`](include/imu/mpu6050_chain.launch) | 旧 MPU6050 滤波链 | `C-4.1.7` 已退役，仅历史复现 |
 | [`desk_map_navigation.launch`](desk_map_navigation.launch) | 桌面地图 + 旧 wheel bridge | 历史兼容 |
 | [`nav/nav_406.launch`](nav/nav_406.launch) | 最简 map/amcl/move_base | 参数不完整，不作实车默认 |
 | [`nav_base_stack.launch`](nav_base_stack.launch) | 旧台架底盘 + 静态雷达 TF | 历史兼容 |

@@ -7,6 +7,7 @@ UTF-8 中文注释说明单位、耦合关系和调参方向。
 
 ```text
 start_pc_full_navigation.sh
+  -> rf1_vel_to_odom.py (/rf1/vel -> /odom + odom->base_link)
   -> navigation_406_rf1_teb.launch
      -> map_server
      -> amcl.launch
@@ -17,6 +18,9 @@ start_pc_full_navigation.sh
         -> teb_local_planner_params.yaml
         -> move_base_teb_params.yaml
 ```
+
+`C-4.1.7` 起导航入口固定使用编码器里程计，不再提供 IMU 或
+`USE_LASER_SCAN_MATCHER` 隐藏分支。定位输入为地图、`/scan`、`/odom` 和 TF。
 
 控制输出：
 

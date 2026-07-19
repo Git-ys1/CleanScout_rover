@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
 ROSCORE_LOG="/tmp/c331_lsm_roscore.log"
 RF1_LOG="/tmp/c331_lsm_rf1.log"
-IMU_LOG="/tmp/c331_lsm_imu.log"
 LIDAR_LOG="/tmp/c331_lsm_lidar.log"
 LSM_LOG="/tmp/c331_lsm.log"
 MAPPING_LOG="/tmp/c331_mapping_406_lsm.log"
@@ -88,18 +87,6 @@ if ! wait_for_topic /rf1/vel 8; then
   echo "[c331-lsm] ERROR: /rf1/vel 未就绪"
   if ! kill -0 "$RF1_PID" 2>/dev/null; then
     echo "[c331-lsm] ERROR: bringup_rf1_min.launch 已退出，请检查 $RF1_LOG"
-  fi
-  exit 1
-fi
-
-echo "[c331-lsm] 启动 imu_only.launch"
-IMU_PID=$(launch_bg "$IMU_LOG" 'source /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh && roslaunch /home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch')
-
-echo "[c331-lsm] 等待 /imu/data"
-if ! wait_for_topic /imu/data 8; then
-  echo "[c331-lsm] ERROR: /imu/data 未就绪"
-  if ! kill -0 "$IMU_PID" 2>/dev/null; then
-    echo "[c331-lsm] ERROR: imu_only.launch 已退出，请检查 $IMU_LOG"
   fi
   exit 1
 fi

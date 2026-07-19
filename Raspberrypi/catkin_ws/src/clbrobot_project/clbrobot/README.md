@@ -23,9 +23,11 @@
 | AMCL | `launch/amcl.launch` |
 | RF1 最小硬件链 | `launch/bringup_rf1_min.launch` |
 | RPLIDAR | `launch/lidar/rplidar.launch` |
-| IMU | `launch/core/imu_only.launch` |
 | 建图 | `launch/slam/slam_406_lsm.launch` |
 | URDF / TF | `launch/robot_state_publisher.launch` |
+
+`C-4.1.7` 起 MPU6050 与 `imu_link` 已从当前实车装配中移除。
+`launch/core/imu_only.launch` 仅保留为历史复现入口，不得被正式链引用。
 
 ## 修改约束
 

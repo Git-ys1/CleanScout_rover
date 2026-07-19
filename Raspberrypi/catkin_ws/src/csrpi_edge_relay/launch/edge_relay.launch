@@ -7,7 +7,6 @@
   <arg name="device_token" default="" />
   <arg name="heartbeat_ms" default="5000" />
   <arg name="odom_hz" default="5" />
-  <arg name="imu_hz" default="5" />
   <arg name="scan_hz" default="1" />
   <arg name="cmd_repeat_hz" default="50" />
   <arg name="default_hold_ms" default="1000" />
@@ -28,7 +27,6 @@
     <param name="device_token" value="$(arg device_token)" />
     <param name="heartbeat_ms" value="$(arg heartbeat_ms)" />
     <param name="odom_hz" value="$(arg odom_hz)" />
-    <param name="imu_hz" value="$(arg imu_hz)" />
     <param name="scan_hz" value="$(arg scan_hz)" />
     <param name="cmd_repeat_hz" value="$(arg cmd_repeat_hz)" />
     <param name="default_hold_ms" value="$(arg default_hold_ms)" />

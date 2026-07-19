@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT="/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws"
 CORE_LOG="/tmp/c330_rf1_core.log"
-IMU_LOG="/tmp/c330_imu.log"
 
 cleanup_on_error() {
   local code=$?
@@ -52,14 +51,5 @@ if ! wait_for_topic /rf1/vel 4; then
   exit 1
 fi
 
-echo "[c330-core] 启动 IMU only"
-nohup bash -lc 'source "/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/use_cleanscout_pi.sh" && roslaunch "/home/clbrobot/Work/CleanScout_rover/Raspberrypi/catkin_ws/src/clbrobot_project/clbrobot/launch/core/imu_only.launch"' >"$IMU_LOG" 2>&1 </dev/null &
-
-echo "[c330-core] 等待 /imu/data 2s 内就绪"
-if ! wait_for_topic /imu/data 4; then
-  echo "[c330-core] ERROR: /imu/data 未就绪"
-  exit 1
-fi
-
-echo "[c330-core] RF1 core + IMU 已就绪"
+echo "[c330-core] RF1 core 已就绪"
 trap - EXIT

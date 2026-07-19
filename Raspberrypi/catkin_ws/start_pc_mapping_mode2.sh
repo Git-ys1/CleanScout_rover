@@ -12,7 +12,6 @@ source "${SCRIPT_DIR}/use_cleanscout_pc.sh"
 
 START_RVIZ="${START_RVIZ:-1}"
 SCAN_TOPIC="${SCAN_TOPIC:-/scan}"
-IMU_TOPIC="${IMU_TOPIC:-/imu/data}"
 VEL_TOPIC="${VEL_TOPIC:-/rf1/vel}"
 ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 MAP_ODOM_FRAME="${MAP_ODOM_FRAME:-odom}"
@@ -49,7 +48,6 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 wait_for_topic "${SCAN_TOPIC}"
-wait_for_topic "${IMU_TOPIC}"
 wait_for_topic "${VEL_TOPIC}"
 
 echo "Starting RF1 encoder odom with ODOM_K_M=${ODOM_K_M}"

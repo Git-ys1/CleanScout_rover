@@ -1,5 +1,8 @@
 # mpu6050_i2c_bridge
 
+> **已退役 / 历史方案：** `C-4.1.7` 起实车因机械结构调整永久移除 MPU6050。
+> 当前硬件、建图、导航和 edge-relay 均不引用本包；以下内容只用于复现旧阶段。
+
 `mpu6050_i2c_bridge` is the Raspberry Pi side raw MPU6050 driver layer for `C-2.3.1`.
 
 ## Purpose

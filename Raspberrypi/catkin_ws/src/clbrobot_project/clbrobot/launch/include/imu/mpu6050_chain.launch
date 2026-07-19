@@ -1,4 +1,5 @@
 <launch>
+    <!-- LEGACY C-4.1.7: 保留旧 MPU6050 联调链，仅用于历史复现。 -->
     <node pkg="mpu6050_i2c_bridge" type="mpu6050_node.py" name="mpu6050_i2c_node" output="screen" respawn="false">
         <param name="bus" value="1" />
         <param name="address" value="104" />

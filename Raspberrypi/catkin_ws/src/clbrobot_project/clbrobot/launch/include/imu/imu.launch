@@ -1,4 +1,5 @@
 <launch>
+    <!-- LEGACY C-4.1.7: 保留旧 IMU 后处理链，仅用于历史复现。 -->
     <!-- IMU relay from clbrobot_msgs/Imu to sensor_msgs/Imu -->
     <node pkg="imu_calib" type="apply_calib" name="apply_calib" output="screen" respawn="false">
         <param name="calib_file" value="$(find clbrobot)/param/imu/imu_calib.yaml" />

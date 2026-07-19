@@ -3,8 +3,8 @@
   <arg name="edge_url" default="wss://api.hzhhds.top/edge/ros" />
   <arg name="edge_fallback_url" default="ws://10.156.250.190:3000/edge/ros" />
   <arg name="edge_primary_failures_before_fallback" default="3" />
-  <arg name="edge_device_id" default="csrpi-001" />
-  <arg name="edge_device_token" default="ac27b6d55f9446daae792bccbb51df4438da3c88d7f9d74986276da8898e66d2" />
+  <arg name="edge_device_id" default="$(optenv EDGE_DEVICE_ID csrpi-001)" />
+  <arg name="edge_device_token" default="$(optenv EDGE_DEVICE_TOKEN)" />
 
   <include file="$(find clbrobot)/launch/bringup_rf1_min.launch" />
 

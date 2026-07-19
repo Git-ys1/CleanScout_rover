@@ -13,7 +13,6 @@
   <arg name="edge_device_token" default="" />
   <arg name="edge_heartbeat_ms" default="5000" />
   <arg name="edge_odom_hz" default="5" />
-  <arg name="edge_imu_hz" default="5" />
   <arg name="edge_scan_hz" default="1" />
   <arg name="edge_cmd_repeat_hz" default="10" />
   <arg name="edge_default_hold_ms" default="400" />
@@ -47,13 +46,6 @@
     <param name="publish_tf" value="false" />
   </node>
 
-  <node pkg="mpu6050_i2c_bridge" type="mpu6050_node.py" name="mpu6050_i2c_node" output="screen">
-    <param name="bus" value="1" />
-    <param name="address" value="104" />
-    <param name="rate_hz" value="50.0" />
-    <param name="frame_id" value="imu_link" />
-  </node>
-
   <node pkg="rplidar_ros" type="rplidarNode" name="rplidarNode" output="screen">
     <param name="serial_port" value="$(arg lidar_port)" />
     <param name="serial_baudrate" value="$(arg lidar_baud)" />
@@ -66,8 +58,6 @@
   </node>
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_laser" args="0.04 0 0.18 0 0 0 base_link laser" />
-  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_imu_link" args="0 0 0 0 0 0 base_link imu_link" />
-
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
     <arg name="port" value="$(arg rosbridge_port)" />
   </include>
@@ -79,7 +69,6 @@
     <arg name="device_token" value="$(arg edge_device_token)" />
     <arg name="heartbeat_ms" value="$(arg edge_heartbeat_ms)" />
     <arg name="odom_hz" value="$(arg edge_odom_hz)" />
-    <arg name="imu_hz" value="$(arg edge_imu_hz)" />
     <arg name="scan_hz" value="$(arg edge_scan_hz)" />
     <arg name="cmd_repeat_hz" value="$(arg edge_cmd_repeat_hz)" />
     <arg name="default_hold_ms" value="$(arg edge_default_hold_ms)" />
