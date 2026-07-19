@@ -13,6 +13,8 @@
 | PC 职责 | 里程计解算、建图、AMCL、move_base、TEB、RViz |
 | 导航基线 | `C-4.1.4` 参数，TEB 多拓扑为默认局部规划器 |
 | 文档治理基线 | `C-4.1.5` |
+| 网络基线 | `C-4.1.6`，默认随身 Wi-Fi 固定拓扑 |
+| 默认地址 | Pi `.108`、OrangePi `.148`、PC `.222`，网段 `192.168.8.0/24` |
 | 速度安全链 | `/cmd_vel_nav -> cmd_vel_safety_gate -> /cmd_vel -> RF1` |
 | 转向几何基线 | `RF1_CMD_K_M=0.1987`，`ODOM_K_M=0.1987` |
 
@@ -21,6 +23,7 @@
 | 路径 | 内容 | 维护建议 |
 | --- | --- | --- |
 | [`catkin_ws/`](catkin_ws/) | ROS 工作空间和全部运行入口 | 日常启动从这里开始 |
+| [`catkin_ws/NETWORK.md`](catkin_ws/NETWORK.md) | 随身 Wi-Fi 与旧手机热点网络基线 | 切换网络或排查 ROS master 时先读 |
 | [`catkin_ws/src/`](catkin_ws/src/) | 自研与 vendored ROS 包 | 新包必须在 `src/README.md` 登记 |
 | [`catkin_ws/src/clbrobot_project/clbrobot/`](catkin_ws/src/clbrobot_project/clbrobot/) | 整车 launch、参数、地图、URDF | 导航配置的主要入口 |
 | [`maps/`](maps/) | 早期桌面地图 | 历史兼容，不是当前默认地图目录 |
@@ -40,7 +43,7 @@
 | 转向标定 | PC | `./calibrate_rf1_turn.sh left\|right [wz] [seconds]` | 实车专项，会动车 |
 | 旧联合演示 | 树莓派 | `./run_nav_and_multifunction_demo.sh` | 历史兼容 |
 
-完整的 23 个 shell 入口、运行端、风险和用途见
+完整的 24 个 shell 文件、运行端、风险和用途见
 [`catkin_ws/README.md`](catkin_ws/README.md)。
 
 ## 数据流
@@ -77,6 +80,7 @@
 
 1. [`../docs/树莓派端_退休交接书.md`](../docs/树莓派端_退休交接书.md)
 2. [`catkin_ws/README.md`](catkin_ws/README.md)
-3. [`catkin_ws/src/README.md`](catkin_ws/src/README.md)
-4. [`catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md`](catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md)
-5. [`releases/C-4.1.5/C-4.1.5_raspberrypi_repository_governance.md`](releases/C-4.1.5/C-4.1.5_raspberrypi_repository_governance.md)
+3. [`catkin_ws/NETWORK.md`](catkin_ws/NETWORK.md)
+4. [`catkin_ws/src/README.md`](catkin_ws/src/README.md)
+5. [`catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md`](catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md)
+6. [`releases/C-4.1.6/C-4.1.6_portable_wifi_network_baseline.md`](releases/C-4.1.6/C-4.1.6_portable_wifi_network_baseline.md)

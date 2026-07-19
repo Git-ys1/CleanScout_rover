@@ -17,5 +17,15 @@
 | 发布 | `/cmd_vel` | 后端手动速度；当前整车入口会覆盖为 `/cmd_vel_nav` |
 | 发布/订阅 | `/fans/enable`、风机 PWM/RPM、顶盖状态 | 多功能控制与状态同步 |
 
+## 网络默认值
+
+| 模式 | 本地 backend / fallback |
+| --- | --- |
+| `portable_wifi`（默认） | `ws://192.168.8.222:3000/edge/ros` |
+| `phone_hotspot`（旧兼容） | 当前树莓派子网 + `.190:3000` |
+
+顶层入口通过 [`../../cleanscout_network.sh`](../../cleanscout_network.sh) 解析地址，
+完整切换方式见 [`../../NETWORK.md`](../../NETWORK.md)。
+
 当前推荐由 `catkin_ws/run_robot_hardware_multifunction.sh` 统一启动，不要在导航链运行时
 另起第二个 relay。新增部署应通过启动环境或本机配置注入设备令牌，不在新文档中记录凭据。

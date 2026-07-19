@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover
 class EdgeRelay:
     def __init__(self):
         self.url = rospy.get_param("~url", "wss://api.hzhhds.top/edge/ros")
-        self.fallback_url = rospy.get_param("~fallback_url", "ws://10.156.250.190:3000/edge/ros")
+        self.fallback_url = rospy.get_param("~fallback_url", "ws://192.168.8.222:3000/edge/ros")
         self.primary_failures_before_fallback = int(rospy.get_param("~primary_failures_before_fallback", 3))
         self.device_id = rospy.get_param("~device_id", "csrpi-001")
         self.device_token = rospy.get_param("~device_token", "")

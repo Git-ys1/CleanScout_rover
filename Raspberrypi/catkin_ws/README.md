@@ -12,12 +12,14 @@
 | `devel/` | catkin 开发空间 | 否 |
 | `bags/` | 实车 rosbag | 否 |
 | `*.sh` | 环境、启动、诊断和维护入口 | 是 |
+| [`NETWORK.md`](NETWORK.md) | 随身 Wi-Fi 固定拓扑与手机热点回退规则 | 是 |
 
 ## 当前推荐流程
 
 | 步骤 | 树莓派 | PC |
 | --- | --- | --- |
-| 1. 环境 | `source ./use_cleanscout_pi.sh` | `source ./use_cleanscout_pc.sh` |
+| 0. 网络 | `./cleanscout_network.sh` | `./cleanscout_network.sh` |
+| 1. 环境 | `source ./use_cleanscout_pi.sh` | `source ./use_cleanscout_pc.sh`，默认连接 Pi `.108` |
 | 2. 硬件 | `./run_robot_hardware_multifunction.sh` | 不启动重复硬件节点 |
 | 3A. 导航 | 保持硬件链运行 | `./start_pc_full_navigation.sh` |
 | 3B. 建图 | 保持硬件链运行 | `./start_pc_mapping_mode2.sh` |
@@ -29,6 +31,7 @@
 
 | 文件 | 运行端 | 用途 | 备注 |
 | --- | --- | --- | --- |
+| [`cleanscout_network.sh`](cleanscout_network.sh) | 双端 | 统一解析随身 Wi-Fi 与手机热点地址 | 可直接运行做只读检查 |
 | [`use_cleanscout_pi.sh`](use_cleanscout_pi.sh) | 树莓派 | 加载 Noetic/catkin，设置本机 ROS master | 应使用 `source` |
 | [`run_robot_hardware_multifunction.sh`](run_robot_hardware_multifunction.sh) | 树莓派 | RF1、IMU、雷达、安全门、风机/顶盖、edge relay | 当前硬件主入口 |
 | [`use_cleanscout_pc.sh`](use_cleanscout_pc.sh) | PC | 发现 PC/Pi 地址并设置分布式 ROS 环境 | 可由 PC 入口自动加载 |
@@ -72,6 +75,9 @@
 
 | 变量 | 默认值 | 作用 |
 | --- | --- | --- |
+| `CLEANSCOUT_NETWORK_MODE` | `portable_wifi` | 默认固定地址；设为 `phone_hotspot` 恢复旧动态子网逻辑 |
+| `CLEANSCOUT_PI_HOST` | 空 | 显式覆盖 PC 使用的 ROS master 主机 |
+| `CLEANSCOUT_PC_HOST` | 空 | 显式覆盖 Pi 使用的本地 backend 主机 |
 | `NAV_LAUNCH` | `navigation_406_rf1_teb.launch` | PC 导航入口，可切传统规划器 |
 | `MAP_FILE` | `407-5.22-2120.yaml` | 导航地图 |
 | `ODOM_K_M` | `0.1987` | PC 端轮速反解角速度 |
@@ -86,3 +92,4 @@
 3. 实车会运动的脚本必须有限时长、失联停车或安全门保护。
 4. 生成目录、rosbag 和 `/tmp` 日志不得提交。
 5. ROS 包说明见 [`src/README.md`](src/README.md)。
+6. 网络地址只在 [`cleanscout_network.sh`](cleanscout_network.sh) 维护，完整规则见 [`NETWORK.md`](NETWORK.md)。

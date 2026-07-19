@@ -13,20 +13,11 @@ FAN_LOG="/tmp/c331_nav_multi_fan.log"
 EDGE_LOG="/tmp/c331_nav_multi_edge.log"
 EDGE_URL="wss://api.hzhhds.top/edge/ros"
 
-get_current_ip() {
-  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
-}
+source "$ROOT/cleanscout_network.sh"
 
-build_host_from_suffix() {
-  local ip="$1"
-  local suffix="$2"
-  IFS='.' read -r o1 o2 o3 _ <<< "${ip}"
-  printf '%s.%s.%s.%s' "${o1}" "${o2}" "${o3}" "${suffix}"
-}
-
-CURRENT_IP="$(get_current_ip)"
+CURRENT_IP="$(cleanscout_current_ipv4)"
 EDGE_FALLBACK_HOST_SUFFIX="${EDGE_FALLBACK_HOST_SUFFIX:-190}"
-EDGE_FALLBACK_HOST="${EDGE_FALLBACK_HOST:-$(build_host_from_suffix "${CURRENT_IP}" "${EDGE_FALLBACK_HOST_SUFFIX}")}"
+EDGE_FALLBACK_HOST="${EDGE_FALLBACK_HOST:-$(cleanscout_pc_host "${CURRENT_IP}" "${EDGE_FALLBACK_HOST_SUFFIX}")}"
 EDGE_FALLBACK_URL="${EDGE_FALLBACK_URL:-ws://${EDGE_FALLBACK_HOST}:3000/edge/ros}"
 EDGE_PRIMARY_FAILURES_BEFORE_FALLBACK="3"
 EDGE_DEVICE_ID="csrpi-001"

@@ -6,6 +6,7 @@
 
 | 版本 | 日期 | 主题 | 记录 |
 | --- | --- | --- | --- |
+| `C-4.1.6` | 2026-07-19 | 随身 Wi-Fi 固定拓扑与手机热点回退 | [`C-4.1.6_portable_wifi_network_baseline.md`](C-4.1.6/C-4.1.6_portable_wifi_network_baseline.md) |
 | `C-4.1.5` | 2026-06-06 | Raspberrypi 仓库分层 README 与入口治理 | [`C-4.1.5_raspberrypi_repository_governance.md`](C-4.1.5/C-4.1.5_raspberrypi_repository_governance.md) |
 | `C-4.1.4` | 2026-06-06 | TEB/AMCL/costmap 实车调优与参数注释治理 | [`C-4.1.4_navigation_tuning_and_parameter_cleanup.md`](C-4.1.4/C-4.1.4_navigation_tuning_and_parameter_cleanup.md) |
 | `C-4.1.3` | 2026-06-06 | TEB 导航正式基线 | [`C-4.1.3_teb_navigation_baseline.md`](C-4.1.3/C-4.1.3_teb_navigation_baseline.md) |

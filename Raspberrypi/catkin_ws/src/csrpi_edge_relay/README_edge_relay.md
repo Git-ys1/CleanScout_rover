@@ -14,11 +14,13 @@ The architecture is:
 ## Current endpoint
 
 - https api: `https://api.hzhhds.top`
-- websocket relay: `ws://10.22.7.190:3000/edge/ros`
+- portable Wi-Fi local relay: `ws://192.168.8.222:3000/edge/ros`
 
-For current local V-line backend testing, use:
+The old phone-hotspot rule derived the backend as current subnet + `.190`. It is
+now available only through `CLEANSCOUT_NETWORK_MODE=phone_hotspot`.
 
-- `ws://10.22.7.190:3000/edge/ros`
+For current local V-line backend testing, use the portable Wi-Fi address above
+or an explicit `EDGE_RELAY_URL` override.
 
 ## Current behavior
 

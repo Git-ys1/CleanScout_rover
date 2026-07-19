@@ -4,11 +4,9 @@ set -e
 # ===== CleanScout Pi ROS network config =====
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-get_pi_ip() {
-  ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; ++i) if ($i == "src") { print $(i + 1); exit }}'
-}
+source "${SCRIPT_DIR}/cleanscout_network.sh"
 
-PI_IP="$(get_pi_ip)"
+PI_IP="$(cleanscout_current_ipv4)"
 
 if [ -z "${PI_IP}" ]; then
   echo "Failed to detect Raspberry Pi local IPv4 address" >&2
@@ -30,5 +28,6 @@ export CLBBASE="mecanum"
 export CLBLIDAR="rplidar"
 
 echo "CleanScout Pi environment loaded"
+echo "CLEANSCOUT_NETWORK_MODE=${CLEANSCOUT_NETWORK_MODE}"
 echo "ROS_MASTER_URI=${ROS_MASTER_URI}"
 echo "ROS_IP=${ROS_IP}"
