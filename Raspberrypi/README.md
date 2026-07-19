@@ -27,6 +27,7 @@
 | [`catkin_ws/NETWORK.md`](catkin_ws/NETWORK.md) | 随身 Wi-Fi 与旧手机热点网络基线 | 切换网络或排查 ROS master 时先读 |
 | [`catkin_ws/src/`](catkin_ws/src/) | 自研与 vendored ROS 包 | 新包必须在 `src/README.md` 登记 |
 | [`catkin_ws/src/clbrobot_project/clbrobot/`](catkin_ws/src/clbrobot_project/clbrobot/) | 整车 launch、参数、地图、URDF | 导航配置的主要入口 |
+| [`docs/`](docs/) | Raspberrypi 侧提出的跨团队接口与前置任务书 | 交付其他子系统前先冻结验收口径 |
 | [`maps/`](maps/) | 早期桌面地图 | 历史兼容，不是当前默认地图目录 |
 | [`releases/`](releases/) | 每轮阶段封存与验证记录 | 发布时新增版本目录和索引 |
 | [`../docs/`](../docs/) | 项目级交接、测量和设计文档 | 先读交接书，再改实车链 |
@@ -88,3 +89,4 @@ MPU6050 已因机械结构调整从实车正式硬件中移除。当前入口不
 4. [`catkin_ws/src/README.md`](catkin_ws/src/README.md)
 5. [`catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md`](catkin_ws/src/clbrobot_project/clbrobot/param/navigation/README.md)
 6. [`releases/C-4.1.7/C-4.1.7_remove_mpu6050_from_active_stack.md`](releases/C-4.1.7/C-4.1.7_remove_mpu6050_from_active_stack.md)
+7. [`docs/下位机双串口双协议合并任务书.md`](docs/下位机双串口双协议合并任务书.md)
