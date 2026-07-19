@@ -7,7 +7,9 @@
 
 | 文件 | 执行方 | 状态 | Raspberrypi 后续动作 |
 | --- | --- | --- | --- |
-| [`下位机双串口双协议合并任务书.md`](下位机双串口双协议合并任务书.md) | STM32 / 下位机维护方 | 待实现 | 交付达到 ROS-ready 门槛后，执行 Noetic 分布式全链路验收 |
+| [`下位机双串口双协议合并任务书.md`](下位机双串口双协议合并任务书.md) | STM32 / 下位机维护方 | 合并固件已烧录，Raspberrypi 运动链已验收 | 机械臂与双域剩余门槛由对应维护方继续验收 |
+| [`combined_dual_uart_controller_verification.md`](../../docs/VERIFY/combined_dual_uart_controller_verification.md) | STM32 / 下位机维护方 | ROS 实测前的原始交付记录 | 保留当时结论，由后续 Raspberrypi 验收记录补齐运动链结果 |
+| [`树莓派ROS新下位机验收记录.md`](树莓派ROS新下位机验收记录.md) | Raspberrypi / ROS 维护方 | 通过 | 可继续接入 PC 导航和分布式 ROS 联调 |
 
 ## 边界
 

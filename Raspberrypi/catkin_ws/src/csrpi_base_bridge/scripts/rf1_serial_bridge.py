@@ -26,7 +26,9 @@ class Rf1SerialBridge:
         )
 
         self.serial_conn = None
-        self.serial_lock = threading.Lock()
+        self.connection_lock = threading.Lock()
+        self.serial_read_lock = threading.Lock()
+        self.serial_write_lock = threading.Lock()
         self.ready_seen = False
         self.last_targets = self.default_targets
         self.last_rx_time = 0.0
@@ -92,14 +94,23 @@ class Rf1SerialBridge:
             raise serial.SerialException("no RF1 serial port configured")
         raise last_error
 
-    def close_serial(self):
-        with self.serial_lock:
-            if self.serial_conn is not None:
+    def current_connection(self):
+        with self.connection_lock:
+            return self.serial_conn
+
+    def close_serial(self, expected_conn=None):
+        with self.connection_lock:
+            if expected_conn is not None and self.serial_conn is not expected_conn:
+                return
+            conn = self.serial_conn
+            self.serial_conn = None
+
+        if conn is not None:
+            with self.serial_write_lock:
                 try:
-                    self.serial_conn.close()
+                    conn.close()
                 except serial.SerialException:
                     pass
-                self.serial_conn = None
         self.ready_seen = False
         self.publish_ready(False)
 
@@ -112,12 +123,13 @@ class Rf1SerialBridge:
 
     def ensure_connection(self):
         while not rospy.is_shutdown():
-            if self.serial_conn is not None:
+            if self.current_connection() is not None:
                 return True
             try:
                 self.close_serial()
-                with self.serial_lock:
-                    self.serial_conn = self.open_serial()
+                conn = self.open_serial()
+                with self.connection_lock:
+                    self.serial_conn = conn
                 self.drain_after_open()
                 self.publish_status("RF1 serial connected")
                 return True
@@ -188,8 +200,8 @@ class Rf1SerialBridge:
 
     def read_line_once(self):
         read_error = None
-        with self.serial_lock:
-            conn = self.serial_conn
+        with self.serial_read_lock:
+            conn = self.current_connection()
             if conn is None:
                 return None
             try:
@@ -200,7 +212,7 @@ class Rf1SerialBridge:
 
         if read_error is not None:
             self.publish_status(f"RF1 serial read failed: {read_error}")
-            self.close_serial()
+            self.close_serial(expected_conn=conn)
             return None
 
         if not raw:
@@ -216,15 +228,15 @@ class Rf1SerialBridge:
         return f"W,{a:.3f},{b:.3f},{c:.3f},{d:.3f}\n"
 
     def send_frame(self, frame):
-        with self.serial_lock:
-            conn = self.serial_conn
+        conn = self.current_connection()
+        with self.serial_write_lock:
             if conn is None:
                 raise serial.SerialException("RF1 serial not connected")
             conn.write(frame.encode("utf-8"))
             conn.flush()
 
     def send_stop_burst(self):
-        if self.serial_conn is None:
+        if self.current_connection() is None:
             return
         for _ in range(max(1, self.stop_burst_count)):
             try:
@@ -256,7 +268,7 @@ class Rf1SerialBridge:
 
     def read_loop(self):
         while not rospy.is_shutdown():
-            if self.serial_conn is None:
+            if self.current_connection() is None:
                 rospy.sleep(0.05)
                 continue
             self.read_line_once()

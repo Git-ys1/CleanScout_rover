@@ -12,6 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package()
 
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(test/test_rf1_serial_bridge.py)
+endif()
+
 catkin_install_python(PROGRAMS
   scripts/wheel_bridge.py
   scripts/cmdvel_to_wheels.py
