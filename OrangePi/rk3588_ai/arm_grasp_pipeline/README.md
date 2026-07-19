@@ -1,23 +1,36 @@
 # Arm Grasp Pipeline
 
 `arm_grasp_pipeline/` 是独立于 ROS 的 D435 + RKNN YOLO11 固定观察姿态抓取管线。
-C-5.2.4 不通过目标位置对应 PWM，也不通过检测框面积估距；目标位置来自 aligned
+C-5.2.5 不通过目标位置对应 PWM，也不通过检测框面积估距；目标位置来自 aligned
 depth、相机反投影、实测 `T_base_camera_reference` 和机械臂 IK。
 
-## C-5.2.4 当前状态
+## C-5.2.5 当前状态
 
 - 13 个唯一对应点经刚体一致性审查后保留 11 点，剔除 2 个异常点。
 - 固定视角矩阵已通过质量门禁：RMSE `5.85 mm`，最大误差 `9.71 mm`。
-- 当前瓶子位置完成 `OPEN -> PRE_GRASP -> APPROACH -> CLOSE -> LIFT` 全流程 dry-run。
-- 为满足水平接近路径的 IK 可达性，当前抓取俯仰角为 `35 deg`。
-- 尚未执行真实抓取；`kinematics.calibrated=false` 和
-  `serial.joint_pwm_calibrated=false` 继续阻止真实输出。
+- Servo000 使用厂家线性比例 `8.148148 PWM/deg`；Servo001--003 使用 D435 桌面
+  平面法得到的逐轴有效斜率 `7.090824/7.935827/6.478096 PWM/deg`，禁止再统一套值。
+- 厂家标称原始范围为 `500..2700`，但当前 STM32 控制器实际命令范围冻结为
+  `500..2490`。
+- Servo005 采用实测边界：`1000` 张开、`2000` 闭合；Servo004 始终固定 `1500`。
+- 固定观察参考姿态统一为 `[1500,1909,1900,620,1500,1500]`。
+- 旧 `000=1380` 的 11 点实测矩阵暂时原样用于 `000=1500` 参考姿态；解析增加
+  `+14.727 deg` 偏航的方案在真实 PRE_GRASP 中导致明显偏转，已否决，不能再启用。
+- 正式抓取冻结 `pitch_deg=0`，即 L3/TCP 水平接近；闭爪后的 80 mm 抬升使用
+  `lift_pitch_deg=-11`。按当前连杆、逐轴比例和 `500..2490` 控制器边界，水平方案
+  要求瓶心距底座至少约 `0.340 m`。瓶子更近时必须移动目标，不能用下俯 L3 或
+  手调单轴 PWM 绕过 IK。
+- `--max_stage` 只预检到请求阶段，不能再让未来 LIFT 无解反向阻断合法的
+  PRE_GRASP；完整运行仍会逐阶段检查 workspace、IK、PWM 和 Servo004。
+- 真实运行会先低速回到参考姿态，并用 `PRAD` 回读六轴；任一轴偏差超过 `40 PWM`
+  会在视觉识别和运动前拒绝继续。`PRAD` 是控制器 PWM 状态，不是物理编码器反馈。
 
 本轮冻结证据位于：
 
 - `config/base_camera_points.consolidated11.csv`
 - `config/base_camera_report.consolidated11.json`
 - `config/base_camera_consolidation_audit.json`
+- `config/base_camera_report.c525_reference1500.json`
 
 ## 坐标系
 
@@ -34,7 +47,7 @@ p_base_h = T_base_camera_reference * p_camera_h
 ```
 
 `T_base_camera_reference` 只在配置中的
-`reference_servo_pwms=[1380,1909,1900,620,1500,1500]` 有效。真实抓取不会调用
+`reference_servo_pwms=[1500,1909,1900,620,1500,1500]` 有效。真实抓取不会调用
 `estimate_tool_matrix_from_pwm`，也不会使用旧 `manual_seed`。
 
 ## 标定
@@ -71,7 +84,7 @@ p_base_h = T_base_camera_reference * p_camera_h
 
 推荐在香橙派远程桌面的终端运行，这样可以直接看到 OpenCV 窗口。下面的命令会先
 通过 `/dev/ttyUSB0` 用 5 秒低速动作把机械臂送到
-`[1380,1909,1900,620,1500,1500]`，再通过 `PRAD` 核验 Servo000--004。
+`[1500,1909,1900,620,1500,1500]`，再通过 `PRAD` 核验 Servo000--004。
 核验成功后串口立即关闭，采点期间不会再发送机械臂命令：
 
 ```bash
@@ -148,7 +161,8 @@ cd ~/rk3588_ai/arm_grasp_pipeline
 - `rmse_m <= 0.010`
 - `max_error_m <= 0.015`
 - 参考姿态 `Servo004=1500`
-- 本机连杆/TCP 与 PWM-angle 零位已验收，`kinematics.calibrated=true`
+- 本机连杆和 PWM-angle 语义已验收，`kinematics.calibrated=true`
+- `joint_pwm_calibration.calibrated=true`，四轴零位/方向/比例字段完整
 - `serial.joint_pwm_calibrated=true` 且运行时显式传入 `--joint_pwm_calibrated`
 
 ## 只验证坐标
@@ -170,6 +184,8 @@ source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
 - `point_base_surface_m`、`bottle_center_base_m`
 - `pre_grasp_base_m`、`approach_base_m`
 - 各点 workspace 标志、PRE/APPROACH IK 标志
+- `configured_pitch_deg` 与 `l3_horizontal_commanded`
+- 当前瓶心半径、完整分阶段计划的最小可达半径、仍需向外移动的距离
 - `serial_opened=false`、`servo_command_sent=false`
 
 ## 目标与路径
@@ -185,7 +201,8 @@ bottle_center = front_surface + approach_axis * bottle_radius_m
 阶段固定为 `OPEN -> PRE_GRASP -> APPROACH -> CLOSE -> LIFT`：
 
 - PRE_GRASP 在瓶心前方 `0.070 m`，允许配置范围仅为 `0.060..0.080 m`。
-- APPROACH 从 PRE_GRASP 到瓶心保持同一 `Z`，默认每 `0.010 m` 一个 IK 路点。
+- APPROACH 从 PRE_GRASP 到瓶心保持同一 `Z`，默认每 `0.010 m` 一个 IK 路点；
+  当前末端姿态为 `0 deg`，L3/TCP 水平直线接近，不允许从上方斜扎瓶子。
 - 每个路点执行前检查 workspace、IK、六路 PWM 边界并打印
   `GRASP_STAGE_PREFLIGHT`。
 - Servo004 在全程固定为 `1500`。
@@ -206,13 +223,16 @@ source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
   --no_show
 ```
 
-## 真实 PRE_GRASP 单阶段
+## 真实分阶段测试
 
-先确认标定报告和五个不同位置的无串口坐标验证结果，再执行：
+每次命令都会先回到固定观察姿态并回读六轴。第一次按
+`open -> pre_grasp -> approach -> close -> lift` 逐个增加 `STAGE`，不要直接从
+`open` 跳到 `lift`：
 
 ```bash
 cd ~/rk3588_ai/arm_grasp_pipeline
 source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
+STAGE=pre_grasp
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_yolo_grasp.py \
   --target_class bottle \
   --execute_on_lock true \
@@ -220,12 +240,16 @@ source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
   --enable_arm \
   --joint_pwm_calibrated \
   --serial_port /dev/ttyUSB0 \
-  --max_stage pre_grasp \
+  --max_stage "$STAGE" \
   --max_frames 600 \
   --no_show
 ```
 
-`--max_stage pre_grasp` 完成 PRE_GRASP 后保持，不会发送任何 APPROACH 路点。
+`--max_stage pre_grasp` 完成 PRE_GRASP 后保持，不会发送任何 APPROACH 路点；
+`approach` 只到瓶心且保持爪子张开；`close` 才把 Servo005 送到 `2000`；`lift`
+才在闭爪后抬升。
+规划器按 `--max_stage` 截断未来阶段，因此 PRE_GRASP 不会再被尚未请求的 LIFT
+可达性反向阻断。
 真实抓取与 `--auto_center` 同时启用会在打开串口前被拒绝。
 
 ## 回归测试
@@ -239,10 +263,8 @@ cd ~/rk3588_ai/arm_grasp_pipeline
 ~/rk3588_ai/rknn_lite_env/bin/python3 tools/mock_grasp_cycle.py
 ```
 
-固定视角相机矩阵已标记为 `calibrated=true`；本机运动学和舵机映射仍为
-`calibrated=false` / `joint_pwm_calibrated=false`，所以仓库代码不会把 dry-run 结果
-误当成真实机械臂标定完成。
-
-`kinematics.l0_m..l3_m` 当前采用 C-5.2.0 测量表中的本机暂定值，不使用商家例程
-连杆长度；由于 `L3` 的 TCP 定义和 PWM-angle 零位仍需实测确认，默认
-`kinematics.calibrated=false`，真实抓取门禁不会放行。
+固定视角相机矩阵、实测连杆和舵机映射均已标记为 `calibrated=true`，但真实输出
+仍需要命令行显式 `--enable_arm --joint_pwm_calibrated`，并受参考姿态回读、workspace、
+IK、逐轴 PWM 边界、Servo004 固定值和 `--max_stage` 共同约束。当前沿用的实测
+矩阵尚无 `000=1500` 姿态下的独立留出点复测，因此必须逐阶段观察；真实对正结果
+只证明当前固定视角下的偏航可用，不能把它扩展成动态手眼标定。

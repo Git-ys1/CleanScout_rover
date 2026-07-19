@@ -80,7 +80,7 @@ def main() -> int:
     assert np.allclose(pre, target - approach_axis * machine.cfg.pre_grasp_standoff_m)
     assert np.allclose(grasp, target)
     assert pre[2] == target[2] and grasp[2] == target[2]
-    assert plan[0].gripper_pwm == 600 and plan[-2].gripper_pwm == 2400
+    assert plan[0].gripper_pwm == 1000 and plan[-2].gripper_pwm == 2000
     assert all(row.servo_pwms[4] == 1500 for row in plan)
 
     machine.locked_target_base = np.array([0.80, 0.0, 0.12], dtype=float)

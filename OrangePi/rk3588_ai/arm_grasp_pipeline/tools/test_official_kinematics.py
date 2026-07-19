@@ -8,20 +8,29 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent))
 
-from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
+from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics, PWM_PER_DEG
 from arm_grasp_pipeline.arm_motion import ArmMotion
 from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
 
 
 def main() -> int:
     kin = OfficialArmKinematics()
+    assert abs(PWM_PER_DEG - (2200.0 / 270.0)) < 1e-12
+    assert kin._pwm_targets((30.0, 0.0, 0.0, 0.0))[0] == 1744
+    assert kin._pwm_targets((90.0, 0.0, 0.0, 0.0))[0] == 2233
+    assert kin._pwm_targets((-90.0, 0.0, 0.0, 0.0))[0] == 767
+    assert kin._pwm_targets((0.0, 30.0, 30.0, 30.0)) == (1500, 1256, 1744, 1744)
+    semantic = (30.0, -40.0, 45.0, -60.0)
+    pwms = kin._pwm_targets(semantic)
+    recovered = kin._angles_from_pwm(pwms)
+    assert np.allclose(recovered, semantic, atol=0.07), (semantic, pwms, recovered)
     for xyz in ((0.18, 0.00, 0.12), (0.22, 0.05, 0.10), (0.14, -0.04, 0.16)):
         result = kin.inverse_pose(xyz, gripper=0.8)
         assert result is not None, xyz
         assert len(result.servo_pwms) == 4
         forward = kin.estimate_tool_matrix_from_pwm(result.servo_pwms)
         assert np.linalg.norm(forward[:3, 3] - np.asarray(xyz)) < 0.003, (xyz, forward[:3, 3])
-        assert all(500 <= value <= 2500 for value in result.servo_pwms)
+        assert all(500 <= value <= 2490 for value in result.servo_pwms)
 
     fixed_pitch = kin.inverse_pose((0.25, 0.04, 0.13), pitch_deg=20.0)
     assert fixed_pitch is not None
@@ -49,7 +58,7 @@ def main() -> int:
     assert "#004" not in command and "#005" not in command
 
     try:
-        arm.pack_ik_command(result, 1000, gripper_pwm=600, include_gripper=False)
+        arm.pack_ik_command(result, 1000, gripper_pwm=1000, include_gripper=False)
     except ValueError as exc:
         assert "Servo000..003" in str(exc)
     else:

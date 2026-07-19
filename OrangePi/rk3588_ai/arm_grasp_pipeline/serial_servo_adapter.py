@@ -30,14 +30,14 @@ class JointPWMMap:
 
 
 DEFAULT_JOINT_MAPS = [
-    JointPWMMap(0, center_us=1500, sign=+1),
-    JointPWMMap(1, center_us=1500, sign=+1),
-    JointPWMMap(2, center_us=1500, sign=+1),
-    # RF4 y_servo.c already reverses index 3 as aim=3000-aim; keep only one side reversed after RF1实测。
-    JointPWMMap(3, center_us=1500, sign=+1),
-    JointPWMMap(4, center_us=1500, sign=+1),
-    # The official controller exposes the full 005 range through P0600/P2400.
-    JointPWMMap(5, center_us=1500, sign=+1, min_us=500, max_us=2500),
+    # The servo vendor advertises 500..2700, but the flashed F103 controller
+    # clamps its generated pulse to 500..2490. Never send past that boundary.
+    JointPWMMap(0, center_us=1500, sign=+1, min_us=500, max_us=2490),
+    JointPWMMap(1, center_us=1500, sign=-1, min_us=500, max_us=2490),
+    JointPWMMap(2, center_us=1500, sign=+1, min_us=500, max_us=2490),
+    JointPWMMap(3, center_us=1500, sign=+1, min_us=500, max_us=2490),
+    JointPWMMap(4, center_us=1500, sign=+1, min_us=500, max_us=2490),
+    JointPWMMap(5, center_us=1500, sign=+1, min_us=500, max_us=2490),
 ]
 
 POSITION_RE = re.compile(r"#(?P<id>\d{3})P(?P<pwm>\d{4})!")
@@ -227,19 +227,26 @@ class SerialServoArmAdapter:
         return cmd
 
     def send_stop(self, servo_ids: Optional[Iterable[int]] = None) -> str:
-        """Stop selected servos without using the unsafe global 255 branch."""
+        """Explicitly stop selected servos, one parser-safe frame at a time.
+
+        PDST may release holding torque, so grasp runtimes must not call this
+        automatically after a successful stage.
+        """
         known_ids = {mapping.servo_id for mapping in self.joint_maps}
         ids = list(known_ids if servo_ids is None else (int(value) for value in servo_ids))
         if not ids or any(servo_id not in known_ids for servo_id in ids):
             raise ValueError("servo_ids must contain known servo ids")
-        cmd = "".join(f"#{servo_id:03d}PDST!" for servo_id in sorted(ids))
+        commands = [f"#{servo_id:03d}PDST!" for servo_id in sorted(ids)]
+        cmd = "".join(commands)
         if self.dry_run:
             print("[DRY-RUN STOP]", cmd)
             return cmd
         if self._ser is None:
             self.connect()
-        self._ser.write(cmd.encode("ascii"))
-        self._ser.flush()
+        for frame in commands:
+            self._ser.write(frame.encode("ascii"))
+            self._ser.flush()
+            time.sleep(0.03)
         return cmd
 
     def stop(self) -> None:

@@ -3,22 +3,70 @@
     "port": "/dev/ttyUSB0",
     "baudrate": 115200,
     "dry_run": true,
-    "joint_pwm_calibrated": false
+    "joint_pwm_calibrated": true,
+    "reference_pose_tolerance_pwm": 40
   },
   "kinematics": {
     "backend": "official_f103",
-    "calibrated": false,
+    "calibrated": true,
     "l0_m": 0.1,
     "l1_m": 0.13,
     "l2_m": 0.065,
     "l3_m": 0.177,
     "source": "docs/VERIFY/C-5.2.0_arm_camera_tcp_measurement_sheet.md",
-    "note": "Local measurements only; confirm L3 TCP meaning and PWM-angle zero calibration before setting calibrated=true"
+    "note": "C-5.2.5 staged fixed-wrist grasp model using the locally measured effective links and measured PWM-angle semantics"
+  },
+  "joint_pwm_calibration": {
+    "calibrated": true,
+    "raw_pwm_min": 500,
+    "raw_pwm_max": 2700,
+    "travel_deg": 270.0,
+    "pwm_per_deg": 8.148148148148149,
+    "deg_per_pwm": 0.12272727272727273,
+    "command_pwm_min": 500,
+    "command_pwm_max": 2490,
+    "pwm_per_deg_by_joint": [
+      8.148148148148149,
+      7.0908242948362,
+      7.93582743625423,
+      6.478095739111546
+    ],
+    "zero_pwms": [
+      1500,
+      1500,
+      1500,
+      1500
+    ],
+    "pwm_signs": [
+      1,
+      -1,
+      1,
+      1
+    ],
+    "positive_directions": [
+      "Servo000 left/CCW yaw",
+      "Servo001 L1 forward",
+      "Servo002 elbow fold/forward",
+      "Servo003 tip raise"
+    ],
+    "measured_checks": {
+      "servo000": [
+        {"pwm": 767, "angle_deg": -90.0},
+        {"pwm": 1500, "angle_deg": 0.0},
+        {"pwm": 1744, "angle_deg": 30.0},
+        {"pwm": 2233, "angle_deg": 90.0}
+      ],
+      "servo001_reference": {"pwm": 1909, "angle_deg": -57.68009910778612},
+      "servo002_reference": {"pwm": 1900, "angle_deg": 50.4043212939751},
+      "servo003_tracking": {"pwm": 900, "angle_deg": -92.61980879567396},
+      "servo003_grasp_view": {"pwm": 620, "angle_deg": -135.84238623365515}
+    },
+    "source": "C-5.2.5 Servo000 protractor anchor plus D435 table-plane measurements for Servo001..003; vendor 500..2700 remains nominal raw capability while flashed STM32 clamps commands to 500..2490"
   },
   "tool_reference": {
     "calibrated": false,
     "at_servo_pwms": [
-      1380,
+      1500,
       1909,
       1900,
       620,
@@ -41,7 +89,7 @@
   "fixed_view_calibration": {
     "calibrated": true,
     "reference_servo_pwms": [
-      1380,
+      1500,
       1909,
       1900,
       620,
@@ -79,7 +127,17 @@
     "max_rmse_m": 0.01,
     "max_point_error_m": 0.015,
     "frame": "T_base_camera_color_optical_reference",
-    "note": "Valid only at reference_servo_pwms; populate with tools/calibrate_base_camera_3d.py"
+    "note": "C-5.2.4 measured 11-point matrix retained for reference1500 after real PRE_GRASP rejected the unverified +14.7272727 deg analytical yaw rebase",
+    "rebase_provenance": {
+      "source_reference_servo000_pwm": 1380,
+      "target_reference_servo000_pwm": 1500,
+      "rejected_delta_yaw_deg": 14.727272727272727,
+      "operation": "T_reference1500 = T_C-5.2.4; rejected unverified Rz(delta_yaw) rebase",
+      "source_report": "config/base_camera_report.consolidated11.json",
+      "physical_evidence": "Rz rebase produced +12.377 deg target yaw and a visibly crooked real PRE_GRASP for a bottle placed forward; source matrix predicts -2.350 deg",
+      "error_metrics_from_source_11_point_fit": true,
+      "independent_holdout_at_new_pose": false
+    }
   },
   "object_geometry": {
     "bottle_radius_m": 0.032,
@@ -148,10 +206,10 @@
     "approach_waypoint_spacing_m": 0.01,
     "approach_waypoint_ms": 450,
     "lift_raise_m": 0.08,
-    "pitch_deg": 35.0,
-    "lift_pitch_deg": 0.0,
-    "gripper_open_pwm": 600,
-    "gripper_close_pwm": 2400,
+    "pitch_deg": 0.0,
+    "lift_pitch_deg": -11.0,
+    "gripper_open_pwm": 1000,
+    "gripper_close_pwm": 2000,
     "wrist_fixed_pwm": 1500,
     "wrist_lock_ms": 1000,
     "gripper_open_ms": 2000,
@@ -160,7 +218,7 @@
     "lift_ms": 1800,
     "retry_motion_ms": 3500,
     "retry_pose_pwms": [
-      1380,
+      1500,
       1909,
       1900,
       620,
@@ -169,28 +227,28 @@
     ],
     "servo_pwm_limits": [
       [
-        500,
-        2200
+        767,
+        2233
+      ],
+      [
+        767,
+        2233
+      ],
+      [
+        1500,
+        2490
       ],
       [
         500,
-        2200
-      ],
-      [
-        500,
-        2200
-      ],
-      [
-        500,
-        2200
+        2233
       ],
       [
         1500,
         1500
       ],
       [
-        600,
-        2400
+        1000,
+        2200
       ]
     ],
     "workspace_min_xyz_m": [
@@ -209,7 +267,7 @@
     "target_class": "bottle",
     "confidence": 0.25,
     "selection_strategy": "nearest_center",
-    "experimental_grasp_status": "fixed_view_calibrated_dry_run_validated",
-    "note": "C-5.2.4 fixed-view calibration passed; real output still requires measured kinematics and joint PWM calibration"
+    "experimental_grasp_status": "c5_2_5_joint_mapping_ready_for_staged_real_validation",
+    "note": "C-5.2.5 measured joint mapping and gripper limits are enabled; real output remains explicit and max_stage gated"
   }
 }

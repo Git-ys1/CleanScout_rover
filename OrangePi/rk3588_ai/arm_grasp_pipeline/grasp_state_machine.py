@@ -117,11 +117,11 @@ class GraspStateMachine:
     def _inside_workspace(self, xyz) -> bool:
         return inside_workspace(xyz, self.cfg)
 
-    def plan_locked_grasp(self):
+    def plan_locked_grasp(self, max_stage=None):
         if self.locked_target_base is None:
             raise ValueError("no locked target")
         return build_fixed_view_grasp_plan(
-            self.locked_target_base, self.arm.kin, self.cfg
+            self.locked_target_base, self.arm.kin, self.cfg, max_stage=max_stage
         )
 
     def _wait_motion(self, duration_ms) -> None:
@@ -161,7 +161,7 @@ class GraspStateMachine:
         if max_stage not in allowed_stages:
             raise ValueError("max_stage must be one of {}".format(sorted(allowed_stages)))
         try:
-            sequence = self.plan_locked_grasp()
+            sequence = self.plan_locked_grasp(max_stage=max_stage)
         except ValueError as exc:
             return self._fail(exc)
 

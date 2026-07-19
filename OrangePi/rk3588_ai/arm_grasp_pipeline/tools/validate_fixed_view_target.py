@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from collections import deque
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -62,6 +63,35 @@ def ik_available(kinematics, xyz_m, pitch_deg):
     return kinematics.inverse_pose(xyz_m, pitch_deg=pitch_deg, gripper=0.0) is not None
 
 
+def minimum_reachable_center_radius(center_base_m, config, kinematics,
+                                    resolution_m=0.001):
+    """Return the first radial distance that passes the complete staged plan."""
+    center = np.asarray(center_base_m, dtype=float)
+    if center.shape != (3,) or not np.all(np.isfinite(center)):
+        raise ValueError("center_base_m must contain three finite values")
+    if not math.isfinite(resolution_m) or resolution_m <= 0.0:
+        raise ValueError("resolution_m must be positive and finite")
+    axis = horizontal_approach_axis(center)
+    max_radius = math.hypot(
+        max(abs(float(config.workspace_min_xyz_m[0])),
+            abs(float(config.workspace_max_xyz_m[0]))),
+        max(abs(float(config.workspace_min_xyz_m[1])),
+            abs(float(config.workspace_max_xyz_m[1]))),
+    )
+    sample_count = int(math.ceil(max_radius / resolution_m))
+    for sample_index in range(sample_count + 1):
+        radius = sample_index * resolution_m
+        candidate = np.array(
+            [axis[0] * radius, axis[1] * radius, center[2]], dtype=float
+        )
+        try:
+            build_fixed_view_grasp_plan(candidate, kinematics, config)
+        except ValueError:
+            continue
+        return float(radius)
+    return None
+
+
 def build_validation_report(debug, config, kinematics, calibration):
     center = np.asarray(debug.bottle_center_base_m, dtype=float)
     axis = horizontal_approach_axis(center)
@@ -87,6 +117,11 @@ def build_validation_report(debug, config, kinematics, calibration):
     except ValueError as exc:
         plan_ok = False
         plan_error = str(exc)
+    current_radius = float(math.hypot(center[0], center[1]))
+    minimum_radius = minimum_reachable_center_radius(center, config, kinematics)
+    required_outward_shift = None
+    if minimum_radius is not None:
+        required_outward_shift = max(0.0, minimum_radius - current_radius)
     return {
         "pixel_xy": list(debug.pixel_xy),
         "depth_m": float(debug.depth_m),
@@ -100,6 +135,12 @@ def build_validation_report(debug, config, kinematics, calibration):
         "ik_flags": ik_flags,
         "plan_ok": plan_ok,
         "plan_error": plan_error,
+        "configured_pitch_deg": float(config.pitch_deg),
+        "l3_horizontal_commanded": abs(float(config.pitch_deg)) <= 1e-9,
+        "current_center_radius_m": current_radius,
+        "minimum_full_plan_center_radius_m": minimum_radius,
+        "required_outward_shift_m": required_outward_shift,
+        "reachability_hint_resolution_m": 0.001,
         "calibration_quality_pass": not bool(calibration.readiness_errors()),
         "serial_opened": False,
         "servo_command_sent": False,
@@ -121,6 +162,7 @@ def main() -> int:
     grasp_mapping = dict(config_data.get("grasp", {}))
     grasp_config = GraspConfig.from_mapping(grasp_mapping)
     kinematics_mapping = dict(config_data.get("kinematics", {}))
+    joint_pwm_mapping = dict(config_data.get("joint_pwm_calibration", {}))
     required_kinematics = {
         "backend", "calibrated", "l0_m", "l1_m", "l2_m", "l3_m",
     }
@@ -131,11 +173,8 @@ def main() -> int:
         )
     if str(kinematics_mapping["backend"]) != "official_f103":
         raise ValueError("fixed-view validation requires the official_f103 kinematics backend")
-    kinematics = OfficialArmKinematics(
-        l0_m=float(kinematics_mapping["l0_m"]),
-        l1_m=float(kinematics_mapping["l1_m"]),
-        l2_m=float(kinematics_mapping["l2_m"]),
-        l3_m=float(kinematics_mapping["l3_m"]),
+    kinematics = OfficialArmKinematics.from_config(
+        kinematics_mapping, joint_pwm_mapping
     )
     runtime = dict(config_data.get("runtime", {}))
     target_class = args.target_class or runtime.get("target_class", "bottle")
@@ -146,7 +185,8 @@ def main() -> int:
     from arm_grasp_pipeline.rknn_yolo_detector import RknnYolo11Detector
 
     detector = RknnYolo11Detector(
-        args.model_path, args.yolo_dir, target=args.target, device_id=args.device_id
+        args.model_path, args.yolo_dir, target=args.target, device_id=args.device_id,
+        object_threshold=confidence,
     )
     source = D435Source(
         int(realsense.get("width", 640)),

@@ -1,0 +1,40 @@
+{
+  "version": "C-5.2.5",
+  "matrix_direction": "p_base = T_base_camera_reference * p_camera",
+  "derivation": "T_reference1500 = T_C-5.2.4; the unverified Rz(+14.7272727 deg) rebase was rejected by real PRE_GRASP evidence",
+  "source_report": "config/base_camera_report.consolidated11.json",
+  "source_reference_servo_pwms": [1380, 1909, 1900, 620, 1500, 1500],
+  "target_reference_servo_pwms": [1500, 1909, 1900, 620, 1500, 1500],
+  "pwm_per_deg": 8.148148148148149,
+  "source_servo000_angle_deg": -14.727272727272727,
+  "target_servo000_angle_deg": 0.0,
+  "rejected_delta_yaw_deg": 14.727272727272727,
+  "T_base_camera_reference": [
+    [
+      -0.07200238368214469,
+      -0.4630936982946097,
+      0.8833798069595604,
+      0.016635206774849143
+    ],
+    [
+      -0.9931025137917506,
+      -0.048884687825174494,
+      -0.10657243732194957,
+      0.04829421497697736
+    ],
+    [
+      0.09253677022997328,
+      -0.8849601764464075,
+      -0.4563797018485254,
+      0.2487978962082768
+    ],
+    [0.0, 0.0, 0.0, 1.0]
+  ],
+  "determinant": 1.0000000000000002,
+  "rmse_m": 0.005847911769639443,
+  "max_error_m": 0.00971011361754861,
+  "error_metrics_from_source_11_point_fit": true,
+  "independent_holdout_at_target_pose": false,
+  "physical_evidence": "The rejected rebase commanded Servo000=1601 (+12.377 deg) and produced a visibly crooked PRE_GRASP for a bottle placed forward; the measured source matrix predicts Servo000 about 1481 (-2.350 deg).",
+  "safety_note": "Repeat max_stage=pre_grasp and require physical alignment confirmation before APPROACH."
+}

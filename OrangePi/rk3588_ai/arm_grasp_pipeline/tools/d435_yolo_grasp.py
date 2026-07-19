@@ -94,8 +94,38 @@ def dataclass_kwargs(mapping, names):
 
 def parse_pwms(text):
     values = [int(part.strip()) for part in str(text).split(",") if part.strip()]
-    if len(values) != 6 or any(value < 500 or value > 2500 for value in values):
-        raise ValueError("current PWM reference must contain six values in 500..2500")
+    if len(values) != 6 or any(value < 500 or value > 2490 for value in values):
+        raise ValueError("current PWM reference must contain six values in 500..2490")
+    return values
+
+
+def reference_pose_mismatches(reference_pwms, actual_by_id, tolerance_pwm,
+                              servo_ids=None):
+    tolerance = int(tolerance_pwm)
+    if tolerance < 0:
+        raise ValueError("reference pose tolerance must be non-negative")
+    mismatches = {}
+    ids = range(len(reference_pwms)) if servo_ids is None else servo_ids
+    for servo_id in (int(value) for value in ids):
+        target = reference_pwms[servo_id]
+        actual = actual_by_id.get(servo_id)
+        if actual is None or abs(int(actual) - int(target)) > tolerance:
+            mismatches[str(servo_id)] = {
+                "target_pwm": int(target),
+                "actual_pwm": None if actual is None else int(actual),
+                "delta_pwm": None if actual is None else abs(int(actual) - int(target)),
+            }
+    return mismatches
+
+
+def expected_stage_pwms(plan_rows, max_stage):
+    stage = str(max_stage).strip().upper()
+    matches = [row for row in plan_rows if str(row.get("state", "")).upper() == stage]
+    if not matches:
+        raise ValueError("grasp plan has no {} stage".format(stage))
+    values = [int(value) for value in matches[-1]["servo_pwms_000_005"]]
+    if len(values) != 6:
+        raise ValueError("stage PWM record must contain six values")
     return values
 
 
@@ -115,12 +145,17 @@ def validate_real_grasp_request(args, config, calibration: FixedViewCalibration)
     grasp_cfg = dict(config.get("grasp", {}))
     camera_mount = dict(config.get("camera_mount", {}))
     kinematics_cfg = dict(config.get("kinematics", {}))
+    joint_cfg = dict(config.get("joint_pwm_calibration", {}))
     if not args.joint_pwm_calibrated:
         raise ValueError("real grasp requires explicit --joint_pwm_calibrated")
     if not bool(serial_cfg.get("joint_pwm_calibrated", False)):
         raise ValueError("config serial.joint_pwm_calibrated is false")
     if not bool(kinematics_cfg.get("calibrated", False)):
         raise ValueError("config kinematics.calibrated is false")
+    if not bool(joint_cfg.get("calibrated", False)):
+        raise ValueError("config joint_pwm_calibration.calibrated is false")
+    # Construction validates range, scale, zero count and per-axis signs.
+    OfficialArmKinematics.from_config(kinematics_cfg, joint_cfg)
     if not bool(camera_mount.get("frozen", False)):
         raise ValueError("camera mount relation is not frozen")
     if not bool(camera_mount.get("requires_fixed_servo004", False)):
@@ -219,6 +254,7 @@ def main() -> int:
     grasp_cfg = dict(config.get("grasp", {}))
     realsense_cfg = dict(config.get("realsense", {}))
     kinematics_cfg = dict(config.get("kinematics", {}))
+    joint_pwm_cfg = dict(config.get("joint_pwm_calibration", {}))
     centering_cfg = dict(config.get("visual_centering", {}))
     calibration = FixedViewCalibration.from_mapping(
         dict(config.get("fixed_view_calibration", {}))
@@ -253,12 +289,7 @@ def main() -> int:
         )
     if str(kinematics_cfg["backend"]) != "official_f103":
         raise ValueError("fixed-view grasp requires the official_f103 kinematics backend")
-    kinematics = OfficialArmKinematics(
-        l0_m=float(kinematics_cfg["l0_m"]),
-        l1_m=float(kinematics_cfg["l1_m"]),
-        l2_m=float(kinematics_cfg["l2_m"]),
-        l3_m=float(kinematics_cfg["l3_m"]),
-    )
+    kinematics = OfficialArmKinematics.from_config(kinematics_cfg, joint_pwm_cfg)
     arm = ArmMotion(adapter, kinematics=kinematics)
     reference_pwms = list(calibration.reference_servo_pwms)
     current_pwms = parse_pwms(args.current_pwms) if args.current_pwms else list(reference_pwms)
@@ -284,7 +315,8 @@ def main() -> int:
     from arm_grasp_pipeline.rknn_yolo_detector import RknnYolo11Detector
 
     detector = RknnYolo11Detector(
-        args.model_path, args.yolo_dir, target=args.target, device_id=args.device_id
+        args.model_path, args.yolo_dir, target=args.target, device_id=args.device_id,
+        object_threshold=confidence,
     )
     source = D435Source(
         int(realsense_cfg.get("width", 640)),
@@ -314,8 +346,20 @@ def main() -> int:
                 prepare_ms = int(grasp_cfg.get("retry_motion_ms", 3500))
                 payload = adapter.send_pwm_command(reference_pwms, prepare_ms)
                 time.sleep(prepare_ms / 1000.0 + float(grasp_cfg.get("motion_settle_s", 0.15)))
+                actual_pwms = adapter.read_pwms(range(6), timeout_s=0.8)
+                pose_tolerance = int(serial_cfg.get("reference_pose_tolerance_pwm", 40))
+                mismatches = reference_pose_mismatches(
+                    reference_pwms, actual_pwms, pose_tolerance
+                )
+                if mismatches:
+                    raise RuntimeError(
+                        "fixed-view reference pose readback failed: "
+                        + json.dumps(mismatches, ensure_ascii=False)
+                    )
                 print("REFERENCE_POSE_READY " + json.dumps({
                     "pwms": reference_pwms,
+                    "readback_pwms": actual_pwms,
+                    "tolerance_pwm": pose_tolerance,
                     "payload": payload,
                     "T_base_camera_reference_valid": True,
                 }, ensure_ascii=False))
@@ -429,6 +473,41 @@ def main() -> int:
                             print("GRASP_EXECUTE {} dry_run={} max_stage={}".format(
                                 ok, args.dry_run, args.max_stage
                             ))
+                            if ok and not args.dry_run:
+                                expected_pwms = expected_stage_pwms(plan, args.max_stage)
+                                actual_pwms = adapter.read_pwms(range(6), timeout_s=0.8)
+                                pose_tolerance = int(
+                                    serial_cfg.get("reference_pose_tolerance_pwm", 40)
+                                )
+                                arm_mismatches = reference_pose_mismatches(
+                                    expected_pwms,
+                                    actual_pwms,
+                                    pose_tolerance,
+                                    servo_ids=range(5),
+                                )
+                                gripper_actual = actual_pwms.get(5)
+                                readback = {
+                                    "stage": str(args.max_stage).upper(),
+                                    "expected_pwms": expected_pwms,
+                                    "actual_pwms": actual_pwms,
+                                    "arm_tolerance_pwm": pose_tolerance,
+                                    "arm_mismatches_000_004": arm_mismatches,
+                                    "gripper_target_pwm": expected_pwms[5],
+                                    "gripper_actual_pwm": gripper_actual,
+                                    "gripper_delta_pwm": (
+                                        None if gripper_actual is None
+                                        else abs(int(gripper_actual) - expected_pwms[5])
+                                    ),
+                                }
+                                print("STAGE_READBACK " + json.dumps(
+                                    readback, ensure_ascii=False
+                                ))
+                                if arm_mismatches:
+                                    grasp_result = "stage_readback_failed"
+                                    raise RuntimeError(
+                                        "stage arm readback failed: "
+                                        + json.dumps(arm_mismatches, ensure_ascii=False)
+                                    )
                     if args.stop_on_lock:
                         break
 
@@ -447,10 +526,10 @@ def main() -> int:
             output_dir.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(output_dir / "last_fixed_view_grasp.png"), last_visual)
         if not args.dry_run:
-            try:
-                adapter.stop()
-            except Exception as exc:
-                print("arm stop warning: {}".format(exc), file=sys.stderr)
+            # PDST releases the holding state on this heavy arm and lets the
+            # mechanism sag under gravity. A completed or rejected staged run
+            # must hold its last commanded pose for physical inspection.
+            print("ARM_HOLD_LAST_POSE automatic_PDST=false")
         adapter.close()
         try:
             source.stop()

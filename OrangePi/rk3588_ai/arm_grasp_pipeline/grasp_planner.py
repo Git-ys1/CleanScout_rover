@@ -44,10 +44,10 @@ class GraspConfig:
     approach_waypoint_spacing_m: float = 0.010
     approach_waypoint_ms: int = 450
     lift_raise_m: float = 0.080
-    pitch_deg: float = 20.0
-    lift_pitch_deg: float = 0.0
-    gripper_open_pwm: int = 600
-    gripper_close_pwm: int = 2400
+    pitch_deg: float = 0.0
+    lift_pitch_deg: float = -11.0
+    gripper_open_pwm: int = 1000
+    gripper_close_pwm: int = 2000
     wrist_fixed_pwm: int = REQUIRED_WRIST_PWM
     wrist_lock_ms: int = 1000
     gripper_open_ms: int = 2000
@@ -55,10 +55,10 @@ class GraspConfig:
     gripper_close_ms: int = 1800
     lift_ms: int = 1800
     retry_motion_ms: int = 3500
-    retry_pose_pwms: Tuple[int, int, int, int, int, int] = (1380, 1909, 1900, 620, 1500, 1500)
+    retry_pose_pwms: Tuple[int, int, int, int, int, int] = (1500, 1909, 1900, 620, 1500, 1500)
     servo_pwm_limits: Tuple[Tuple[int, int], ...] = (
-        (500, 2200), (500, 2200), (500, 2200),
-        (500, 2200), (REQUIRED_WRIST_PWM, REQUIRED_WRIST_PWM), (600, 2400),
+        (767, 2233), (767, 2233), (1500, 2490),
+        (500, 2233), (REQUIRED_WRIST_PWM, REQUIRED_WRIST_PWM), (1000, 2200),
     )
     workspace_min_xyz_m: Tuple[float, float, float] = (0.04, -0.30, 0.015)
     workspace_max_xyz_m: Tuple[float, float, float] = (0.39, 0.30, 0.42)
@@ -162,8 +162,12 @@ def _motion_step(state, xyz_m, pitch_deg, gripper_pwm, duration_ms,
 
 
 def build_fixed_view_grasp_plan(bottle_center_base_m, kinematics,
-                                config: GraspConfig):
+                                config: GraspConfig, max_stage=None):
     """Build OPEN/PRE_GRASP/APPROACH/CLOSE/LIFT with full preflight checks."""
+    requested_stage = None if max_stage is None else str(max_stage).strip().upper()
+    allowed_stages = {"OPEN", "PRE_GRASP", "APPROACH", "CLOSE", "LIFT"}
+    if requested_stage is not None and requested_stage not in allowed_stages:
+        raise ValueError("max_stage must be one of {}".format(sorted(allowed_stages)))
     if not 0.060 <= float(config.pre_grasp_standoff_m) <= 0.080:
         raise ValueError("pre_grasp_standoff_m must be in 0.060..0.080 m")
     if int(config.wrist_fixed_pwm) != REQUIRED_WRIST_PWM:
@@ -189,6 +193,9 @@ def build_fixed_view_grasp_plan(bottle_center_base_m, kinematics,
         ik_ok=None,
     )
 
+    if requested_stage == "OPEN":
+        return [open_step]
+
     center = np.asarray(bottle_center_base_m, dtype=float)
     if center.shape != (3,) or not np.all(np.isfinite(center)):
         raise ValueError("bottle center must contain three finite base-frame values")
@@ -202,6 +209,8 @@ def build_fixed_view_grasp_plan(bottle_center_base_m, kinematics,
         GraspState.PRE_GRASP, pre, config.pitch_deg, config.gripper_open_pwm,
         config.pre_grasp_ms, kinematics, config,
     ))
+    if requested_stage == "PRE_GRASP":
+        return steps
     waypoints = cartesian_line_points(pre, approach, config.approach_waypoint_spacing_m)
     for index, waypoint in enumerate(waypoints, start=1):
         steps.append(_motion_step(
@@ -209,10 +218,14 @@ def build_fixed_view_grasp_plan(bottle_center_base_m, kinematics,
             config.approach_waypoint_ms, kinematics, config,
             waypoint_index=index, waypoint_count=len(waypoints),
         ))
+    if requested_stage == "APPROACH":
+        return steps
     steps.append(_motion_step(
         GraspState.CLOSE, approach, config.pitch_deg, config.gripper_close_pwm,
         config.gripper_close_ms, kinematics, config,
     ))
+    if requested_stage == "CLOSE":
+        return steps
     lift = approach.copy()
     lift[2] += float(config.lift_raise_m)
     steps.append(_motion_step(

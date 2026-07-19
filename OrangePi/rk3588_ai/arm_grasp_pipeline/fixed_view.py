@@ -102,6 +102,27 @@ def solve_rigid_transform(camera_points_m, base_points_m) -> RigidCalibrationRes
     )
 
 
+def rebase_base_camera_for_base_yaw(T_base_camera, delta_yaw_deg: float) -> np.ndarray:
+    """Rotate a fixed-view camera pose with Servo000 about the base Z axis.
+
+    This is valid only when Servo000 is the sole changed joint and the arm base
+    origin lies on its rotation axis. The matrix direction remains
+    ``p_base = T_base_camera @ p_camera``.
+    """
+    matrix = validate_rigid_transform(T_base_camera, "T_base_camera_source")
+    angle_deg = float(delta_yaw_deg)
+    if not math.isfinite(angle_deg):
+        raise ValueError("delta_yaw_deg must be finite")
+    angle = math.radians(angle_deg)
+    yaw = np.eye(4, dtype=float)
+    yaw[:3, :3] = [
+        [math.cos(angle), -math.sin(angle), 0.0],
+        [math.sin(angle), math.cos(angle), 0.0],
+        [0.0, 0.0, 1.0],
+    ]
+    return validate_rigid_transform(yaw @ matrix, "T_base_camera_rebased")
+
+
 def median_depth_around_pixel(depth_frames_m, pixel_xy, radius_px=4,
                               min_valid_samples=12) -> Optional[float]:
     """Return robust aligned depth around a clicked RGB pixel."""
@@ -217,8 +238,8 @@ class FixedViewCalibration:
             errors.append("fixed-view max_error_m exceeds {:.3f} m".format(
                 effective_point_limit
             ))
-        if any(value < 500 or value > 2500 for value in self.reference_servo_pwms):
-            errors.append("fixed-view reference servo PWM is outside 500..2500")
+        if any(value < 500 or value > 2490 for value in self.reference_servo_pwms):
+            errors.append("fixed-view reference servo PWM is outside controller range 500..2490")
         if self.reference_servo_pwms[4] != int(required_wrist_pwm):
             errors.append("Servo004 reference PWM must be {}".format(required_wrist_pwm))
         return errors

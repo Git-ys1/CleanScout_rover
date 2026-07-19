@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C-5.2.4 hardware-free regression suite."""
+"""C-5.2.5 hardware-free regression suite."""
 from __future__ import annotations
 
 import math
@@ -21,6 +21,7 @@ from arm_grasp_pipeline.fixed_view import (
     fixed_view_target_debug,
     median_depth_around_pixel,
     pre_grasp_from_bottle_center,
+    rebase_base_camera_for_base_yaw,
     solve_rigid_transform,
 )
 from arm_grasp_pipeline.geometry import CameraIntrinsics, depth_pixel_to_camera
@@ -30,8 +31,19 @@ from arm_grasp_pipeline.grasp_planner import (
     build_fixed_view_grasp_plan,
 )
 from arm_grasp_pipeline.grasp_state_machine import GraspStateMachine
-from arm_grasp_pipeline.official_kinematics import OfficialIKResult
-from arm_grasp_pipeline.tools.d435_yolo_grasp import validate_real_grasp_request
+from arm_grasp_pipeline.official_kinematics import (
+    OfficialArmKinematics,
+    OfficialIKResult,
+)
+from arm_grasp_pipeline.rknn_yolo_detector import RknnYolo11Detector
+from arm_grasp_pipeline.tools.d435_yolo_grasp import (
+    expected_stage_pwms,
+    reference_pose_mismatches,
+    validate_real_grasp_request,
+)
+from arm_grasp_pipeline.tools.validate_fixed_view_target import (
+    minimum_reachable_center_radius,
+)
 from arm_grasp_pipeline.tools.collect_base_camera_points import (
     parse_base_xyz_mm,
     pose_mismatches,
@@ -103,10 +115,32 @@ def real_args(**overrides):
 
 
 def real_config(reference=None):
-    reference = reference or [1380, 1909, 1900, 620, 1500, 1500]
+    reference = reference or [1500, 1909, 1900, 620, 1500, 1500]
     return {
         "serial": {"joint_pwm_calibrated": True},
-        "kinematics": {"calibrated": True},
+        "kinematics": {
+            "calibrated": True,
+            "l0_m": 0.100,
+            "l1_m": 0.130,
+            "l2_m": 0.065,
+            "l3_m": 0.177,
+        },
+        "joint_pwm_calibration": {
+            "calibrated": True,
+            "raw_pwm_min": 500,
+            "raw_pwm_max": 2700,
+            "travel_deg": 270.0,
+            "zero_pwms": [1500, 1500, 1500, 1500],
+            "pwm_signs": [1, -1, 1, 1],
+            "pwm_per_deg_by_joint": [
+                8.148148148148149,
+                7.0908242948362,
+                7.93582743625423,
+                6.478095739111546,
+            ],
+            "command_pwm_min": 500,
+            "command_pwm_max": 2490,
+        },
         "camera_mount": {
             "frozen": True,
             "requires_fixed_servo004": True,
@@ -120,6 +154,12 @@ def real_config(reference=None):
 
 
 class FixedViewGraspTests(unittest.TestCase):
+    def test_detector_threshold_is_configurable_before_runtime_start(self):
+        detector = RknnYolo11Detector("model.rknn", ".", object_threshold=0.15)
+        self.assertAlmostEqual(detector.object_threshold, 0.15)
+        with self.assertRaisesRegex(ValueError, "object_threshold"):
+            RknnYolo11Detector("model.rknn", ".", object_threshold=0.0)
+
     def test_calibration_collector_converts_base_mm_to_metres(self):
         self.assertTrue(np.allclose(
             parse_base_xyz_mm("230,-60,85"),
@@ -127,23 +167,178 @@ class FixedViewGraspTests(unittest.TestCase):
         ))
 
     def test_reference_pose_verification_requires_servo000_through_004(self):
-        reference = [1380, 1909, 1900, 620, 1500, 1500]
-        actual = {0: 1382, 1: 1913, 2: 1901, 3: 620, 4: 1500, 5: None}
+        reference = [1500, 1909, 1900, 620, 1500, 1500]
+        actual = {0: 1502, 1: 1913, 2: 1901, 3: 620, 4: 1500, 5: None}
         self.assertEqual(pose_mismatches(reference, actual, 30), {})
         actual[4] = 1450
         self.assertIn(4, pose_mismatches(reference, actual, 30))
 
-    def test_repository_config_uses_local_unapproved_link_measurements(self):
+    def test_runtime_reference_pose_readback_requires_all_six_servos(self):
+        reference = [1500, 1909, 1900, 620, 1500, 1500]
+        actual = {index: value for index, value in enumerate(reference)}
+        self.assertEqual(reference_pose_mismatches(reference, actual, 40), {})
+        actual[3] = 700
+        self.assertIn("3", reference_pose_mismatches(reference, actual, 40))
+        actual[3] = 620
+        actual[5] = None
+        self.assertIn("5", reference_pose_mismatches(reference, actual, 40))
+
+    def test_stage_readback_uses_last_waypoint_and_ignores_gripper_for_arm_gate(self):
+        plan = [
+            {"state": "APPROACH", "servo_pwms_000_005": [1500, 1600, 1700, 1800, 1500, 1000]},
+            {"state": "APPROACH", "servo_pwms_000_005": [1510, 1610, 1710, 1810, 1500, 1000]},
+            {"state": "CLOSE", "servo_pwms_000_005": [1510, 1610, 1710, 1810, 1500, 2000]},
+        ]
+        expected = expected_stage_pwms(plan, "approach")
+        self.assertEqual(expected, [1510, 1610, 1710, 1810, 1500, 1000])
+        actual = {0: 1510, 1: 1610, 2: 1710, 3: 1810, 4: 1500, 5: 1400}
+        self.assertEqual(
+            reference_pose_mismatches(expected, actual, 40, servo_ids=range(5)),
+            {},
+        )
+
+    def test_repository_config_uses_measured_joint_mapping(self):
         with (ROOT / "config/arm_grasp_default.json").open(
                 "r", encoding="utf-8") as handle:
             config = json.load(handle)
         kinematics = config["kinematics"]
-        self.assertFalse(kinematics["calibrated"])
+        self.assertTrue(kinematics["calibrated"])
         self.assertEqual(
             [kinematics[name] for name in ("l0_m", "l1_m", "l2_m", "l3_m")],
             [0.100, 0.130, 0.065, 0.177],
         )
         self.assertIn("C-5.2.0_arm_camera_tcp_measurement_sheet.md", kinematics["source"])
+        joint = config["joint_pwm_calibration"]
+        self.assertTrue(joint["calibrated"])
+        self.assertEqual(joint["zero_pwms"], [1500, 1500, 1500, 1500])
+        self.assertEqual(joint["pwm_signs"], [1, -1, 1, 1])
+        self.assertAlmostEqual(joint["pwm_per_deg"], 2200.0 / 270.0, places=12)
+        self.assertEqual(joint["command_pwm_max"], 2490)
+        self.assertEqual(len(joint["pwm_per_deg_by_joint"]), 4)
+        self.assertAlmostEqual(joint["pwm_per_deg_by_joint"][2], 7.93582743625423)
+        self.assertAlmostEqual(joint["pwm_per_deg_by_joint"][3], 6.478095739111546)
+
+    def test_per_joint_angle_mapping_and_controller_limit(self):
+        config = real_config()
+        kin = OfficialArmKinematics.from_config(
+            config["kinematics"], config["joint_pwm_calibration"]
+        )
+        pwms = kin._pwm_targets((30.0, -20.0, 50.0, -90.0))
+        self.assertEqual(pwms, (1744, 1642, 1897, 917))
+        self.assertTrue(np.allclose(
+            kin._angles_from_pwm(pwms),
+            (30.0, -20.0, 50.0, -90.0),
+            atol=0.08,
+        ))
+        self.assertIsNone(kin._pwm_targets((0.0, 0.0, 125.0, 0.0)))
+
+    def test_measured_reference_pose_pitch_matches_physical_observation(self):
+        with (ROOT / "config/arm_grasp_default.json").open(
+                "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        kin = OfficialArmKinematics.from_config(
+            config["kinematics"], config["joint_pwm_calibration"]
+        )
+        tracking = kin.estimate_tool_matrix_from_pwm(
+            [1500, 1909, 1900, 900, 1500, 1500]
+        )
+        fixed_view = kin.estimate_tool_matrix_from_pwm(
+            [1500, 1909, 1900, 620, 1500, 1500]
+        )
+        tracking_pitch = math.degrees(math.asin(float(tracking[2, 0])))
+        fixed_view_pitch = math.degrees(math.asin(float(fixed_view[2, 0])))
+        self.assertLess(abs(tracking_pitch), 6.0)
+        self.assertLess(fixed_view_pitch, -30.0)
+
+    def test_horizontal_bottle_grasp_at_measured_reachable_radius(self):
+        with (ROOT / "config/arm_grasp_default.json").open(
+                "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        kin = OfficialArmKinematics.from_config(
+            config["kinematics"], config["joint_pwm_calibration"]
+        )
+        grasp = GraspConfig.from_mapping(config["grasp"])
+        plan = build_fixed_view_grasp_plan(
+            (0.339721374804642, -0.01376181313795489, 0.15453145107926852),
+            kin,
+            grasp,
+        )
+        pre = next(step for step in plan if step.state == GraspState.PRE_GRASP)
+        close = next(step for step in plan if step.state == GraspState.CLOSE)
+        lift = next(step for step in plan if step.state == GraspState.LIFT)
+        self.assertEqual(pre.pitch_deg, 0.0)
+        self.assertEqual(pre.servo_pwms, (1481, 1289, 2486, 1914, 1500, 1000))
+        self.assertEqual(close.servo_pwms, (1481, 1129, 1977, 1646, 1500, 2000))
+        self.assertEqual(lift.pitch_deg, -11.0)
+        self.assertEqual(lift.servo_pwms, (1481, 1106, 1576, 1410, 1500, 2000))
+        self.assertLessEqual(pre.servo_pwms[2], 2490)
+
+    def test_horizontal_reachability_hint_uses_complete_plan(self):
+        with (ROOT / "config/arm_grasp_default.json").open(
+                "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        kin = OfficialArmKinematics.from_config(
+            config["kinematics"], config["joint_pwm_calibration"]
+        )
+        grasp = GraspConfig.from_mapping(config["grasp"])
+        current = (0.24563334954400154, -0.004183836378415715, 0.1536203742911384)
+        minimum = minimum_reachable_center_radius(current, grasp, kin)
+        self.assertAlmostEqual(minimum, 0.340, places=3)
+        self.assertGreater(minimum - math.hypot(current[0], current[1]), 0.094)
+
+    def test_pre_grasp_stage_does_not_require_future_lift_solution(self):
+        with (ROOT / "config/arm_grasp_default.json").open(
+                "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        config["grasp"]["lift_pitch_deg"] = -10.0
+        kin = OfficialArmKinematics.from_config(
+            config["kinematics"], config["joint_pwm_calibration"]
+        )
+        grasp = GraspConfig.from_mapping(config["grasp"])
+        plan = build_fixed_view_grasp_plan(
+            (0.339721374804642, -0.01376181313795489, 0.15453145107926852),
+            kin,
+            grasp,
+            max_stage="pre_grasp",
+        )
+        self.assertEqual([step.state for step in plan], [GraspState.OPEN, GraspState.PRE_GRASP])
+
+    def test_fixed_view_matrix_rebases_with_servo000_yaw(self):
+        source = np.eye(4, dtype=float)
+        source[:3, 3] = [0.20, 0.0, 0.10]
+        rebased = rebase_base_camera_for_base_yaw(source, 30.0)
+        self.assertTrue(np.allclose(
+            rebased[:3, 3],
+            [0.20 * math.cos(math.radians(30.0)), 0.10, 0.10],
+            atol=1e-12,
+        ))
+        self.assertAlmostEqual(float(np.linalg.det(rebased[:3, :3])), 1.0, places=12)
+
+    def test_repository_reference1500_rejects_unverified_yaw_rebase(self):
+        with (ROOT / "config/base_camera_report.consolidated11.json").open(
+                "r", encoding="utf-8") as handle:
+            source = json.load(handle)
+        with (ROOT / "config/base_camera_report.c525_reference1500.json").open(
+                "r", encoding="utf-8") as handle:
+            report = json.load(handle)
+        with (ROOT / "config/arm_grasp_default.json").open(
+                "r", encoding="utf-8") as handle:
+            config = json.load(handle)
+        expected = np.asarray(source["T_base_camera_reference"], dtype=float)
+        rejected = rebase_base_camera_for_base_yaw(
+            expected, report["rejected_delta_yaw_deg"]
+        )
+        self.assertTrue(np.allclose(expected, report["T_base_camera_reference"], atol=1e-12))
+        self.assertTrue(np.allclose(
+            expected,
+            config["fixed_view_calibration"]["base_to_camera_matrix_4x4"],
+            atol=1e-12,
+        ))
+        self.assertFalse(np.allclose(expected, rejected, atol=1e-6))
+        self.assertEqual(
+            config["fixed_view_calibration"]["reference_servo_pwms"],
+            [1500, 1909, 1900, 620, 1500, 1500],
+        )
 
     def test_known_rigid_transform_recovery(self):
         camera = np.array([
@@ -233,7 +428,7 @@ class FixedViewGraspTests(unittest.TestCase):
     def test_uncalibrated_real_grasp_rejection(self):
         calibration = FixedViewCalibration(
             calibrated=False,
-            reference_servo_pwms=(1380, 1909, 1900, 620, 1500, 1500),
+            reference_servo_pwms=(1500, 1909, 1900, 620, 1500, 1500),
             base_to_camera_matrix_4x4=np.eye(4),
             rmse_m=0.001,
             max_error_m=0.002,
@@ -244,7 +439,7 @@ class FixedViewGraspTests(unittest.TestCase):
     def test_calibration_error_thresholds_reject_real_grasp(self):
         calibration = FixedViewCalibration(
             calibrated=True,
-            reference_servo_pwms=(1380, 1909, 1900, 620, 1500, 1500),
+            reference_servo_pwms=(1500, 1909, 1900, 620, 1500, 1500),
             base_to_camera_matrix_4x4=np.eye(4),
             rmse_m=0.011,
             max_error_m=0.016,
@@ -255,7 +450,7 @@ class FixedViewGraspTests(unittest.TestCase):
     def test_non_finite_calibration_limit_cannot_bypass_real_gate(self):
         calibration = FixedViewCalibration(
             calibrated=True,
-            reference_servo_pwms=(1380, 1909, 1900, 620, 1500, 1500),
+            reference_servo_pwms=(1500, 1909, 1900, 620, 1500, 1500),
             base_to_camera_matrix_4x4=np.eye(4),
             rmse_m=0.001,
             max_error_m=0.002,
@@ -267,7 +462,7 @@ class FixedViewGraspTests(unittest.TestCase):
     def test_unmeasured_kinematics_rejects_real_grasp(self):
         calibration = FixedViewCalibration(
             calibrated=True,
-            reference_servo_pwms=(1380, 1909, 1900, 620, 1500, 1500),
+            reference_servo_pwms=(1500, 1909, 1900, 620, 1500, 1500),
             base_to_camera_matrix_4x4=np.eye(4),
             rmse_m=0.001,
             max_error_m=0.002,
@@ -275,6 +470,20 @@ class FixedViewGraspTests(unittest.TestCase):
         config = real_config()
         config["kinematics"]["calibrated"] = False
         with self.assertRaisesRegex(ValueError, "kinematics.calibrated is false"):
+            validate_real_grasp_request(real_args(), config, calibration)
+
+    def test_unmeasured_joint_mapping_rejects_real_grasp(self):
+        calibration = FixedViewCalibration(
+            calibrated=True,
+            reference_servo_pwms=(1500, 1909, 1900, 620, 1500, 1500),
+            base_to_camera_matrix_4x4=np.eye(4),
+            rmse_m=0.001,
+            max_error_m=0.002,
+        )
+        config = real_config()
+        config["joint_pwm_calibration"]["calibrated"] = False
+        with self.assertRaisesRegex(
+                ValueError, "joint_pwm_calibration.calibrated is false"):
             validate_real_grasp_request(real_args(), config, calibration)
 
     def test_max_stage_pre_grasp_sends_no_approach(self):
@@ -295,7 +504,7 @@ class FixedViewGraspTests(unittest.TestCase):
         self.assertEqual(machine.state, GraspState.VERIFY)
 
     def test_servo004_not_1500_rejects_real_grasp(self):
-        reference = (1380, 1909, 1900, 620, 1490, 1500)
+        reference = (1500, 1909, 1900, 620, 1490, 1500)
         calibration = FixedViewCalibration(
             calibrated=True,
             reference_servo_pwms=reference,
