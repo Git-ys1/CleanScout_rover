@@ -1,270 +1,442 @@
-# Arm Grasp Pipeline
+# D435 + RKNN YOLO11 动态闭环抓取
 
-`arm_grasp_pipeline/` 是独立于 ROS 的 D435 + RKNN YOLO11 固定观察姿态抓取管线。
-C-5.2.5 不通过目标位置对应 PWM，也不通过检测框面积估距；目标位置来自 aligned
-depth、相机反投影、实测 `T_base_camera_reference` 和机械臂 IK。
+本目录是在香橙派 RK3588 上运行的非 ROS 机械臂抓取管线。它保留现有 RKNN
+YOLO11、Intel RealSense D435 深度对齐到 RGB、总线舵机 ASCII 协议与 `PRAD`
+回读，并将真实路径从固定相机外参改为实时关节姿态驱动的动态坐标链。
 
-## C-5.2.5 当前状态
+当前实现已经具备软件级阶段门控，但**不把代码完成或舵机到位写成实机抓取成功**。
+当前配置的动态手眼多姿态验证、closed TCP、运动学和冻结 PWM 映射已经进入真实动态
+坐标链；`tool_tcp.open_calibrated=false` 只表示 open TCP 仍是暂存几何，最终规划明确
+使用已标定的 closed TCP。Servo005 安全闭合 PWM/夹爪内宽尚未完成独立实测，因此
+`gripper_close_calibrated=false` 时 CLOSE、VERIFY、LIFT 和 `full` 必须在连接设备前
+拒绝；observe、center、pregrasp、approach 不得绕过六轴 PRAD。若相机支架、机械臂
+安装或夹爪结构发生变化，必须重新标定并从 observe/center 开始验收。
 
-- 13 个唯一对应点经刚体一致性审查后保留 11 点，剔除 2 个异常点。
-- 固定视角矩阵已通过质量门禁：RMSE `5.85 mm`，最大误差 `9.71 mm`。
-- Servo000 使用厂家线性比例 `8.148148 PWM/deg`；Servo001--003 使用 D435 桌面
-  平面法得到的逐轴有效斜率 `7.090824/7.935827/6.478096 PWM/deg`，禁止再统一套值。
-- 厂家标称原始范围为 `500..2700`，但当前 STM32 控制器实际命令范围冻结为
-  `500..2490`。
-- Servo005 采用实测边界：`1000` 张开、`2000` 闭合；Servo004 始终固定 `1500`。
-- 固定观察参考姿态统一为 `[1500,1909,1900,620,1500,1500]`。
-- 旧 `000=1380` 的 11 点实测矩阵暂时原样用于 `000=1500` 参考姿态；解析增加
-  `+14.727 deg` 偏航的方案在真实 PRE_GRASP 中导致明显偏转，已否决，不能再启用。
-- 正式抓取冻结 `pitch_deg=0`，即 L3/TCP 水平接近；闭爪后的 80 mm 抬升使用
-  `lift_pitch_deg=-11`。按当前连杆、逐轴比例和 `500..2490` 控制器边界，水平方案
-  要求瓶心距底座至少约 `0.340 m`。瓶子更近时必须移动目标，不能用下俯 L3 或
-  手调单轴 PWM 绕过 IK。
-- `--max_stage` 只预检到请求阶段，不能再让未来 LIFT 无解反向阻断合法的
-  PRE_GRASP；完整运行仍会逐阶段检查 workspace、IK、PWM 和 Servo004。
-- 真实运行会先低速回到参考姿态，并用 `PRAD` 回读六轴；任一轴偏差超过 `40 PWM`
-  会在视觉识别和运动前拒绝继续。`PRAD` 是控制器 PWM 状态，不是物理编码器反馈。
+## 硬件与坐标模型
 
-本轮冻结证据位于：
+- 平台：香橙派 RK3588，不引入 ROS/ROS2。
+- 检测：RKNN YOLO11，默认目标类别为 `bottle`。
+- RGB-D：D435 深度流先对齐到 RGB，再使用对齐后彩色相机内参反投影；不叠加商家
+  例程的 RGB/深度像素硬编码偏移。
+- 执行器：现有 `#xxxPxxxxTxxxx!` ASCII 命令和 `#xxxPRAD!` PWM 回读。写串口成功
+  不等于到位，真实运动结果必须通过回读容差门禁。
+- 相机固定在 Servo004 定子上，随 Servo000～003 运动，不随 Servo004 转子或
+  Servo005 开合运动；Servo004 全程固定为 `1500`。
+- 退出或失败时保持当前姿态，程序永不自动发送 `PDST`。
 
-- `config/base_camera_points.consolidated11.csv`
-- `config/base_camera_report.consolidated11.json`
-- `config/base_camera_consolidation_audit.json`
-- `config/base_camera_report.c525_reference1500.json`
-
-## 坐标系
-
-| 坐标系 | 轴定义 |
-| --- | --- |
-| `camera_color_optical` | RealSense 彩色光学坐标，`+X` 图像向右、`+Y` 图像向下、`+Z` 镜头向前 |
-| `arm_base` | 机械臂底座坐标，`+X` 向前、`+Y` 向左、`+Z` 向上，单位为米 |
-
-固定观察矩阵方向只有一种：
+坐标变换统一采用 `T_parent_child`，即把 child 坐标表达转换到 parent：
 
 ```text
-p_base = R_base_camera * p_camera + t_base_camera
-p_base_h = T_base_camera_reference * p_camera_h
+T_base_camera = T_base_wrist(PRAD 实时 PWM 000..003) × T_wrist_camera
+T_base_tcp     = T_base_wrist(PRAD 实时 PWM 000..003) × T_wrist_tcp_open/closed
 ```
 
-`T_base_camera_reference` 只在配置中的
-`reference_servo_pwms=[1500,1909,1900,620,1500,1500]` 有效。真实抓取不会调用
-`estimate_tool_matrix_from_pwm`，也不会使用旧 `manual_seed`。
+真实动态路径不读取
+`fixed_view_calibration.base_to_camera_matrix_4x4`。旧固定视角数据仅保留作诊断和回滚
+证据，不能重新接入真实抓取。
 
-## 标定
+`wrist`、`camera_color_optical`、`tcp_open` 和 `tcp_closed` 是四个不同坐标系：
 
-### 1. 一行数据代表什么
+- `wrist`：Servo004 定子/轴心处的机械臂本体末端。
+- `camera_color_optical`：D435 RGB 光学系，`+X` 图像向右、`+Y` 图像向下、`+Z`
+  镜头向前。
+- `tcp_open`：夹爪张开时的工具中心，仅作张开状态几何描述，目前仍为未标定的暂存值。
+- `tcp_closed`：夹爪闭合时两指真实夹持区域中点，最终 IK、接近、闭爪和抬升均以它
+  为工具点。
 
-每一行是**同一个实体标记点**在两个坐标系下的位置：
+当前夹爪张开端的真实可达回读为 Servo005=`1112`：发送旧 `1000` 后，两次历史实测
+和本次实测都稳定停在 `1111/1112`。因此生产配置使用 `1112` 作为张开目标；这不修改
+Servo000～003 的冻结零位、方向或线性系数。
 
-- `camera_x/y/z`：D435 aligned depth 自动测得，工具负责填写。
-- `base_x/y/z`：从 Servo000 竖直轴与底座安装平面的交点量到该标记点，人工实测后在终端输入。
+### 已确认物理值
 
-底座坐标必须按 `X=向前、Y=向左、Z=向上` 测量。终端输入单位是毫米，CSV
-自动换算成米。例如标记点位于底座原点前方 230 mm、右侧 60 mm、高 85 mm，输入：
+| 物理量 | 当前值 | 配置含义 |
+|---|---:|---|
+| L3 总长度（Servo003 后段到闭合 TCP） | 190 mm | `kinematics.measured_l3_total_closed_m=0.190` |
+| Servo003 到 wrist/Servo004 定子 | 55 mm | `kinematics.wrist_link_m=0.055` |
+| wrist 到 closed TCP 的轴向距离 | 135 mm | `T_wrist_tcp_closed` 的 `+X=0.135 m` |
+| RGB 原点到 closed TCP 的物理竖直差 | TCP 向下 13 mm | 相机原点在 closed TCP 中为 `Z=+13 mm`；不是 RealSense optical Z，也不是 wrist→TCP Z |
+| 机械臂安装基座平面高出桌面 | 120 mm | base `+Z` 向上，因此桌面 `Z=-0.120 m` |
+| D435 对齐深度可靠下限 | 0.17 m | 小于该值停止使用深度继续接近 |
 
-```text
-230,-60,85
-```
+`L3=190 mm` 的拆分是 `55+135 mm`；不得再把一个含义不明的 `l3_m` 同时当作
+机械臂连杆和工具 TCP。`RGB→closed TCP 向下 13 mm` 是现实世界竖直方向测量，只有
+结合明确的相机轴映射才能进入完整手眼矩阵，不能直接写成 optical Z 或
+`T_wrist_tcp_closed.z=-0.013`。
 
-右侧对应负 `Y`，因此是 `-60`。不能把瓶子检测框中心、桌面上另一个点或估算的
-舵机 FK 坐标填进来；相机点击处和卷尺测量处必须是同一物理点。
+## 闭环行为与停止条件
 
-### 2. 标记物与采点布局
+状态机按 `OBSERVE → PREGRASP → REACQUIRE → FINE_APPROACH → FINAL_ALIGN →
+CLOSE → VERIFY_LIFT → LIFT` 工作：
 
-使用一个平整、边长约 15--30 mm、中心清楚的标记面；点击标记面中心，同时测量该
-中心。推荐准备直尺/卷尺、直角尺和若干已知高度的垫块。
+1. 每次坐标计算优先读取六轴 `PRAD`，用 Servo000～003 的实际 PWM 计算
+   `T_base_wrist` 和动态 `T_base_camera`。纯 observe 在确认只有 Servo005 缺失时可用
+   Servo000～004 继续输出只读诊断并记录缺失 ID；任何真实运动仍要求六轴完整回读。
+2. PREGRASP 默认距目标约 60 mm，只是重新观察位置。到达后会废弃旧目标坐标，强制
+   重新检测、重新测深度、重新读 PWM、重新计算坐标。
+3. APPROACH 每次仅移动 5～10 mm（默认 8 mm）；每一步都等待回读到位，然后只接受
+   动作结束之后的新 RGB-D 帧和新 PWM 快照。
+4. 目标丢失/切换/歧义、帧过期、深度小于 0.17 m 或质量异常、PWM 回读失败、
+   Servo004 偏离 1500、工作空间/PWM 越界、IK 失败或误差不收敛，都会停止下一步。
+5. D435 近于 0.17 m 不再提供可信反馈。只有 FINAL_ALIGN 已用多帧新观测满足三轴
+   收敛后，才允许沿当前工具水平前向做配置的最终 10 mm 插入；该动作禁止竖直或横向
+   分量，且 `max_final_insertion_m=15 mm` 是硬上限。
+6. Servo005 的闭爪 `PRAD` 只能证明夹爪 PWM 到位，**不等于抓取成功**。`lift` 阶段
+   会先做 15 mm 验证抬升，并用物体相对相机/TCP 与桌面坐标变化分类为
+   `grasp_verified`、`grasp_failed` 或 `uncertain`；默认不把 `uncertain` 当成功。
 
-- 数量：最低 3 个非共线点，正式标定建议 8--15 个点。
-- 分布：覆盖左/中/右、近/中/远，至少使用 3 个不同高度。
-- 禁止：全部点排成直线；正式标定也不要只取同一桌面高度。
-- 精度：目标门禁是平均/RMSE 10 mm、最大 15 mm，人工测量最好控制在 5 mm 内。
-- 全程固定机械臂底座、相机支架和标定物基准，不要碰动相机。
+## 环境与安装
 
-### 3. 在香橙派采集
-
-推荐在香橙派远程桌面的终端运行，这样可以直接看到 OpenCV 窗口。下面的命令会先
-通过 `/dev/ttyUSB0` 用 5 秒低速动作把机械臂送到
-`[1500,1909,1900,620,1500,1500]`，再通过 `PRAD` 核验 Servo000--004。
-核验成功后串口立即关闭，采点期间不会再发送机械臂命令：
+沿用香橙派现有目录和虚拟环境：
 
 ```bash
 cd ~/rk3588_ai/arm_grasp_pipeline
 source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/collect_base_camera_points.py \
-  --prepare_reference_pose \
-  --serial_port /dev/ttyUSB0 \
-  --output ~/rk3588_ai/calibration/base_camera_points.csv
+PY=~/rk3588_ai/rknn_lite_env/bin/python3
 ```
 
-每个点按以下顺序操作：
+运行前确认：
 
-1. 把标记面放在一个已测量的底座 XYZ 位置，不移动机械臂和相机。
-2. 在相机窗口左键点击标记面中心。
-3. 回到终端，输入同一中心的 `X,Y,Z` 毫米值并回车。
-4. 看到 `POINT_SAVED` 后再移动标记物，采下一个点。
-5. 按 `u` 撤销最后一点；按 `q` 或 `ESC` 完成采集。
+- D435 可用，RGB 与深度均为 `640×480@30`，指定序列号与实际设备一致；
+- RKNN 模型默认位于 `~/rk3588_ai/models/official_yolo11.rknn`，YOLO11 Python
+  目录存在；
+- `/dev/ttyUSB0` 是当前机械臂控制器，115200 baud；
+- 桌面、车体和机械臂底座固定，急停/断电手段可立即触达；
+- 配置的工作空间、每轴 PWM 限位、Servo004=1500 和 frozen PWM 零位/方向/线性
+  系数未被修改。
 
-工具生成：
-
-- `~/rk3588_ai/calibration/base_camera_points.csv`：用于 SVD 标定的六列数据。
-- `~/rk3588_ai/calibration/base_camera_points.session.json`：六轴回读、D435 内参、
-  点击像素、深度与每个点的双坐标证据。
-
-再次运行采集工具时，如果 `--output` 仍指向同一个 CSV，工具会读取旧行并在末尾
-追加新点，**不会清空旧 CSV**。如果要完全独立地重做一轮，应改用新文件名：
+先做只读环境检查：
 
 ```bash
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/collect_base_camera_points.py \
-  --prepare_reference_pose \
-  --serial_port /dev/ttyUSB0 \
-  --output ~/rk3588_ai/calibration/base_camera_points_round2.csv
+$PY tools/realsense_env_check.py
+$PY tools/d435_yolo_grasp.py --help
+$PY tools/configure_hand_eye_tcp.py --check-only
+$PY tools/grasp_offset_tuner.py --check-only
+$PY tools/tune_grasp_compensation.py --check-only
 ```
 
-同名 `.session.json` 和标定报告 JSON 会被后一次运行更新，因此重要轮次应使用
-`round1/round2` 文件名，或先复制到 `~/rk3588_ai/calibration/backups/`。异常点不要
-直接从唯一原件中删除，应保留原 CSV，另建过滤后的候选 CSV 再复算。
+## 严格现场快捷入口
 
-如果机械臂已经处于参考姿态，只读回核验、不发送动作：
+初始摆放建议：bottle 抓取区域距 Servo000 旋转轴约 `0.35～0.38 m`（优先约
+`0.36 m`），横向靠近正中；003=`620` 初始桌面视角下，可见表面的 D435 深度至少
+约 `0.20 m`。高度可用垫块改变，视觉居中会处理画面高低；当前最终抓取点另有明确的
+`grasp_height_offset_m=+0.040 m`。瓶身前方必须为无障碍水平路径。
+
+快捷脚本只调用严格的 `d435_yolo_grasp.py` 动态状态机。它不读取磁盘中的旧目标锁，
+不允许 RGB-only 代替失效深度，也不允许缺失 Servo005 PRAD。旧
+`bottle_demo.py` / `tools/bottle_grasp_demo.py` 只保留作历史和软件诊断，真实模式已经
+禁用，不能作为答辩入口。
+
+纯视觉居中，不接近、不闭爪：
 
 ```bash
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/collect_base_camera_points.py \
-  --verify_reference_pose \
-  --serial_port /dev/ttyUSB0 \
-  --pose_check_only
+bash tools/run_bottle_stage.sh center
 ```
 
-CSV 表头固定为：
-
-```csv
-camera_x,camera_y,camera_z,base_x,base_y,base_z
-```
-
-工具会自动创建 CSV；`config/base_camera_points.template.csv` 只是格式参考，不需要
-手工填写相机坐标。
-
-### 4. 求解矩阵
-
-运行 SVD/Kabsch 刚体配准并写入配置：
+严格一键到 FINAL_ALIGN 前，流程为 center 后重新建立目标，再执行
+PREGRASP→强制重观测→5～10 mm 闭环 APPROACH；不会闭爪或抬升：
 
 ```bash
-cd ~/rk3588_ai/arm_grasp_pipeline
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/calibrate_base_camera_3d.py \
-  ~/rk3588_ai/calibration/base_camera_points.csv \
-  --output_json ~/rk3588_ai/calibration/base_camera_report.json \
-  --write_config
+bash tools/run_bottle_stage.sh oneclick
 ```
 
-工具输出 `T_base_camera_reference`、逐点误差、平均误差、最大误差、RMSE 和
-`det(R)`。反射矩阵直接拒绝。只有以下条件全部成立才允许真实抓取：
-
-- `fixed_view_calibration.calibrated=true`
-- `rmse_m <= 0.010`
-- `max_error_m <= 0.015`
-- 参考姿态 `Servo004=1500`
-- 本机连杆和 PWM-angle 语义已验收，`kinematics.calibrated=true`
-- `joint_pwm_calibration.calibrated=true`，四轴零位/方向/比例字段完整
-- `serial.joint_pwm_calibrated=true` 且运行时显式传入 `--joint_pwm_calibrated`
-
-## 只验证坐标
-
-该工具没有串口参数，不导入串口适配器，也不会发送舵机命令：
+只有安全闭爪实测完成、配置门禁明确为 true，并且五阶段验收已逐项通过后，才允许：
 
 ```bash
-cd ~/rk3588_ai/arm_grasp_pipeline
-source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/validate_fixed_view_target.py \
-  --target_class bottle \
-  --max_results 5 \
-  --output_jsonl ~/rk3588_ai/debug_logs/fixed-view-targets.jsonl
+bash tools/run_bottle_stage.sh full
 ```
 
-每条 `FIXED_VIEW_TARGET` 包含：
+`full` 从严格 center 开始重新观测，随后运行到 CLOSE、验证小抬升和 LIFT。任一步
+目标丢失/切换、深度异常、帧过期、六轴 PRAD 不完整、Servo004 偏离 1500、IK/PWM
+失败都会停止，不会复用旧坐标继续走，也不会自动发送 PDST。
 
-- `pixel_xy`、`depth_m`、`point_camera_m`
-- `point_base_surface_m`、`bottle_center_base_m`
-- `pre_grasp_base_m`、`approach_base_m`
-- 各点 workspace 标志、PRE/APPROACH IK 标志
-- `configured_pitch_deg` 与 `l3_horizontal_commanded`
-- 当前瓶心半径、完整分阶段计划的最小可达半径、仍需向外移动的距离
-- `serial_opened=false`、`servo_command_sent=false`
+## 手眼与 TCP 配置
 
-## 目标与路径
+查看当前矩阵、方向和标定状态并生成报告，不修改配置：
 
-对 YOLO `bottle` 框内部 ROI 过滤 `0/NaN/Inf`，以 15--85 百分位剔除离群值后
-取中位深度。前表面点通过固定矩阵变换到 `arm_base`，再按配置的瓶子半径修正：
-
-```text
-approach_axis = normalize([surface_base_x, surface_base_y, 0])
-bottle_center = front_surface + approach_axis * bottle_radius_m
+```bash
+mkdir -p ~/rk3588_ai/calibration
+$PY tools/configure_hand_eye_tcp.py \
+  --check-only \
+  --report ~/rk3588_ai/calibration/hand-eye-tcp-check.md
 ```
 
-阶段固定为 `OPEN -> PRE_GRASP -> APPROACH -> CLOSE -> LIFT`：
+当前安装已经通过三安全姿态静态目标验证。仅在支架、安装方向或 TCP 几何变化后重新
+写入；届时必须同时提供“RGB 光学原点在选定 TCP 物理轴中的 XYZ”和完整相机轴映射。
+以下变量必须替换为新的现场测量，不得照抄示意值：
 
-- PRE_GRASP 在瓶心前方 `0.070 m`，允许配置范围仅为 `0.060..0.080 m`。
-- APPROACH 从 PRE_GRASP 到瓶心保持同一 `Z`，默认每 `0.010 m` 一个 IK 路点；
-  当前末端姿态为 `0 deg`，L3/TCP 水平直线接近，不允许从上方斜扎瓶子。
-- 每个路点执行前检查 workspace、IK、六路 PWM 边界并打印
-  `GRASP_STAGE_PREFLIGHT`。
-- Servo004 在全程固定为 `1500`。
+```bash
+CAMERA_ORIGIN_IN_CLOSED_TCP_MM='实测X,实测Y,实测Z'
+CAMERA_AXIS_MAP='实测相机+X,实测相机+Y,实测相机+Z在wrist轴中的映射'
+
+$PY tools/configure_hand_eye_tcp.py \
+  --camera-reference-tcp closed \
+  --camera-origin-in-tcp-mm="$CAMERA_ORIGIN_IN_CLOSED_TCP_MM" \
+  --camera-axis-map="$CAMERA_AXIS_MAP" \
+  --wrist-tcp-closed-mm=135,0,0 \
+  --closed-tcp-vertical-down-from-rgb-mm=13 \
+  --mark-hand-eye-calibrated \
+  --mark-closed-calibrated \
+  --replace-existing \
+  --write \
+  --report ~/rk3588_ai/calibration/hand-eye-tcp-final.md
+```
+
+工具会校验刚体矩阵、检测与既有矩阵的冲突，并在写入前备份 JSON。只有确认轴映射、
+报告方向和至少三个安全姿态下静态目标的基座坐标一致性（目标平均散布不超过
+10～15 mm）后，才可保留 `hand_eye.calibrated=true`。配置迁移详见
+[`docs/CONFIG_MIGRATION_V2.md`](docs/CONFIG_MIGRATION_V2.md)。
 
 ## Dry-run
 
-完成矩阵标定后，只生成计划和总线命令，不打开真实串口：
+`--dry_run true` 不打开串口、不发送任何机械臂命令，但仍使用真实 D435 与 RKNN
+走状态机；PWM/到位回读由模拟状态提供。保存 RGB、深度、overlay、ROI 统计和 JSONL：
 
 ```bash
-cd ~/rk3588_ai/arm_grasp_pipeline
-source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_yolo_grasp.py \
+RUN=~/rk3588_ai/debug_logs/dryrun-pregrasp-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode pregrasp \
   --target_class bottle \
-  --execute_on_lock true \
   --dry_run true \
-  --max_stage lift \
   --max_frames 600 \
-  --no_show
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
 ```
 
-## 真实分阶段测试
+如需演练更多软件阶段，可将 `--mode` 改为 `approach`，或使用
+`--mode grasp --max_stage close|lift`。由于真实机械臂和相机不会随模拟命令运动，
+全流程收敛应以自动化 fake-source 测试为准，不能把 dry-run 结果记作实机到位或抓取。
 
-每次命令都会先回到固定观察姿态并回读六轴。第一次按
-`open -> pre_grasp -> approach -> close -> lift` 逐个增加 `STAGE`，不要直接从
-`open` 跳到 `lift`：
+## 分阶段实机命令
+
+下面命令是**人工逐条执行的验收入口**，程序不会自动串联启动下一条。运动命令只有在
+手眼与 closed TCP 标定门禁通过后才能运行。每次运行使用新的日志目录；操作者必须在
+每个阶段检查现场、日志和急停条件，再决定是否进入下一阶段。CLOSE/LIFT 还必须通过
+独立的 `gripper_close_calibrated` 门禁；当前未测完成时保留命令用于验收流程说明，
+实际运行应在连接设备前安全拒绝。
+
+### 0. center：620 桌面视角起步，只视觉居中
 
 ```bash
-cd ~/rk3588_ai/arm_grasp_pipeline
-source ~/rk3588_ai/scripts/use_realsense_rsusb.sh
-STAGE=pre_grasp
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/d435_yolo_grasp.py \
+RUN=~/rk3588_ai/debug_logs/center-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode center \
   --target_class bottle \
-  --execute_on_lock true \
   --dry_run false \
   --enable_arm \
-  --joint_pwm_calibrated \
   --serial_port /dev/ttyUSB0 \
-  --max_stage "$STAGE" \
-  --max_frames 600 \
-  --no_show
+  --center_duration_s 12 \
+  --prepare_center_pose true \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
 ```
 
-`--max_stage pre_grasp` 完成 PRE_GRASP 后保持，不会发送任何 APPROACH 路点；
-`approach` 只到瓶心且保持爪子张开；`close` 才把 Servo005 送到 `2000`；`lift`
-才在闭爪后抬升。
-规划器按 `--max_stage` 截断未来阶段，因此 PRE_GRASP 不会再被尚未请求的 LIFT
-可达性反向阻断。
-真实抓取与 `--auto_center` 同时启用会在打开串口前被拒绝。
+该阶段先到 `[1500,1909,1968,620,1500,1112]`，再以 000/003 对齐画面中心；004 和
+张开夹爪始终保持，不会 PREGRASP 或闭爪。继续当前姿态微调时可把
+`--prepare_center_pose` 改为 `false`。
 
-## 回归测试
+### 1. observe：只读动态坐标，不动臂
+
+这是始终可优先执行的只读实机入口。它打开 D435、RKNN 和串口，只发 `PRAD` 读取
+当前 PWM，不发任何舵机位置命令。若仅 Servo005 瞬时不响应，
+输出会以 `missing_pwm_ids=[5]` 明确标记并继续只读坐标；运动入口不会使用该降级：
 
 ```bash
-cd ~/rk3588_ai/arm_grasp_pipeline
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_fixed_view_grasp.py
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_grasp_safety.py
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_geometry_frames.py
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/test_official_kinematics.py
-~/rk3588_ai/rknn_lite_env/bin/python3 tools/mock_grasp_cycle.py
+RUN=~/rk3588_ai/debug_logs/observe-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode observe \
+  --target_class bottle \
+  --dry_run false \
+  --serial_port /dev/ttyUSB0 \
+  --max_frames 30 \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
 ```
 
-固定视角相机矩阵、实测连杆和舵机映射均已标记为 `calibrated=true`，但真实输出
-仍需要命令行显式 `--enable_arm --joint_pwm_calibrated`，并受参考姿态回读、workspace、
-IK、逐轴 PWM 边界、Servo004 固定值和 `--max_stage` 共同约束。当前沿用的实测
-矩阵尚无 `000=1500` 姿态下的独立留出点复测，因此必须逐阶段观察；真实对正结果
-只证明当前固定视角下的偏航可用，不能把它扩展成动态手眼标定。
+至少在三个已确认安全的人工姿态分别执行，比较同一静态 bottle 的
+`target_base`/`T_base_camera`。在散布满足 10～15 mm 之前不要进入 PREGRASP。
+
+### 2. pregrasp：约 60 mm 中间观察位
+
+```bash
+RUN=~/rk3588_ai/debug_logs/pregrasp-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode pregrasp \
+  --target_class bottle \
+  --dry_run false \
+  --enable_arm \
+  --serial_port /dev/ttyUSB0 \
+  --max_frames 600 \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
+```
+
+该阶段打开夹爪、到 PREGRASP、强制获取动作后的新 RGB-D/PWM/坐标并保持；不会发送
+APPROACH 或 CLOSE。
+
+### 3. approach：5～10 mm 闭环到 FINAL_ALIGN
+
+```bash
+RUN=~/rk3588_ai/debug_logs/approach-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode approach \
+  --closed_loop true \
+  --target_class bottle \
+  --dry_run false \
+  --enable_arm \
+  --serial_port /dev/ttyUSB0 \
+  --max_frames 600 \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
+```
+
+该阶段每步后重新观测并停在 FINAL_ALIGN，夹爪保持张开，不发送 CLOSE。确认 closed
+TCP 相对 bottle 的 along/lateral/vertical 误差后，再通过调参工具修正配置。
+
+### 4. close：闭爪但不宣称成功
+
+```bash
+RUN=~/rk3588_ai/debug_logs/close-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode grasp \
+  --max_stage close \
+  --closed_loop true \
+  --target_class bottle \
+  --dry_run false \
+  --enable_arm \
+  --serial_port /dev/ttyUSB0 \
+  --max_frames 600 \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
+```
+
+它重新完成观察、PREGRASP、闭环接近与 FINAL_ALIGN 后才闭爪。`SUMMARY.ok=true` 在
+这里仅表示 close 阶段及 PWM 回读完成，`grasp_verification=not_verified`，不能记录为
+抓取成功。安全闭爪 PWM/内宽未标定时，本命令必须 fail closed，不得发送闭爪动作。
+
+### 5. lift：小抬升验证后才完整抬升
+
+```bash
+RUN=~/rk3588_ai/debug_logs/lift-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/d435_yolo_grasp.py \
+  --mode grasp \
+  --max_stage lift \
+  --closed_loop true \
+  --target_class bottle \
+  --dry_run false \
+  --enable_arm \
+  --serial_port /dev/ttyUSB0 \
+  --max_frames 600 \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/grasp_events.jsonl" \
+  --no_show 2>&1 | tee "$RUN/console.log"
+```
+
+该阶段闭爪后先抬升 15 mm 获取验证证据；只有 `grasp_verified` 才默认继续完成余下抬升。
+`grasp_failed` 或 `uncertain` 会停止且不会伪报成功。任何退出路径都打印
+`ARM_HOLD_LAST_POSE automatic_PDST=false`。安全闭爪门禁未通过时，本命令必须在
+设备连接前拒绝。
+
+## 补偿调参工具
+
+正式的 `grasp_offset_tuner.py` 是**纯观察调参器**：它没有机械臂运动入口，也拒绝
+`--enable_arm`。先用上面的 pregrasp 或 approach 阶段把机械臂停在安全观察位/
+FINAL_ALIGN，再单独启动调参器；`--stage` 只记录当前人工确认的阶段标签，不会发送
+定位动作。
+
+PREGRASP 位置启动：
+
+```bash
+RUN=~/rk3588_ai/debug_logs/tuner-pregrasp-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RUN"
+$PY tools/grasp_offset_tuner.py \
+  --stage pregrasp \
+  --dry_run false \
+  --serial_port /dev/ttyUSB0 \
+  --target_class bottle \
+  --save_dir "$RUN" \
+  --metrics_path "$RUN/events.jsonl"
+```
+
+APPROACH 已停在 FINAL_ALIGN 后启动：
+
+```bash
+$PY tools/grasp_offset_tuner.py \
+  --stage final_align \
+  --dry_run false \
+  --serial_port /dev/ttyUSB0 \
+  --target_class bottle
+```
+
+调参器实时显示 RGB、对齐深度、目标框、closed TCP、目标点、三轴误差和补偿值；
+每次调整后强制获取新的 RGB-D 与完整 Servo000～005 PRAD。`1/2` 切换毫米步长，
+`w/s` 前后、`a/d` 左右、`r/f` 高低、`e/c` 深度、`t/g` 表面到中心、`[/]` 像素
+高度，`u` 撤销、`0` 恢复启动值、空格立即暂停采集、双击 `p` 备份并保存。整个工具
+没有 CLOSE/LIFT/运动 API。
+
+仅需离线预览或脚本化修改 JSON 时，使用配置工具：
+
+```bash
+$PY tools/tune_grasp_compensation.py --check-only
+$PY tools/tune_grasp_compensation.py \
+  --set along_mm=1 \
+  --write \
+  --confirm-save SAVE
+```
+
+两种工具都会拒绝超过 15 mm 的最终插入。保存后必须重新运行 observe/pregrasp/
+approach 获取新数据，不得沿用旧框、旧深度或旧 PWM。
+
+## 日志与失败判定
+
+`--metrics_path` 写入每个状态、观测和运动步骤的 JSONL；`--save_dir` 保存
+`*_rgb.jpg`、`*_depth.png`、`*_overlay.jpg` 和 `*_depth_roi_stats.png`。控制台末尾
+打印 `SUMMARY`，建议始终通过 `tee` 保存。
+
+JSONL 包含目标 track、帧时间/年龄、完整深度质量、六轴 PWM、关节角、
+`T_base_wrist`、`T_wrist_camera`、动态 `T_base_camera`、active closed TCP、补偿中间
+值、三轴误差、IK/PWM 命令、PRAD 回读/偏差及停止原因。失败时先定位
+`FAILED.stop_reason`，不得仅看串口写入或 `SUMMARY.ok`。
+
+仓库样例位于 `docs/example_logs/`。样例中的 `simulated=true` 只证明软件闭环和日志
+字段，不是实机抓取证据。
+
+## 硬件无关测试
+
+在开发机或香橙派项目目录运行：
+
+```bash
+$PY -m unittest discover -s tests -t .. -p 'test_*.py' -v
+$PY -m unittest discover -s tools -t .. -p 'test_*.py' -v
+$PY tools/mock_dynamic_grasp_cycle.py
+```
+
+测试覆盖动态坐标链、wrist FK/PWM 往返、open/closed TCP、Servo004/005 相机不变性、
+严格 PRAD、目标关联、深度质量、补偿顺序、PREGRASP/APPROACH 阶段门控、每次运动后
+拒绝旧帧、final 水平插入和闭爪/抬升验证。具体结果以本次执行输出为准，本 README
+不声称实机已经通过。
+
+## 旧 fixed-view 回滚边界
+
+旧 `fixed_view.py`、标定点和报告仍保留用于对比/审计。只有操作者显式选择
+`--mode legacy_fixed_view` 时，入口才会进入隔离的弃用回滚模块并显示强警告；默认动态
+路径从不导入固定外参。该回滚仍要求 `--enable_arm`、旧标定冻结、参考姿态完整六轴
+PRAD，以及每阶段完整六轴 PRAD 到位；不会自动发送 PDST。它只用于紧急回滚，不能把
+旧 `T_base_camera_reference` 或一次检测后的开环 waypoint 混回动态真实路径。
+
+仍需实测的值见
+[`KNOWN_PHYSICAL_VALUES_TO_MEASURE.md`](KNOWN_PHYSICAL_VALUES_TO_MEASURE.md)；逐文件
+变更见 [`CHANGELOG_DYNAMIC_GRASP.md`](CHANGELOG_DYNAMIC_GRASP.md)。

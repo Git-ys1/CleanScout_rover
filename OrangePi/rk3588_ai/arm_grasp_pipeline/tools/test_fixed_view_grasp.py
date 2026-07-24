@@ -30,7 +30,6 @@ from arm_grasp_pipeline.grasp_planner import (
     GraspState,
     build_fixed_view_grasp_plan,
 )
-from arm_grasp_pipeline.grasp_state_machine import GraspStateMachine
 from arm_grasp_pipeline.official_kinematics import (
     OfficialArmKinematics,
     OfficialIKResult,
@@ -119,11 +118,14 @@ def real_config(reference=None):
     return {
         "serial": {"joint_pwm_calibrated": True},
         "kinematics": {
+            "backend": "official_f103_dynamic_wrist",
             "calibrated": True,
             "l0_m": 0.100,
             "l1_m": 0.130,
             "l2_m": 0.065,
-            "l3_m": 0.177,
+            "wrist_link_m": 0.055,
+            "measured_l3_total_closed_m": 0.190,
+            "closed_tcp_axial_from_wrist_m": 0.135,
         },
         "joint_pwm_calibration": {
             "calibrated": True,
@@ -204,9 +206,11 @@ class FixedViewGraspTests(unittest.TestCase):
         kinematics = config["kinematics"]
         self.assertTrue(kinematics["calibrated"])
         self.assertEqual(
-            [kinematics[name] for name in ("l0_m", "l1_m", "l2_m", "l3_m")],
-            [0.100, 0.130, 0.065, 0.177],
+            [kinematics[name] for name in ("l0_m", "l1_m", "l2_m", "wrist_link_m")],
+            [0.100, 0.130, 0.065, 0.055],
         )
+        self.assertAlmostEqual(kinematics["measured_l3_total_closed_m"], 0.190)
+        self.assertAlmostEqual(kinematics["closed_tcp_axial_from_wrist_m"], 0.135)
         self.assertIn("C-5.2.0_arm_camera_tcp_measurement_sheet.md", kinematics["source"])
         joint = config["joint_pwm_calibration"]
         self.assertTrue(joint["calibrated"])
@@ -259,7 +263,7 @@ class FixedViewGraspTests(unittest.TestCase):
         )
         grasp = GraspConfig.from_mapping(config["grasp"])
         plan = build_fixed_view_grasp_plan(
-            (0.339721374804642, -0.01376181313795489, 0.15453145107926852),
+            (0.342, -0.014, 0.155),
             kin,
             grasp,
         )
@@ -267,10 +271,10 @@ class FixedViewGraspTests(unittest.TestCase):
         close = next(step for step in plan if step.state == GraspState.CLOSE)
         lift = next(step for step in plan if step.state == GraspState.LIFT)
         self.assertEqual(pre.pitch_deg, 0.0)
-        self.assertEqual(pre.servo_pwms, (1481, 1289, 2486, 1914, 1500, 1000))
-        self.assertEqual(close.servo_pwms, (1481, 1129, 1977, 1646, 1500, 2000))
+        self.assertEqual(pre.servo_pwms, (1481, 1292, 2488, 1914, 1500, 1112))
+        self.assertEqual(close.servo_pwms, (1481, 1162, 2075, 1695, 1500, 2000))
         self.assertEqual(lift.pitch_deg, -11.0)
-        self.assertEqual(lift.servo_pwms, (1481, 1106, 1576, 1410, 1500, 2000))
+        self.assertEqual(lift.servo_pwms, (1481, 1185, 1820, 1537, 1500, 2000))
         self.assertLessEqual(pre.servo_pwms[2], 2490)
 
     def test_horizontal_reachability_hint_uses_complete_plan(self):
@@ -283,7 +287,7 @@ class FixedViewGraspTests(unittest.TestCase):
         grasp = GraspConfig.from_mapping(config["grasp"])
         current = (0.24563334954400154, -0.004183836378415715, 0.1536203742911384)
         minimum = minimum_reachable_center_radius(current, grasp, kin)
-        self.assertAlmostEqual(minimum, 0.340, places=3)
+        self.assertAlmostEqual(minimum, 0.343, places=3)
         self.assertGreater(minimum - math.hypot(current[0], current[1]), 0.094)
 
     def test_pre_grasp_stage_does_not_require_future_lift_solution(self):
@@ -296,7 +300,7 @@ class FixedViewGraspTests(unittest.TestCase):
         )
         grasp = GraspConfig.from_mapping(config["grasp"])
         plan = build_fixed_view_grasp_plan(
-            (0.339721374804642, -0.01376181313795489, 0.15453145107926852),
+            (0.342, -0.014, 0.155),
             kin,
             grasp,
             max_stage="pre_grasp",
@@ -486,22 +490,18 @@ class FixedViewGraspTests(unittest.TestCase):
                 ValueError, "joint_pwm_calibration.calibrated is false"):
             validate_real_grasp_request(real_args(), config, calibration)
 
-    def test_max_stage_pre_grasp_sends_no_approach(self):
-        adapter = RecordingAdapter()
-        arm = ArmMotion(adapter, kinematics=FakeKinematics())
-        machine = GraspStateMachine(
-            arm,
-            CameraIntrinsics(500.0, 500.0, 320.0, 240.0),
-            np.eye(4),
-            cfg=GraspConfig(motion_settle_s=0.0),
-            object_geometry=ObjectGeometry(),
+    def test_max_stage_pre_grasp_plan_contains_no_approach(self):
+        plan = build_fixed_view_grasp_plan(
+            np.array([0.342, -0.014, 0.155], dtype=float),
+            FakeKinematics(),
+            GraspConfig(motion_settle_s=0.0),
+            max_stage="PRE_GRASP",
         )
-        machine.locked_target_base = np.array([0.24, 0.0, 0.12], dtype=float)
-        self.assertTrue(machine.execute_locked_grasp(max_stage="pre_grasp"))
-        arm_commands = [entry for entry in adapter.commands
-                        if entry[0] == "partial" and set(entry[1]) == {0, 1, 2, 3}]
-        self.assertEqual(len(arm_commands), 1)
-        self.assertEqual(machine.state, GraspState.VERIFY)
+        self.assertEqual(
+            [step.state for step in plan],
+            [GraspState.OPEN, GraspState.PRE_GRASP],
+        )
+        self.assertNotIn(GraspState.APPROACH, [step.state for step in plan])
 
     def test_servo004_not_1500_rejects_real_grasp(self):
         reference = (1500, 1909, 1900, 620, 1490, 1500)

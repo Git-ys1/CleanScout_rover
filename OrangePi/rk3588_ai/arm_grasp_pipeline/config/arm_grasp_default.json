@@ -1,20 +1,39 @@
 {
+  "schema_version": 2,
+  "frames": {
+    "base_convention": "x_forward_y_left_z_up",
+    "camera_convention": "realsense_color_optical_x_right_y_down_z_forward",
+    "camera_parent": "servo004_stator",
+    "servo004_fixed_pwm": 1500
+  },
+  "environment": {
+    "base_mounting_plane_to_table_m": 0.12,
+    "table_surface_z_base_m": -0.12,
+    "calibrated": true,
+    "source": "User emergency measurement on 2026-07-20 after arm installation on rover"
+  },
   "serial": {
     "port": "/dev/ttyUSB0",
     "baudrate": 115200,
     "dry_run": true,
     "joint_pwm_calibrated": true,
-    "reference_pose_tolerance_pwm": 40
+    "readback_retries": 3,
+    "readback_timeout_s": 0.8,
+    "readback_tolerance_pwm": 40,
+    "motion_settle_s": 0.15,
+    "initial_dry_run_pwms": [1500, 1909, 1900, 620, 1500, 1500]
   },
   "kinematics": {
-    "backend": "official_f103",
+    "backend": "official_f103_dynamic_wrist",
     "calibrated": true,
     "l0_m": 0.1,
     "l1_m": 0.13,
     "l2_m": 0.065,
-    "l3_m": 0.177,
+    "wrist_link_m": 0.055,
+    "measured_l3_total_closed_m": 0.19,
+    "closed_tcp_axial_from_wrist_m": 0.135,
     "source": "docs/VERIFY/C-5.2.0_arm_camera_tcp_measurement_sheet.md",
-    "note": "C-5.2.5 staged fixed-wrist grasp model using the locally measured effective links and measured PWM-angle semantics"
+    "note": "L3=190 mm is split into 003-to-Servo004-stator wrist=55 mm and wrist-to-closed-TCP axial distance=135 mm"
   },
   "joint_pwm_calibration": {
     "calibrated": true,
@@ -31,18 +50,8 @@
       7.93582743625423,
       6.478095739111546
     ],
-    "zero_pwms": [
-      1500,
-      1500,
-      1500,
-      1500
-    ],
-    "pwm_signs": [
-      1,
-      -1,
-      1,
-      1
-    ],
+    "zero_pwms": [1500, 1500, 1500, 1500],
+    "pwm_signs": [1, -1, 1, 1],
     "positive_directions": [
       "Servo000 left/CCW yaw",
       "Servo001 L1 forward",
@@ -61,83 +70,200 @@
       "servo003_tracking": {"pwm": 900, "angle_deg": -92.61980879567396},
       "servo003_grasp_view": {"pwm": 620, "angle_deg": -135.84238623365515}
     },
-    "source": "C-5.2.5 Servo000 protractor anchor plus D435 table-plane measurements for Servo001..003; vendor 500..2700 remains nominal raw capability while flashed STM32 clamps commands to 500..2490"
+    "source": "Frozen C-5.2.5 measured mapping; do not modify during dynamic grasp work"
   },
-  "tool_reference": {
-    "calibrated": false,
-    "at_servo_pwms": [
-      1500,
-      1909,
-      1900,
-      620,
-      1500,
-      1500
+  "hand_eye": {
+    "calibrated": true,
+    "input_mode": "measured_translation_with_live_three_pose_validated_rotation",
+    "T_wrist_camera_color_optical": [
+      [-0.113987, 0.189619, 0.975219, 0.075],
+      [-0.993103, -0.048885, -0.106572, 0.032],
+      [0.027465, -0.98064, 0.193883, 0.013],
+      [0.0, 0.0, 0.0, 1.0]
     ],
-    "base_to_tool_matrix_4x4": null,
-    "base_to_tool_xyz_m": [
-      0.0,
-      0.0,
-      0.0
+    "measurement_source": "User-measured RGB origin in closed TCP [-60,+32,+13] mm combined with the legacy 11-point rotation; accepted after live three-pose static-bottle validation on the installed rover",
+    "measurement_record": {
+      "camera_origin_in_tcp_open_xyz_m_legacy_superseded": [0.06, 0.032, 0.055],
+      "camera_origin_in_closed_tcp_xyz_m": [-0.06, 0.032, 0.013],
+      "closed_tcp_vertical_down_from_rgb_origin_m": 0.013,
+      "closed_tcp_vertical_measurement_frame": "physical vertical, not RealSense optical Z",
+      "camera_axis_mapping": "legacy 11-point rotation, accepted by live multi-pose static-target validation",
+      "camera_rpy_in_tcp_open_deg": null,
+      "note": "Signed interpretation: RGB is 60 mm behind, 32 mm toward +Y, and 13 mm above closed TCP. Translation is measured; the legacy rotation seed was accepted for this installed bracket by the recorded three-pose static-target validation."
+    },
+    "dynamic_validation": {
+      "accepted": true,
+      "required_safe_pose_count": 3,
+      "max_mean_static_target_spread_m": 0.015,
+      "validation_timestamp_local": "2026-07-20T12:45:00+08:00",
+      "target_class": "bottle",
+      "safe_pose_servo000_pwms": [1440, 1500, 1560],
+      "mean_target_base_xyz_m": [
+        [0.24581191, 0.000362015, -0.060702208],
+        [0.247796303, -0.001643219, -0.059557948],
+        [0.253781102, -0.008751148, -0.053376839]
+      ],
+      "mean_aligned_depth_m": [0.294, 0.300333, 0.304],
+      "measured_max_pairwise_static_target_spread_m": 0.01415,
+      "physical_motion_evidence": "Bottle pixel center shifted approximately 235->301->373 while Servo000 moved 1440->1500->1560; every observation used fresh Servo000..005 PRAD and aligned depth.",
+      "board_log_directories": [
+        "/home/orangepi/rk3588_ai/debug_logs/dynamic-v2-calib-yaw1440",
+        "/home/orangepi/rk3588_ai/debug_logs/dynamic-v2-calib-yaw1500",
+        "/home/orangepi/rk3588_ai/debug_logs/dynamic-v2-calib-yaw1560"
+      ]
+    },
+    "note": "Live three-pose validation passed the configured 15 mm spread gate. Production motion must also require dynamic_validation.accepted=true."
+  },
+  "tool_tcp": {
+    "open_calibrated": false,
+    "closed_calibrated": true,
+    "active_grasp_tcp": "closed",
+    "T_wrist_tcp_open": [
+      [1.0, 0.0, 0.0, 0.116],
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
     ],
-    "base_to_tool_rpy_deg": [
-      0.0,
-      0.0,
-      0.0
+    "T_wrist_tcp_closed": [
+      [1.0, 0.0, 0.0, 0.135],
+      [0.0, 1.0, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
     ],
-    "note": "Legacy dynamic-FK field; ignored by the C-5.2.4 fixed-view runtime"
+    "measurement_source": {
+      "open": "Legacy 004-axis-to-open-center axial measurement; retained as provisional and not used as final grasp TCP",
+      "closed": "User 2026-07-20: closed-gripper midpoint, 004 axis is 135 mm behind TCP; therefore TCP in wrist is +0.135 m",
+      "closed_z_note": "The reported -13 mm is RGB-origin-to-TCP physical vertical difference, not wrist-to-TCP Z; wrist TCP Z remains 0 under the confirmed coaxial L3 split"
+    }
+  },
+  "grasp_compensation": {
+    "target_pixel_offset_px": [0.0, 0.0],
+    "target_pixel_y_ratio": 0.5,
+    "depth_bias_m": 0.0,
+    "camera_point_bias_m": [0.0, 0.0, 0.0],
+    "object_surface_to_grasp_center_m": 0.032,
+    "object_center_axis": "camera_ray",
+    "motion_approach_axis": "base_horizontal_radial",
+    "grasp_bias_approach_frame_m": [0.0, 0.0, 0.0],
+    "final_insertion_m": 0.01,
+    "max_final_insertion_m": 0.015,
+    "final_insertion_axis": "base_horizontal_tool_forward",
+    "pregrasp_standoff_m": 0.06,
+    "approach_step_m": 0.008,
+    "min_approach_step_m": 0.005,
+    "max_approach_step_m": 0.01,
+    "close_distance_m": 0.006,
+    "grasp_height_offset_m": 0.04
+  },
+  "target_tracker": {
+    "target_class": "bottle",
+    "initial_strategy": "nearest_center",
+    "min_iou": 0.1,
+    "max_center_distance_px": 90.0,
+    "max_depth_difference_m": 0.08,
+    "max_size_ratio": 2.0,
+    "ambiguity_margin": 0.08,
+    "max_lost_frames": 3,
+    "stable_frames": 5
+  },
+  "depth_observation": {
+    "mode": "front_cluster",
+    "sample_pixel_y_ratio": 0.14,
+    "roi_inner_ratio": 0.35,
+    "percentile": 25.0,
+    "front_cluster_bin_m": 0.012,
+    "min_valid_count": 12,
+    "min_valid_ratio": 0.15,
+    "max_mad_m": 0.025,
+    "max_iqr_m": 0.05,
+    "max_depth_jump_m": 0.08,
+    "min_depth_m": 0.17,
+    "max_depth_m": 2.0
+  },
+  "closed_loop": {
+    "enabled": true,
+    "max_approach_iterations": 20,
+    "max_cumulative_approach_m": 0.15,
+    "max_approach_time_s": 45.0,
+    "max_joint_pwm_step": 120,
+    "final_align_stable_frames": 3,
+    "final_lateral_tolerance_m": 0.008,
+    "final_vertical_tolerance_m": 0.008,
+    "final_along_tolerance_m": 0.008,
+    "safe_roi_margin_px": [30, 30],
+    "stale_frame_timeout_s": 1.0,
+    "coarse_center_enabled": false,
+    "coarse_center_max_iterations": 12,
+    "depth_lock_min_frames": 2,
+    "depth_lock_max_base_spread_m": 0.015,
+    "max_retries": 0,
+    "retry_backoff_enabled": false,
+    "retry_backoff_m": 0.008,
+    "uncertain_continue_to_full_lift": false,
+    "verify_lift_raise_m": 0.015,
+    "verify_relative_camera_tolerance_m": 0.025,
+    "verify_table_static_tolerance_m": 0.012,
+    "minimum_reliable_aligned_depth_m": 0.17,
+    "near_depth_loss_policy": "stop_unless_final_align_already_stable",
+    "final_motion_horizontal_only": true,
+    "final_tool_pitch_tolerance_deg": 2.0
+  },
+  "grasp": {
+    "stable_frames": 5,
+    "max_center_jitter_px": 10.0,
+    "depth_stable_frames": 4,
+    "max_depth_jitter_m": 0.025,
+    "depth_roi_inner_ratio": 0.35,
+    "pre_grasp_standoff_m": 0.06,
+    "approach_waypoint_spacing_m": 0.008,
+    "approach_waypoint_ms": 450,
+    "lift_raise_m": 0.08,
+    "pitch_deg": 0.0,
+    "pregrasp_pitch_deg": 0.0,
+    "approach_pitch_deg": 0.0,
+    "lift_pitch_deg": -11.0,
+    "gripper_open_pwm": 1112,
+    "gripper_open_calibrated": true,
+    "gripper_open_calibration_source": "User live confirmation: maximum open endpoint is PRAD 1112",
+    "gripper_close_pwm": 2000,
+    "gripper_close_calibrated": false,
+    "gripper_close_calibration_source": "Pending empty close/contact/standard-bottle width measurement; real close and lift remain gated",
+    "wrist_fixed_pwm": 1500,
+    "wrist_lock_ms": 1000,
+    "gripper_open_ms": 2000,
+    "pre_grasp_ms": 5000,
+    "gripper_close_ms": 1800,
+    "verify_lift_ms": 900,
+    "lift_ms": 1800,
+    "retry_motion_ms": 3500,
+    "retry_pose_pwms": [1500, 1909, 1900, 620, 1500, 1500],
+    "servo_pwm_limits": [
+      [767, 2233],
+      [767, 2233],
+      [1500, 2490],
+      [500, 2233],
+      [1500, 1500],
+      [1000, 2200]
+    ],
+    "workspace_min_xyz_m": [0.04, -0.3, -0.105],
+    "workspace_max_xyz_m": [0.39, 0.3, 0.42],
+    "motion_settle_s": 0.15
   },
   "fixed_view_calibration": {
     "calibrated": true,
-    "reference_servo_pwms": [
-      1500,
-      1909,
-      1900,
-      620,
-      1500,
-      1500
-    ],
+    "reference_servo_pwms": [1500, 1909, 1900, 620, 1500, 1500],
     "base_to_camera_matrix_4x4": [
-      [
-        -0.07200238368214469,
-        -0.4630936982946097,
-        0.8833798069595604,
-        0.016635206774849143
-      ],
-      [
-        -0.9931025137917506,
-        -0.048884687825174494,
-        -0.10657243732194957,
-        0.04829421497697736
-      ],
-      [
-        0.09253677022997328,
-        -0.8849601764464075,
-        -0.4563797018485254,
-        0.2487978962082768
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        1.0
-      ]
+      [-0.07200238368214469, -0.4630936982946097, 0.8833798069595604, 0.016635206774849143],
+      [-0.9931025137917506, -0.048884687825174494, -0.10657243732194957, 0.04829421497697736],
+      [0.09253677022997328, -0.8849601764464075, -0.4563797018485254, 0.2487978962082768],
+      [0.0, 0.0, 0.0, 1.0]
     ],
     "rmse_m": 0.005847911769639443,
     "max_error_m": 0.00971011361754861,
     "max_rmse_m": 0.01,
     "max_point_error_m": 0.015,
     "frame": "T_base_camera_color_optical_reference",
-    "note": "C-5.2.4 measured 11-point matrix retained for reference1500 after real PRE_GRASP rejected the unverified +14.7272727 deg analytical yaw rebase",
-    "rebase_provenance": {
-      "source_reference_servo000_pwm": 1380,
-      "target_reference_servo000_pwm": 1500,
-      "rejected_delta_yaw_deg": 14.727272727272727,
-      "operation": "T_reference1500 = T_C-5.2.4; rejected unverified Rz(delta_yaw) rebase",
-      "source_report": "config/base_camera_report.consolidated11.json",
-      "physical_evidence": "Rz rebase produced +12.377 deg target yaw and a visibly crooked real PRE_GRASP for a bottle placed forward; source matrix predicts -2.350 deg",
-      "error_metrics_from_source_11_point_fit": true,
-      "independent_holdout_at_new_pose": false
-    }
+    "note": "Legacy diagnostics/rollback only. Dynamic real grasp must never read this matrix."
   },
   "object_geometry": {
     "bottle_radius_m": 0.032,
@@ -152,7 +278,7 @@
     "moves_with_servo005_open_close": false,
     "requires_fixed_servo004": true,
     "fixed_servo004_pwm": 1500,
-    "transform_model": "T_tool_camera is constant only while Servo004 is fixed at 1500"
+    "transform_model": "legacy description; dynamic truth is frames + hand_eye + tool_tcp"
   },
   "realsense": {
     "mode": "d435_rgbd",
@@ -162,112 +288,92 @@
     "fps": 30,
     "today_depth_only_test_mode": "d430_depth_only"
   },
-  "ros_compat": {
-    "enabled": false,
-    "bridge": "null",
-    "future_topics": {
-      "grasp_event": "/cleanscout/arm/grasp_event",
-      "arm_target": "/cleanscout/arm/target"
-    }
-  },
-  "hand_eye": {
-    "calibrated": false,
-    "x": 0.0,
-    "y": 0.0,
-    "z": 0.0,
-    "roll_deg": 0.0,
-    "pitch_deg": 0.0,
-    "yaw_deg": 0.0,
-    "matrix_4x4": null,
-    "frame": "T_tool_camera_color_optical",
-    "note": "Legacy dynamic hand-eye field; ignored by the C-5.2.4 fixed-view runtime"
-  },
   "visual_centering": {
+    "enabled": true,
     "dead_zone_px": 36.0,
     "yaw_servo_id": 0,
     "pitch_servo_id": 3,
     "yaw_pwm_per_px": 0.15,
-    "pitch_pwm_per_px": 0.18,
-    "max_pwm_step": 12,
+    "pitch_pwm_per_px": 0.6,
+    "max_pwm_step": 30,
     "yaw_pwm_min": 1000,
     "yaw_pwm_max": 2000,
     "pitch_pwm_min": 500,
     "pitch_pwm_max": 1100,
-    "duration_ms": 180,
-    "interval_s": 0.22
+    "prepare_pose_pwms": [1500, 1909, 1968, 620, 1500, 1112],
+    "prepare_pose_duration_ms": 5000,
+    "stable_frames": 2,
+    "duration_ms": 1000,
+    "interval_s": 0.15
   },
-  "grasp": {
-    "stable_frames": 5,
-    "max_center_jitter_px": 10.0,
-    "depth_stable_frames": 4,
-    "max_depth_jitter_m": 0.025,
-    "depth_roi_inner_ratio": 0.35,
-    "pre_grasp_standoff_m": 0.07,
-    "approach_waypoint_spacing_m": 0.01,
-    "approach_waypoint_ms": 450,
-    "lift_raise_m": 0.08,
-    "pitch_deg": 0.0,
-    "lift_pitch_deg": -11.0,
-    "gripper_open_pwm": 1000,
+  "demo_grasp": {
+    "target_class_aliases": ["bottle", "cup"],
+    "prepare_pose_pwms": [1500, 1909, 1968, 620, 1500, 1112],
+    "prepare_duration_ms": 5000,
+    "centering_timeout_s": 45.0,
+    "acquisition_pitch_step_pwm": 30,
+    "acquisition_pitch_max_pwm": 800,
+    "acquisition_move_duration_ms": 600,
+    "detection_stable_frames": 2,
+    "detection_max_frames": 18,
+    "observable_pregrasp_standoff_m": 0.11,
+    "observable_pregrasp_pitch_deg": 40.0,
+    "pregrasp_duration_ms": 5000,
+    "grasp_height_offset_m": 0.04,
+    "minimum_reliable_depth_m": 0.17,
+    "near_depth_fallback_enabled": true,
+    "near_approach_step_m": 0.008,
+    "near_min_step_m": 0.005,
+    "near_close_distance_m": 0.006,
+    "near_final_tolerance_m": 0.005,
+    "near_max_forward_m": 0.13,
+    "near_step_duration_ms": 600,
+    "near_max_iterations": 20,
+    "approach_profile_standoff_pitch": [
+      {"standoff_m": 0.102, "pitch_deg": 40.0},
+      {"standoff_m": 0.094, "pitch_deg": 35.0},
+      {"standoff_m": 0.086, "pitch_deg": 30.0},
+      {"standoff_m": 0.078, "pitch_deg": 30.0},
+      {"standoff_m": 0.070, "pitch_deg": 25.0},
+      {"standoff_m": 0.062, "pitch_deg": 20.0},
+      {"standoff_m": 0.054, "pitch_deg": 15.0},
+      {"standoff_m": 0.046, "pitch_deg": 10.0},
+      {"standoff_m": 0.038, "pitch_deg": 5.0},
+      {"standoff_m": 0.030, "pitch_deg": 0.0},
+      {"standoff_m": 0.022, "pitch_deg": 0.0},
+      {"standoff_m": 0.014, "pitch_deg": 0.0},
+      {"standoff_m": 0.006, "pitch_deg": 0.0}
+    ],
+    "horizontal_only_from_standoff_m": 0.03,
+    "final_horizontal_insertion_m": 0.006,
+    "rgb_max_center_jump_px": 120.0,
+    "rgb_max_size_ratio": 2.2,
+    "rgb_reacquire_center_radius_px": 220.0,
+    "target_base_max_jump_m": 0.05,
+    "near_lateral_tolerance_m": 0.03,
+    "near_vertical_tolerance_m": 0.025,
+    "gripper_open_pwm": 1112,
     "gripper_close_pwm": 2000,
     "wrist_fixed_pwm": 1500,
-    "wrist_lock_ms": 1000,
-    "gripper_open_ms": 2000,
-    "pre_grasp_ms": 1800,
-    "gripper_close_ms": 1800,
-    "lift_ms": 1800,
-    "retry_motion_ms": 3500,
-    "retry_pose_pwms": [
-      1500,
-      1909,
-      1900,
-      620,
-      1500,
-      1500
-    ],
-    "servo_pwm_limits": [
-      [
-        767,
-        2233
-      ],
-      [
-        767,
-        2233
-      ],
-      [
-        1500,
-        2490
-      ],
-      [
-        500,
-        2233
-      ],
-      [
-        1500,
-        1500
-      ],
-      [
-        1000,
-        2200
-      ]
-    ],
-    "workspace_min_xyz_m": [
-      0.04,
-      -0.3,
-      0.015
-    ],
-    "workspace_max_xyz_m": [
-      0.39,
-      0.3,
-      0.42
-    ],
-    "motion_settle_s": 0.15
+    "gripper_close_duration_ms": 1800,
+    "verify_lift_m": 0.015,
+    "verify_lift_duration_ms": 1200,
+    "verify_rgb_max_center_shift_px": 90.0,
+    "verify_rgb_max_size_ratio": 1.8,
+    "full_lift_enabled": true,
+    "full_lift_additional_m": 0.03,
+    "full_lift_duration_ms": 1800
+  },
+  "ros_compat": {
+    "enabled": false,
+    "bridge": "null"
   },
   "runtime": {
+    "default_mode": "observe",
     "target_class": "bottle",
     "confidence": 0.25,
-    "selection_strategy": "nearest_center",
-    "experimental_grasp_status": "c5_2_5_joint_mapping_ready_for_staged_real_validation",
-    "note": "C-5.2.5 measured joint mapping and gripper limits are enabled; real output remains explicit and max_stage gated"
+    "selection_strategy": "tracked_identity",
+    "automatic_pdst": false,
+    "note": "Dynamic wrist-camera closed loop is default; fixed view requires explicit legacy_fixed_view."
   }
 }

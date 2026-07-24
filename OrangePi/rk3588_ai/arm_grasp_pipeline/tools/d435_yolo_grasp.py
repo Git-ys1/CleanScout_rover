@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Fixed-observation D435 + RKNN YOLO grasp runtime, without ROS."""
+"""D435 + RKNN YOLO11 dynamic closed-loop grasp runtime (no ROS)."""
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import json
+import math
 from pathlib import Path
 import sys
 import time
@@ -12,25 +14,26 @@ import numpy as np
 
 try:
     import cv2
-except ImportError:  # Keep --help and config gates usable on development PCs.
+except ImportError:  # --help and all configuration gates remain PC-testable.
     cv2 = None
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent))
 
 from arm_grasp_pipeline.arm_motion import ArmMotion
-from arm_grasp_pipeline.fixed_view import (
-    REQUIRED_WRIST_PWM,
-    FixedViewCalibration,
-    ObjectGeometry,
+from arm_grasp_pipeline.fixed_view import REQUIRED_WRIST_PWM, FixedViewCalibration
+from arm_grasp_pipeline.geometry import FrameTransforms
+from arm_grasp_pipeline.grasp_state_machine import (
+    DynamicGraspStateMachine,
+    DynamicObservation,
+    JsonlGraspLogger,
 )
-from arm_grasp_pipeline.geometry import depth_pixel_to_camera
-from arm_grasp_pipeline.grasp_planner import GraspConfig, GraspState, validate_servo_pwms
-from arm_grasp_pipeline.grasp_state_machine import GraspStateMachine
+from arm_grasp_pipeline.legacy_fixed_view_runtime import run_legacy_fixed_view
 from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
 from arm_grasp_pipeline.realsense_source import D435Source
 from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
-from arm_grasp_pipeline.target_depth import median_depth_in_bbox
+from arm_grasp_pipeline.target_depth import observe_depth_from_frame
+from arm_grasp_pipeline.target_tracker import TargetTracker
 from arm_grasp_pipeline.visual_centering import CenteringConfig, PWMVisualCentering
 
 
@@ -49,38 +52,38 @@ def str2bool(value):
     raise argparse.ArgumentTypeError("expected true/false")
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
+    parser.add_argument(
+        "--mode",
+        choices=("observe", "center", "pregrasp", "approach", "grasp", "legacy_fixed_view"),
+        default="observe",
+    )
+    parser.add_argument("--closed_loop", type=str2bool, default=True)
+    parser.add_argument(
+        "--max_stage", choices=("pregrasp", "approach", "close", "lift"), default=""
+    )
+    parser.add_argument("--max_approach_iterations", type=int, default=0)
+    parser.add_argument("--target_class", default="")
+    parser.add_argument("--dry_run", type=str2bool, default=True)
+    parser.add_argument("--enable_arm", action="store_true")
+    parser.add_argument("--save_dir", default="")
+    parser.add_argument("--metrics_path", default="")
+    parser.add_argument("--print_transforms", type=str2bool, default=True)
+    parser.add_argument("--print_compensation", type=str2bool, default=True)
     parser.add_argument("--model_path", default="~/rk3588_ai/models/official_yolo11.rknn")
     parser.add_argument("--yolo_dir", default=str(DEFAULT_YOLO_DIR))
     parser.add_argument("--target", default="rk3588")
     parser.add_argument("--device_id", default=None)
-    parser.add_argument("--target_class", default="")
     parser.add_argument("--conf", type=float, default=None)
-    parser.add_argument("--strategy", choices=("nearest_center", "highest_conf"), default="")
-    parser.add_argument("--max_frames", type=int, default=0)
-    parser.add_argument("--skip", type=int, default=0)
-    parser.add_argument("--no_show", action="store_true")
-    parser.add_argument("--save_dir", default="")
-    parser.add_argument("--metrics_path", default="")
-    parser.add_argument("--execute_on_lock", type=str2bool, default=False)
-    parser.add_argument("--stop_on_lock", type=str2bool, default=True)
-    parser.add_argument("--dry_run", type=str2bool, default=True)
-    parser.add_argument("--enable_arm", action="store_true")
-    parser.add_argument("--joint_pwm_calibrated", action="store_true")
-    parser.add_argument(
-        "--max_stage", choices=("open", "pre_grasp", "approach", "close", "lift"),
-        default="lift",
-    )
     parser.add_argument("--serial_port", default="")
     parser.add_argument("--baudrate", type=int, default=0)
-    parser.add_argument("--current_pwms", default="",
-                        help="six live PWM values; only valid for centering-only mode")
-    parser.add_argument("--auto_center", action="store_true",
-                        help="bounded centering only; incompatible with fixed-view grasp")
-    parser.add_argument("--center_max_commands", type=int, default=60)
-    return parser.parse_args()
+    parser.add_argument("--max_frames", type=int, default=0)
+    parser.add_argument("--center_duration_s", type=float, default=3.0)
+    parser.add_argument("--prepare_center_pose", type=str2bool, default=True)
+    parser.add_argument("--no_show", action="store_true")
+    return parser.parse_args(argv)
 
 
 def load_config(path):
@@ -88,19 +91,8 @@ def load_config(path):
         return json.load(handle)
 
 
-def dataclass_kwargs(mapping, names):
-    return {name: mapping[name] for name in names if name in mapping}
-
-
-def parse_pwms(text):
-    values = [int(part.strip()) for part in str(text).split(",") if part.strip()]
-    if len(values) != 6 or any(value < 500 or value > 2490 for value in values):
-        raise ValueError("current PWM reference must contain six values in 500..2490")
-    return values
-
-
-def reference_pose_mismatches(reference_pwms, actual_by_id, tolerance_pwm,
-                              servo_ids=None):
+# Compatibility helpers used by the explicit legacy rollback tests/tools.
+def reference_pose_mismatches(reference_pwms, actual_by_id, tolerance_pwm, servo_ids=None):
     tolerance = int(tolerance_pwm)
     if tolerance < 0:
         raise ValueError("reference pose tolerance must be non-negative")
@@ -129,24 +121,41 @@ def expected_stage_pwms(plan_rows, max_stage):
     return values
 
 
-def validate_real_grasp_request(args, config, calibration: FixedViewCalibration):
-    """Reject unsafe real output before any serial port is opened."""
-    if args.dry_run or not args.execute_on_lock:
-        return
-    if not args.enable_arm:
-        raise ValueError("real output requires --enable_arm")
-    if args.auto_center:
-        raise ValueError(
-            "real fixed-view grasp and auto_center cannot run together without calibrated dynamic FK"
-        )
-    calibration.require_real_grasp_ready(required_wrist_pwm=REQUIRED_WRIST_PWM)
+def same_target_observation(
+    reference_center,
+    reference_depth_m,
+    target,
+    target_depth_m,
+    center_tolerance_px,
+    depth_tolerance_m,
+):
+    if target is None or target_depth_m is None:
+        return False
+    dx = float(target.center[0]) - float(reference_center[0])
+    dy = float(target.center[1]) - float(reference_center[1])
+    return bool(
+        math.hypot(dx, dy) <= float(center_tolerance_px)
+        and abs(float(target_depth_m) - float(reference_depth_m))
+        <= float(depth_tolerance_m)
+    )
 
+
+def validate_real_grasp_request(args, config, calibration=None):
+    """Compatibility plus dynamic fail-before-connect safety gate."""
+
+    executing = bool(
+        getattr(args, "enable_arm", False)
+        or getattr(args, "execute_on_lock", False)
+    )
+    if bool(getattr(args, "dry_run", True)) or not executing:
+        return
+    if not getattr(args, "enable_arm", False):
+        raise ValueError("real output requires --enable_arm")
     serial_cfg = dict(config.get("serial", {}))
     grasp_cfg = dict(config.get("grasp", {}))
-    camera_mount = dict(config.get("camera_mount", {}))
     kinematics_cfg = dict(config.get("kinematics", {}))
     joint_cfg = dict(config.get("joint_pwm_calibration", {}))
-    if not args.joint_pwm_calibrated:
+    if hasattr(args, "joint_pwm_calibrated") and not args.joint_pwm_calibrated:
         raise ValueError("real grasp requires explicit --joint_pwm_calibrated")
     if not bool(serial_cfg.get("joint_pwm_calibrated", False)):
         raise ValueError("config serial.joint_pwm_calibrated is false")
@@ -154,23 +163,25 @@ def validate_real_grasp_request(args, config, calibration: FixedViewCalibration)
         raise ValueError("config kinematics.calibrated is false")
     if not bool(joint_cfg.get("calibrated", False)):
         raise ValueError("config joint_pwm_calibration.calibrated is false")
-    # Construction validates range, scale, zero count and per-axis signs.
-    OfficialArmKinematics.from_config(kinematics_cfg, joint_cfg)
-    if not bool(camera_mount.get("frozen", False)):
-        raise ValueError("camera mount relation is not frozen")
-    if not bool(camera_mount.get("requires_fixed_servo004", False)):
-        raise ValueError("fixed-view camera model must require fixed Servo004")
-    if int(camera_mount.get("fixed_servo004_pwm", -1)) != REQUIRED_WRIST_PWM:
-        raise ValueError("camera mount Servo004 PWM must be {}".format(REQUIRED_WRIST_PWM))
     if int(grasp_cfg.get("wrist_fixed_pwm", -1)) != REQUIRED_WRIST_PWM:
         raise ValueError("grasp Servo004 PWM must be {}".format(REQUIRED_WRIST_PWM))
-    if list(grasp_cfg.get("retry_pose_pwms", [])) != list(calibration.reference_servo_pwms):
-        raise ValueError("grasp reference pose must equal fixed-view calibration pose")
-    if args.current_pwms and parse_pwms(args.current_pwms) != list(calibration.reference_servo_pwms):
-        raise ValueError("real fixed-view grasp cannot override the calibrated reference pose")
+    OfficialArmKinematics.from_config(kinematics_cfg, joint_cfg)
+    if calibration is not None:
+        calibration.require_real_grasp_ready(required_wrist_pwm=REQUIRED_WRIST_PWM)
+        camera_mount = dict(config.get("camera_mount", {}))
+        if not bool(camera_mount.get("frozen", False)):
+            raise ValueError("camera mount relation is not frozen")
+        if int(camera_mount.get("fixed_servo004_pwm", -1)) != REQUIRED_WRIST_PWM:
+            raise ValueError("camera mount Servo004 PWM must be 1500")
+        if list(grasp_cfg.get("retry_pose_pwms", [])) != list(
+            calibration.reference_servo_pwms
+        ):
+            raise ValueError("grasp reference pose must equal fixed-view calibration pose")
 
 
 def draw_depth(depth_m):
+    if cv2 is None:
+        return None
     valid = np.isfinite(depth_m) & (depth_m > 0.0)
     gray = np.zeros(depth_m.shape, dtype=np.uint8)
     if np.any(valid):
@@ -185,365 +196,416 @@ def draw_depth(depth_m):
     return image
 
 
-def draw_overlay(color_bgr, depth_m, detections, target, state, infer_ms):
-    color = color_bgr.copy()
-    for box in detections:
-        cv2.rectangle(color, (box.x1, box.y1), (box.x2, box.y2), (255, 0, 0), 2)
-        cv2.putText(
-            color, "{} {:.2f}".format(box.cls, box.score),
-            (box.x1, max(20, box.y1 - 5)), cv2.FONT_HERSHEY_SIMPLEX,
-            0.5, (0, 255, 255), 2,
+class LiveObservationSource:
+    """D435/RKNN/TargetTracker adapter for the pure state machine boundary."""
+
+    def __init__(self, source, detector, tracker, config, confidence, save_dir=None, show=False):
+        self.source = source
+        self.detector = detector
+        self.tracker = tracker
+        self.config = config
+        self.confidence = float(confidence)
+        self.depth_config = dict(config["depth_observation"])
+        self.compensation = dict(config["grasp_compensation"])
+        self.stale_timeout = float(config["closed_loop"]["stale_frame_timeout_s"])
+        self.save_dir = None if save_dir is None else Path(save_dir)
+        self.show = bool(show)
+        self.frame_count = 0
+        self.inference_count = 0
+        self.previous_depth_m = None
+        if self.save_dir is not None:
+            self.save_dir.mkdir(parents=True, exist_ok=True)
+
+    def _target_pixel(self, bbox):
+        ratio = float(self.compensation.get("target_pixel_y_ratio", 0.5))
+        return (
+            float(bbox.center[0]),
+            float(bbox.y1 + (bbox.y2 - bbox.y1) * ratio),
         )
-    if target is not None:
-        cx, cy = [int(round(value)) for value in target.center]
-        cv2.circle(color, (cx, cy), 6, (0, 0, 255), -1)
-    cv2.rectangle(color, (0, color.shape[0] - 38),
-                  (color.shape[1], color.shape[0]), (0, 0, 0), -1)
-    cv2.putText(
-        color, "state={} infer={:.1f}ms".format(state, infer_ms),
-        (10, color.shape[0] - 12), cv2.FONT_HERSHEY_SIMPLEX,
-        0.62, (0, 255, 0), 2,
-    )
-    return np.concatenate([color, draw_depth(depth_m)], axis=1)
 
+    def _depth_sample_pixel(self, bbox):
+        """Return the configured opaque-region depth probe inside the bbox.
 
-def same_target_observation(reference_center, reference_depth_m, target, target_depth_m,
-                            center_tolerance_px, depth_tolerance_m):
-    if target is None or target_depth_m is None:
-        return False
-    dx = float(target.center[0]) - float(reference_center[0])
-    dy = float(target.center[1]) - float(reference_center[1])
-    return (
-        float(np.hypot(dx, dy)) <= float(center_tolerance_px)
-        and abs(float(target_depth_m) - float(reference_depth_m)) <= float(depth_tolerance_m)
-    )
+        Transparent bottle bodies often return the background or several false
+        stereo clusters.  The RGB grasp point remains independent (normally the
+        bottle-body centre); only the depth ROI is centred on the opaque cap or
+        label region selected by this ratio.
+        """
+        ratio = float(self.depth_config.get("sample_pixel_y_ratio", 0.5))
+        if not 0.0 <= ratio <= 1.0:
+            raise ValueError("depth_observation.sample_pixel_y_ratio must be in [0, 1]")
+        return (
+            float(bbox.center[0]),
+            float(bbox.y1 + (bbox.y2 - bbox.y1) * ratio),
+        )
 
+    def _save_debug(self, frame, detections, tracking, depth):
+        if cv2 is None:
+            return
+        color = frame.color_bgr.copy()
+        for box in detections:
+            cv2.rectangle(color, (box.x1, box.y1), (box.x2, box.y2), (255, 0, 0), 2)
+        if tracking.bbox is not None:
+            box = tracking.bbox
+            cv2.rectangle(color, (box.x1, box.y1), (box.x2, box.y2), (0, 255, 0), 3)
+        if self.show:
+            cv2.imshow("D435 Dynamic Closed Loop", np.concatenate([color, draw_depth(frame.depth_m)], axis=1))
+            cv2.waitKey(1)
+        if self.save_dir is None or not tracking.motion_allowed:
+            return
+        stem = "frame_{:06d}".format(self.frame_count)
+        cv2.imwrite(str(self.save_dir / (stem + "_rgb.jpg")), frame.color_bgr)
+        cv2.imwrite(str(self.save_dir / (stem + "_depth.png")), draw_depth(frame.depth_m))
+        cv2.imwrite(str(self.save_dir / (stem + "_overlay.jpg")), color)
+        stats = np.zeros((300, 720, 3), dtype=np.uint8)
+        fields = [] if depth is None else [
+            "ok={} reason={}".format(depth.ok, depth.reason),
+            "depth={} valid={}/ratio={:.3f}".format(depth.depth_m, depth.valid_count, depth.valid_ratio),
+            "median={} MAD={} IQR={}".format(depth.median_m, depth.mad_m, depth.iqr_m),
+            "ROI={}".format(depth.roi),
+        ]
+        for index, line in enumerate(fields):
+            cv2.putText(stats, line, (15, 45 + 55 * index), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+        cv2.imwrite(str(self.save_dir / (stem + "_depth_roi_stats.png")), stats)
 
-def plan_as_json(machine):
-    rows = []
-    for step in machine.plan_locked_grasp():
-        row = step.as_dict()
-        if step.state in (GraspState.OPEN, GraspState.CLOSE):
-            command = machine.arm.adapter.pack_partial_pwm_command(
-                {5: step.gripper_pwm}, step.duration_ms
+    def next_observation(self, after_monotonic, expected_track_id):
+        barrier = float(after_monotonic)
+        for _ in range(121):
+            frame = self.source.read_fresh_after(
+                barrier,
+                max_age_s=self.stale_timeout,
+                require_aligned_rgbd=True,
             )
-        else:
-            command = machine.arm.pack_ik_command(
-                step.ik, step.duration_ms, include_gripper=False
+            self.frame_count += 1
+            detections, _ = self.detector.infer(frame.color_bgr)
+            self.inference_count += 1
+            candidates = [box for box in detections if box.score >= self.confidence]
+            candidate_depths = []
+            for bbox in candidates:
+                measured = observe_depth_from_frame(
+                    frame,
+                    bbox,
+                    self.depth_config,
+                    pixel_xy=self._depth_sample_pixel(bbox),
+                )
+                candidate_depths.append(measured.depth_m if measured.ok else None)
+            tracking = self.tracker.update_result(
+                candidates,
+                frame.monotonic_timestamp,
+                image_shape=frame.color_bgr.shape,
+                depths_m=candidate_depths,
+                now_monotonic_s=frame.arrival_monotonic_timestamp,
             )
-        row["command"] = command
-        rows.append(row)
-    return rows
+            depth = None
+            pixel = None
+            if tracking.bbox is not None:
+                pixel = self._target_pixel(tracking.bbox)
+                depth_pixel = self._depth_sample_pixel(tracking.bbox)
+                depth = observe_depth_from_frame(
+                    frame,
+                    tracking.bbox,
+                    self.depth_config,
+                    pixel_xy=depth_pixel,
+                    previous_depth_m=self.previous_depth_m,
+                    max_depth_jump_m=float(
+                        self.depth_config.get(
+                            "max_depth_jump_m",
+                            self.config["target_tracker"]["max_depth_difference_m"],
+                        )
+                    ),
+                )
+                if depth.ok:
+                    self.previous_depth_m = depth.depth_m
+            self._save_debug(frame, candidates, tracking, depth)
+            terminal_association_failure = bool(
+                expected_track_id is not None
+                and (tracking.lost or tracking.ambiguous or tracking.switched or not tracking.ok)
+            )
+            if tracking.motion_allowed or terminal_association_failure:
+                return DynamicObservation(
+                    acquired_monotonic=frame.monotonic_timestamp,
+                    frame_timestamp=frame.device_timestamp_ms,
+                    intrinsics=frame.intrinsics_for_detection,
+                    image_shape_hw=frame.color_bgr.shape[:2],
+                    track_id=tracking.track_id,
+                    bbox=tracking.bbox,
+                    pixel_grasp_point=pixel,
+                    depth_observation=depth,
+                    track_stable=tracking.stable,
+                    track_switched=tracking.switched,
+                    association_reason=tracking.association_reason,
+                    color_bgr=frame.color_bgr,
+                    depth_m=frame.depth_m,
+                )
+            barrier = frame.monotonic_timestamp
+        raise RuntimeError("target did not become stable within 121 fresh frames")
 
 
-def main() -> int:
-    args = parse_args()
-    if args.skip < 0 or args.max_frames < 0:
-        raise ValueError("--skip and --max_frames must be non-negative")
-    if not args.dry_run:
-        if not args.enable_arm:
-            raise ValueError("real output requires --enable_arm")
-        if not args.auto_center and not args.execute_on_lock:
-            raise ValueError("real output must select centering or fixed-view grasp")
-        if args.auto_center and args.execute_on_lock:
-            raise ValueError("auto_center and fixed-view real grasp are mutually exclusive")
+def print_runtime_configuration(config, frames, print_transforms=True, print_compensation=True):
+    print("DYNAMIC_FRAME_MODEL fixed_reference_used=false")
+    print("ENVIRONMENT " + json.dumps(config["environment"], ensure_ascii=False))
+    print("CALIBRATION_GATES " + json.dumps({
+        "hand_eye": frames.hand_eye_calibrated,
+        "open_tcp": frames.open_calibrated,
+        "closed_tcp": frames.closed_calibrated,
+        "joint_pwm": config["joint_pwm_calibration"]["calibrated"],
+        "servo004_fixed_pwm": frames.servo004_fixed_pwm,
+    }, ensure_ascii=False))
+    if print_transforms:
+        print("T_wrist_camera=" + json.dumps(frames.T_wrist_camera.tolist()))
+        print("T_wrist_tcp_open=" + json.dumps(frames.T_wrist_tcp_open.tolist()))
+        print("T_wrist_tcp_closed=" + json.dumps(frames.T_wrist_tcp_closed.tolist()))
+    if print_compensation:
+        print("GRASP_COMPENSATION=" + json.dumps(config["grasp_compensation"], ensure_ascii=False))
 
+
+def resolve_stage(args):
+    if args.mode == "pregrasp":
+        required = "pregrasp"
+    elif args.mode == "approach":
+        required = "approach"
+    elif args.mode == "grasp":
+        required = args.max_stage or "lift"
+    else:
+        required = args.max_stage or "pregrasp"
+    if args.max_stage and args.mode in ("pregrasp", "approach") and args.max_stage != required:
+        raise ValueError("mode {} fixes max_stage={}".format(args.mode, required))
+    return required
+
+
+def main(argv=None) -> int:
+    args = parse_args(argv)
+    if args.max_frames < 0 or args.max_approach_iterations < 0:
+        raise ValueError("frame/iteration limits must be non-negative")
     config = load_config(args.config)
-    serial_cfg = dict(config.get("serial", {}))
-    runtime_cfg = dict(config.get("runtime", {}))
-    grasp_cfg = dict(config.get("grasp", {}))
-    realsense_cfg = dict(config.get("realsense", {}))
-    kinematics_cfg = dict(config.get("kinematics", {}))
-    joint_pwm_cfg = dict(config.get("joint_pwm_calibration", {}))
-    centering_cfg = dict(config.get("visual_centering", {}))
-    calibration = FixedViewCalibration.from_mapping(
-        dict(config.get("fixed_view_calibration", {}))
+    if args.max_approach_iterations:
+        config["closed_loop"]["max_approach_iterations"] = args.max_approach_iterations
+    if args.target_class:
+        config["target_tracker"]["target_class"] = args.target_class.strip().lower()
+        config["runtime"]["target_class"] = args.target_class.strip().lower()
+    if args.mode == "legacy_fixed_view":
+        return run_legacy_fixed_view(args, config)
+    if args.mode in ("approach", "grasp") and not args.closed_loop:
+        raise ValueError("approach/grasp forbid --closed_loop false")
+    motion_mode = args.mode in ("center", "pregrasp", "approach", "grasp")
+    if motion_mode and not args.dry_run and not args.enable_arm:
+        raise ValueError("real motion requires explicit --enable_arm")
+    if args.mode == "observe" and args.enable_arm:
+        raise ValueError("observe mode never enables arm motion")
+
+    frames = FrameTransforms.from_config(config)
+    kinematics = OfficialArmKinematics.from_config(
+        config["kinematics"], config["joint_pwm_calibration"]
     )
-    object_geometry = ObjectGeometry.from_mapping(dict(config.get("object_geometry", {})))
-    validate_real_grasp_request(args, config, calibration)
-
-    matrix = None
-    try:
-        matrix = calibration.matrix()
-    except ValueError:
-        if args.execute_on_lock:
-            raise ValueError(
-                "fixed-view matrix is required for grasp planning; run calibrate_base_camera_3d.py"
-            )
-
-    target_class = args.target_class or runtime_cfg.get("target_class", "bottle")
-    confidence = args.conf if args.conf is not None else float(runtime_cfg.get("confidence", 0.25))
-    strategy = args.strategy or runtime_cfg.get("selection_strategy", "nearest_center")
+    serial_cfg = config["serial"]
+    grasp_cfg = config["grasp"]
     adapter = SerialServoArmAdapter(
-        port=args.serial_port or serial_cfg.get("port", "/dev/ttyUSB0"),
-        baudrate=args.baudrate or int(serial_cfg.get("baudrate", 115200)),
+        port=args.serial_port or serial_cfg["port"],
+        baudrate=args.baudrate or int(serial_cfg["baudrate"]),
         dry_run=args.dry_run,
+        initial_pwms=serial_cfg["initial_dry_run_pwms"],
+        readback_retries=serial_cfg["readback_retries"],
+        readback_timeout_s=serial_cfg["readback_timeout_s"],
+        readback_tolerance_pwm=serial_cfg["readback_tolerance_pwm"],
+        motion_settle_s=serial_cfg["motion_settle_s"],
     )
-    required_kinematics = {
-        "backend", "calibrated", "l0_m", "l1_m", "l2_m", "l3_m",
-    }
-    missing_kinematics = sorted(required_kinematics.difference(kinematics_cfg))
-    if missing_kinematics:
-        raise ValueError(
-            "kinematics config missing fields: " + ", ".join(missing_kinematics)
-        )
-    if str(kinematics_cfg["backend"]) != "official_f103":
-        raise ValueError("fixed-view grasp requires the official_f103 kinematics backend")
-    kinematics = OfficialArmKinematics.from_config(kinematics_cfg, joint_pwm_cfg)
-    arm = ArmMotion(adapter, kinematics=kinematics)
-    reference_pwms = list(calibration.reference_servo_pwms)
-    current_pwms = parse_pwms(args.current_pwms) if args.current_pwms else list(reference_pwms)
-
-    machine_cfg = GraspConfig.from_mapping(grasp_cfg)
-    if list(machine_cfg.retry_pose_pwms) != reference_pwms:
-        raise ValueError("grasp retry pose and fixed-view reference pose must match")
-    if machine_cfg.wrist_fixed_pwm != REQUIRED_WRIST_PWM:
-        raise ValueError("Servo004 must be fixed at PWM {}".format(REQUIRED_WRIST_PWM))
-    validate_servo_pwms(reference_pwms, machine_cfg)
-
-    center_names = set(CenteringConfig.__dataclass_fields__.keys())
-    centerer = PWMVisualCentering(
-        CenteringConfig(**dataclass_kwargs(centering_cfg, center_names))
+    arm = ArmMotion(
+        adapter,
+        kinematics,
+        wrist_fixed_pwm=grasp_cfg["wrist_fixed_pwm"],
+        servo_pwm_limits=grasp_cfg["servo_pwm_limits"],
     )
-    center_duration_ms = int(centering_cfg.get("duration_ms", 180))
-    center_interval_s = float(centering_cfg.get("interval_s", 0.22))
-    center_command_count = 0
-    last_center_command_time = 0.0
+    metrics_path = args.metrics_path or (
+        str(Path(args.save_dir).expanduser() / "grasp_events.jsonl") if args.save_dir else ""
+    )
+    logger = JsonlGraspLogger(metrics_path)
+    machine = DynamicGraspStateMachine(
+        arm,
+        frames,
+        config,
+        logger=logger,
+        allow_motion=motion_mode,
+    )
+    # This gate runs before detector, D435, and serial are opened.
+    if motion_mode and not args.dry_run:
+        machine.require_real_motion_calibration()
+        if args.mode == "grasp" and resolve_stage(args) in ("close", "lift"):
+            machine.require_real_close_calibration()
+    print_runtime_configuration(
+        config, frames, args.print_transforms, args.print_compensation
+    )
 
     if cv2 is None:
-        raise RuntimeError("opencv-python is required to run the D435 YOLO grasp pipeline")
+        raise RuntimeError("opencv-python is required for D435 RKNN runtime")
     from arm_grasp_pipeline.rknn_yolo_detector import RknnYolo11Detector
 
+    confidence = float(
+        config["runtime"]["confidence"] if args.conf is None else args.conf
+    )
     detector = RknnYolo11Detector(
-        args.model_path, args.yolo_dir, target=args.target, device_id=args.device_id,
+        args.model_path,
+        args.yolo_dir,
+        target=args.target,
+        device_id=args.device_id,
         object_threshold=confidence,
     )
-    source = D435Source(
-        int(realsense_cfg.get("width", 640)),
-        int(realsense_cfg.get("height", 480)),
-        int(realsense_cfg.get("fps", 30)),
-        serial_number=realsense_cfg.get("serial_number") or None,
+    rs_cfg = config["realsense"]
+    camera = D435Source(
+        rs_cfg["width"],
+        rs_cfg["height"],
+        rs_cfg["fps"],
+        serial_number=rs_cfg.get("serial_number") or None,
     )
-    output_dir = Path(args.save_dir).expanduser() if args.save_dir else None
-    metrics_path = Path(args.metrics_path).expanduser() if args.metrics_path else None
-    metrics_handle = None
-    machine = None
-    last_visual = None
-    frame_count = 0
-    inference_count = 0
-    selected = None
-    detections = []
-    infer_ms = 0.0
-    locked = False
-    grasp_result = "not_executed"
-
+    tracker = TargetTracker.from_config(
+        config["target_tracker"],
+        max_observation_age_s=config["closed_loop"]["stale_frame_timeout_s"],
+    )
+    live = LiveObservationSource(
+        camera,
+        detector,
+        tracker,
+        config,
+        confidence,
+        save_dir=args.save_dir or None,
+        show=not args.no_show,
+    )
+    outcome = None
     try:
         detector.start()
-        source.start()
+        camera.start()
         if not args.dry_run:
-            adapter.connect()
-            if args.execute_on_lock:
-                prepare_ms = int(grasp_cfg.get("retry_motion_ms", 3500))
-                payload = adapter.send_pwm_command(reference_pwms, prepare_ms)
-                time.sleep(prepare_ms / 1000.0 + float(grasp_cfg.get("motion_settle_s", 0.15)))
-                actual_pwms = adapter.read_pwms(range(6), timeout_s=0.8)
-                pose_tolerance = int(serial_cfg.get("reference_pose_tolerance_pwm", 40))
-                mismatches = reference_pose_mismatches(
-                    reference_pwms, actual_pwms, pose_tolerance
-                )
-                if mismatches:
-                    raise RuntimeError(
-                        "fixed-view reference pose readback failed: "
-                        + json.dumps(mismatches, ensure_ascii=False)
-                    )
-                print("REFERENCE_POSE_READY " + json.dumps({
-                    "pwms": reference_pwms,
-                    "readback_pwms": actual_pwms,
-                    "tolerance_pwm": pose_tolerance,
-                    "payload": payload,
-                    "T_base_camera_reference_valid": True,
+            adapter.connect()  # observe uses PRAD read-only; no command is sent here.
+        if args.mode == "observe":
+            limit = args.max_frames or 1
+            for _ in range(limit):
+                # Observation cannot move the arm. It needs Servo000..004 for
+                # the dynamic camera pose and reports Servo005 as unavailable
+                # when the gripper PRAD is faulty. Every motion mode remains
+                # strict Servo000..005 and fails before the next command.
+                context = machine.observe_once(live, require_gripper_pwm=False)
+                print("OBSERVE " + json.dumps({
+                    "track_id": machine.track_id,
+                    "actual_pwms_000_005": [
+                        context.pwm_snapshot.pwms.get(servo_id)
+                        for servo_id in range(6)
+                    ],
+                    "missing_pwm_ids": [
+                        servo_id
+                        for servo_id in range(6)
+                        if servo_id not in context.pwm_snapshot.pwms
+                    ],
+                    "T_base_camera": context.T_base_camera.tolist(),
+                    "target_base": list(context.compensation.final_grasp_point_base),
+                    "depth": machine._depth_dict(context.observation.depth_observation),
                 }, ensure_ascii=False))
-        if metrics_path is not None:
-            metrics_path.parent.mkdir(parents=True, exist_ok=True)
-            metrics_handle = metrics_path.open("w", encoding="utf-8")
-
-        while args.max_frames <= 0 or frame_count < args.max_frames:
-            frame = source.read()
-            frame_count += 1
-            if machine is None and matrix is not None:
-                machine = GraspStateMachine(
-                    arm,
-                    frame.intrinsics_for_detection,
-                    matrix,
-                    cfg=machine_cfg,
-                    object_geometry=object_geometry,
+            outcome = machine.outcome(True, "observe complete")
+        elif args.mode == "center":
+            center_cfg = dict(config["visual_centering"])
+            if not bool(center_cfg.get("enabled", False)):
+                raise ValueError("visual_centering.enabled=false")
+            if args.center_duration_s <= 0.0 or args.center_duration_s > 15.0:
+                raise ValueError("center_duration_s must be in (0, 15]")
+            prepare = tuple(int(value) for value in center_cfg["prepare_pose_pwms"])
+            if len(prepare) != 6 or prepare[4] != 1500:
+                raise ValueError("visual centering prepare pose must contain six PWMs and Servo004=1500")
+            if args.prepare_center_pose:
+                prepared = arm.execute_assignments(
+                    {servo_id: pwm for servo_id, pwm in enumerate(prepare)},
+                    int(center_cfg["prepare_pose_duration_ms"]),
                 )
-
-            if (frame_count - 1) % (args.skip + 1) == 0:
-                detections, infer_ms = detector.infer(frame.color_bgr)
-                inference_count += 1
-                selected = detector.select_target(
-                    detections, frame.color_bgr.shape, target_class, confidence, strategy
+                machine._execute_motion(prepared, "CENTER_PREPARE")
+                barrier = float(prepared.motion_end_monotonic)
+            else:
+                barrier = float(arm.get_actual_pwm_snapshot().monotonic_timestamp)
+            cfg_fields = {
+                name: center_cfg[name]
+                for name in CenteringConfig.__dataclass_fields__
+                if name in center_cfg
+            }
+            centerer = PWMVisualCentering(CenteringConfig(**cfg_fields))
+            deadline = time.monotonic() + float(args.center_duration_s)
+            stable = 0
+            iterations = 0
+            while time.monotonic() < deadline:
+                observation = live.next_observation(barrier, None)
+                if observation.bbox is None or not observation.track_stable:
+                    raise RuntimeError("visual centering lost stable bottle")
+                snapshot = arm.get_actual_pwm_snapshot()
+                updates = centerer.command(
+                    observation.bbox,
+                    observation.image_shape_hw,
+                    snapshot.ordered(),
                 )
-                target = None
-                if machine is not None:
-                    machine.update_detection(selected)
-                if selected is not None and args.auto_center:
-                    updates = centerer.command(selected, frame.color_bgr.shape, current_pwms)
-                    now = time.monotonic()
-                    if updates and now - last_center_command_time >= center_interval_s:
-                        if center_command_count >= args.center_max_commands:
-                            raise RuntimeError("visual centering command limit reached")
-                        payload = adapter.send_partial_pwm_command(updates, center_duration_ms)
-                        for servo_id, pwm in updates.items():
-                            current_pwms[servo_id] = pwm
-                        center_command_count += 1
-                        last_center_command_time = now
-                        if machine is not None:
-                            machine.update_detection(None)
-                        print("CENTER_ONLY_CMD " + json.dumps({
-                            "count": center_command_count,
-                            "updates": updates,
-                            "current_pwms": current_pwms,
-                            "payload": payload,
-                            "grasp_disabled": True,
-                        }, ensure_ascii=False))
-                    elif not updates and machine is not None:
-                        target = machine.try_lock_depth(frame.depth_m)
-                elif selected is not None and machine is not None:
-                    target = machine.try_lock_depth(frame.depth_m)
-                elif selected is not None and matrix is None:
-                    depth = median_depth_in_bbox(frame.depth_m, selected)
-                    if depth is not None:
-                        camera_point = depth_pixel_to_camera(
-                            selected.center, depth, frame.intrinsics_for_detection
-                        )
-                        print("FIXED_VIEW_PLAN_BLOCKED " + json.dumps({
-                            "reason": "base_to_camera_matrix_4x4 is not configured",
-                            "pixel_xy": list(selected.center),
-                            "depth_m": float(depth),
-                            "point_camera_m": camera_point.tolist(),
-                        }, ensure_ascii=False))
-
-                row = {
-                    "time": time.time(),
-                    "frame": frame_count,
-                    "inference": inference_count,
-                    "detections": len(detections),
-                    "target": None if selected is None else {
-                        "class": selected.cls,
-                        "score": selected.score,
-                        "box": [selected.x1, selected.y1, selected.x2, selected.y2],
-                        "center": list(selected.center),
-                    },
-                    "state": "UNCALIBRATED" if machine is None else machine.state.name,
-                    "infer_ms": infer_ms,
-                }
-                if metrics_handle is not None:
-                    metrics_handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-                    metrics_handle.flush()
-                if frame_count == 1 or frame_count % 15 == 0:
-                    print(json.dumps(row, ensure_ascii=False))
-
-                if target is not None:
-                    locked = True
-                    debug = machine.last_lock_debug
-                    lock_record = {
-                        "pixel_xy": list(debug.pixel_xy),
-                        "depth_m": float(debug.depth_m),
-                        "point_camera_m": list(debug.point_camera_m),
-                        "point_base_surface_m": list(debug.point_base_surface_m),
-                        "bottle_center_base_m": list(debug.bottle_center_base_m),
-                        "approach_axis_base": list(debug.approach_axis_base),
-                    }
-                    print("GRASP_LOCK " + json.dumps(lock_record, ensure_ascii=False))
-                    try:
-                        plan = plan_as_json(machine)
-                    except ValueError as exc:
-                        print("GRASP_PLAN_REJECTED " + json.dumps(
-                            {"reason": str(exc)}, ensure_ascii=False
-                        ))
-                        grasp_result = "plan_rejected"
-                        plan = None
-                    if plan is not None:
-                        print("GRASP_PLAN " + json.dumps(plan, ensure_ascii=False))
-                        if args.execute_on_lock:
-                            ok = machine.execute_locked_grasp(max_stage=args.max_stage)
-                            grasp_result = "stage_complete" if ok else "motion_failed"
-                            print("GRASP_EXECUTE {} dry_run={} max_stage={}".format(
-                                ok, args.dry_run, args.max_stage
-                            ))
-                            if ok and not args.dry_run:
-                                expected_pwms = expected_stage_pwms(plan, args.max_stage)
-                                actual_pwms = adapter.read_pwms(range(6), timeout_s=0.8)
-                                pose_tolerance = int(
-                                    serial_cfg.get("reference_pose_tolerance_pwm", 40)
-                                )
-                                arm_mismatches = reference_pose_mismatches(
-                                    expected_pwms,
-                                    actual_pwms,
-                                    pose_tolerance,
-                                    servo_ids=range(5),
-                                )
-                                gripper_actual = actual_pwms.get(5)
-                                readback = {
-                                    "stage": str(args.max_stage).upper(),
-                                    "expected_pwms": expected_pwms,
-                                    "actual_pwms": actual_pwms,
-                                    "arm_tolerance_pwm": pose_tolerance,
-                                    "arm_mismatches_000_004": arm_mismatches,
-                                    "gripper_target_pwm": expected_pwms[5],
-                                    "gripper_actual_pwm": gripper_actual,
-                                    "gripper_delta_pwm": (
-                                        None if gripper_actual is None
-                                        else abs(int(gripper_actual) - expected_pwms[5])
-                                    ),
-                                }
-                                print("STAGE_READBACK " + json.dumps(
-                                    readback, ensure_ascii=False
-                                ))
-                                if arm_mismatches:
-                                    grasp_result = "stage_readback_failed"
-                                    raise RuntimeError(
-                                        "stage arm readback failed: "
-                                        + json.dumps(arm_mismatches, ensure_ascii=False)
-                                    )
-                    if args.stop_on_lock:
+                error_x = float(observation.bbox.center[0] - observation.image_shape_hw[1] / 2.0)
+                error_y = float(observation.bbox.center[1] - observation.image_shape_hw[0] / 2.0)
+                dead_zone_px = float(center_cfg["dead_zone_px"])
+                aligned = (
+                    abs(error_x) <= dead_zone_px
+                    and abs(error_y) <= dead_zone_px
+                )
+                iterations += 1
+                print("CENTER " + json.dumps({
+                    "iteration": iterations,
+                    "error_px": [error_x, error_y],
+                    "aligned": aligned,
+                    "actual_pwms_000_005": list(snapshot.ordered()),
+                    "updates": updates,
+                }, ensure_ascii=False))
+                if aligned:
+                    stable += 1
+                    if stable >= int(center_cfg["stable_frames"]):
                         break
-
-            state = "UNCALIBRATED" if machine is None else machine.state.name
-            last_visual = draw_overlay(
-                frame.color_bgr, frame.depth_m, detections, selected, state, infer_ms
+                    barrier = observation.acquired_monotonic
+                    continue
+                if not updates:
+                    raise RuntimeError(
+                        "visual centering saturated outside dead zone: "
+                        f"error_px=({error_x:.1f},{error_y:.1f})"
+                    )
+                stable = 0
+                updates[4] = 1500
+                updates[5] = int(config["grasp"]["gripper_open_pwm"])
+                result = arm.execute_assignments(
+                    updates, int(center_cfg["duration_ms"])
+                )
+                machine._execute_motion(result, "VISUAL_CENTER")
+                barrier = float(result.motion_end_monotonic)
+                time.sleep(float(center_cfg["interval_s"]))
+            outcome = machine.outcome(
+                stable >= int(center_cfg["stable_frames"]),
+                "visual centering converged" if stable >= int(center_cfg["stable_frames"])
+                else "visual centering duration ended before convergence",
             )
-            if not args.no_show:
-                cv2.imshow("D435 Fixed-View Grasp", last_visual)
-                if cv2.waitKey(1) & 0xFF in (27, ord("q")):
-                    break
+        else:
+            stage = resolve_stage(args)
+            outcome = machine.run_to_stage(live, stage)
     finally:
-        if metrics_handle is not None:
-            metrics_handle.close()
-        if output_dir is not None and last_visual is not None:
-            output_dir.mkdir(parents=True, exist_ok=True)
-            cv2.imwrite(str(output_dir / "last_fixed_view_grasp.png"), last_visual)
-        if not args.dry_run:
-            # PDST releases the holding state on this heavy arm and lets the
-            # mechanism sag under gravity. A completed or rejected staged run
-            # must hold its last commanded pose for physical inspection.
-            print("ARM_HOLD_LAST_POSE automatic_PDST=false")
+        logger.close()
+        # Never call stop()/PDST automatically: the heavy arm must hold.
+        print("ARM_HOLD_LAST_POSE automatic_PDST=false")
         adapter.close()
         try:
-            source.stop()
+            camera.stop()
         except Exception:
             pass
         detector.close()
-        cv2.destroyAllWindows()
-
-    print("SUMMARY frames={} inferences={} locked={} center_commands={} grasp_result={} dry_run={} fixed_view_calibrated={}".format(
-        frame_count, inference_count, locked, center_command_count,
-        grasp_result, args.dry_run, calibration.calibrated,
-    ))
-    return 0
+        if cv2 is not None:
+            cv2.destroyAllWindows()
+    print("SUMMARY " + json.dumps(asdict(outcome), ensure_ascii=False, default=str))
+    if args.save_dir and outcome is not None:
+        summary_path = Path(args.save_dir).expanduser() / "grasp_summary.json"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(asdict(outcome), ensure_ascii=False, indent=2, default=str)
+            + "\n",
+            encoding="utf-8",
+        )
+    return 0 if outcome is not None and outcome.ok else 2
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, RuntimeError, ValueError) as exc:
+        print("ERROR {}".format(exc), file=sys.stderr)
+        raise SystemExit(2)

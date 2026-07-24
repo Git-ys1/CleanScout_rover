@@ -1,95 +1,94 @@
 #!/usr/bin/env python3
-"""Hardware-free checks for target centering, depth stability, and plan safety."""
+"""Hardware-free checks for the dynamic grasp state machine safety gates."""
+import math
 from pathlib import Path
 import sys
-
-import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent))
 
-from arm_grasp_pipeline.arm_motion import ArmMotion
-from arm_grasp_pipeline.geometry import CameraIntrinsics
-from arm_grasp_pipeline.fixed_view import ObjectGeometry
-from arm_grasp_pipeline.grasp_state_machine import GraspConfig, GraspState, GraspStateMachine
-from arm_grasp_pipeline.official_kinematics import OfficialArmKinematics
-from arm_grasp_pipeline.serial_servo_adapter import SerialServoArmAdapter
-from arm_grasp_pipeline.target_depth import BBox
+from arm_grasp_pipeline.grasp_state_machine import (  # noqa: E402
+    DynamicGraspStateMachine,
+    GraspState,
+)
+from arm_grasp_pipeline.tests.dynamic_fakes import (  # noqa: E402
+    StaticTargetSource,
+    runtime_parts,
+)
 
 
-def make_machine():
-    adapter = SerialServoArmAdapter(dry_run=True)
-    kin = OfficialArmKinematics()
-    arm = ArmMotion(adapter, kinematics=kin)
-    intr = CameraIntrinsics(fx=610.0, fy=610.0, cx=320.0, cy=240.0)
-    cfg = GraspConfig(stable_frames=5, depth_stable_frames=4,
-                      pre_grasp_standoff_m=0.07, pitch_deg=20.0, lift_pitch_deg=0.0)
-    T_base_camera = np.array([
-        [0.0, 0.0, 1.0, -0.120],
-        [-1.0, 0.0, 0.0, 0.0],
-        [0.0, -1.0, 0.0, 0.120],
-        [0.0, 0.0, 0.0, 1.0],
-    ], dtype=float)
-    return GraspStateMachine(
-        arm, intr, T_base_camera, cfg=cfg, object_geometry=ObjectGeometry()
+def make_machine(**source_kwargs):
+    config, frames, kin, adapter, arm, target = runtime_parts()
+    source = StaticTargetSource(
+        adapter, kin, frames, target, **source_kwargs
     )
+    machine = DynamicGraspStateMachine(
+        arm, frames, config, allow_motion=True
+    )
+    return machine, source, adapter
 
 
-def feed_boxes(machine, box):
-    for _ in range(machine.cfg.stable_frames + 1):
-        machine.update_detection(box)
-
-
-def depth_frame(value):
-    frame = np.zeros((480, 640), dtype=np.float32)
-    frame[180:300, 260:380] = float(value)
-    return frame
+def motion_labels(machine):
+    return [
+        row.get("motion_label")
+        for row in machine.logger.records
+        if row.get("motion_label")
+    ]
 
 
 def main() -> int:
-    machine = make_machine()
+    pregrasp, source, adapter = make_machine()
+    outcome = pregrasp.run_to_stage(source, "pregrasp")
+    assert outcome.ok, outcome.reason
+    assert outcome.state == GraspState.DONE
+    assert outcome.commands_executed == 2
+    assert motion_labels(pregrasp) == ["OPEN", "MOVE_PREGRASP"]
+    assert len(source.calls) >= 3
+    assert adapter._ser is None
 
-    feed_boxes(machine, BBox(280, 200, 360, 280, 0.9, "bottle"))
-    for _ in range(machine.cfg.depth_stable_frames):
-        assert machine.try_lock_depth(depth_frame(0.0)) is None
+    approach, source, adapter = make_machine()
+    outcome = approach.run_to_stage(source, "approach")
+    assert outcome.ok, outcome.reason
+    assert outcome.approach_iterations > 1
+    planned_steps = [
+        row["planned_step_xyz"]
+        for row in approach.logger.records
+        if row.get("state") == "FINE_APPROACH"
+        and "planned_step_xyz" in row
+    ]
+    assert len(planned_steps) == outcome.approach_iterations
+    for step in planned_steps:
+        length = math.sqrt(sum(float(value) ** 2 for value in step))
+        assert 0.005 - 1e-12 <= length <= 0.010 + 1e-12
+    assert adapter._ser is None
 
-    machine.update_detection(None)
-    feed_boxes(machine, BBox(280, 200, 360, 280, 0.9, "bottle"))
-    for value in (0.30, 0.35, 0.30, 0.35):
-        assert machine.try_lock_depth(depth_frame(value)) is None
+    invalid_depth, source, _ = make_machine(depth_override_m=0.16)
+    outcome = invalid_depth.run_to_stage(source, "pregrasp")
+    assert not outcome.ok
+    assert "unreliable zone" in outcome.reason
+    assert outcome.commands_executed == 0
 
-    machine.update_detection(None)
-    feed_boxes(machine, BBox(280, 200, 360, 280, 0.9, "bottle"))
-    target = None
-    for value in (0.320, 0.321, 0.319, 0.320):
-        target = machine.try_lock_depth(depth_frame(value))
-    assert target is not None
+    target_loss, source, _ = make_machine(fail_call=3)
+    outcome = target_loss.run_to_stage(source, "approach")
+    assert not outcome.ok
+    assert "target lost" in outcome.reason
+    assert outcome.commands_executed == 2
+    assert outcome.approach_iterations == 0
 
-    machine.locked_target_base = np.array([0.25, 0.00, 0.18], dtype=float)
-    plan = machine.plan_locked_grasp()
-    states = [row.state for row in plan]
-    assert states[0] == GraspState.OPEN
-    assert states[1] == GraspState.PRE_GRASP
-    assert GraspState.APPROACH in states
-    assert states[-2:] == [GraspState.CLOSE, GraspState.LIFT]
-    pre = np.asarray(plan[1].xyz_m)
-    grasp = np.asarray([row for row in plan if row.state == GraspState.APPROACH][-1].xyz_m)
-    target = machine.locked_target_base
-    approach_axis = np.array([target[0], target[1], 0.0], dtype=float)
-    approach_axis /= np.linalg.norm(approach_axis)
-    assert np.allclose(pre, target - approach_axis * machine.cfg.pre_grasp_standoff_m)
-    assert np.allclose(grasp, target)
-    assert pre[2] == target[2] and grasp[2] == target[2]
-    assert plan[0].gripper_pwm == 1000 and plan[-2].gripper_pwm == 2000
-    assert all(row.servo_pwms[4] == 1500 for row in plan)
+    table_object, source, _ = make_machine(attach_on_close=False)
+    outcome = table_object.run_to_stage(source, "lift")
+    assert not outcome.ok
+    assert outcome.grasp_verification == "grasp_failed"
+    assert "VERIFY_LIFT" in motion_labels(table_object)
+    assert "LIFT" not in motion_labels(table_object)
 
-    machine.locked_target_base = np.array([0.80, 0.0, 0.12], dtype=float)
-    try:
-        machine.plan_locked_grasp()
-    except ValueError as exc:
-        assert "outside workspace" in str(exc)
-    else:
-        raise AssertionError("workspace guard did not reject unreachable target")
+    held_object, source, adapter = make_machine(attach_on_close=True)
+    outcome = held_object.run_to_stage(source, "lift")
+    assert outcome.ok, outcome.reason
+    assert outcome.grasp_verification == "grasp_verified"
+    labels = motion_labels(held_object)
+    assert labels.index("VERIFY_LIFT") < labels.index("LIFT")
+    assert adapter._ser is None
 
     print("GRASP_SAFETY_CHECK_OK")
     return 0
