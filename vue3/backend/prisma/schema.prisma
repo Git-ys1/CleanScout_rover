@@ -49,7 +49,11 @@ model MessageCache {
   id        String   @id @default(cuid())
   userId    String
   role      String
+  type      String   @default("text")
   content   String
+  imageUrl  String?
+  imageName String?
+  mimeType  String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

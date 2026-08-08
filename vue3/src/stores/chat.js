@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { requestChatHistory, requestSendChatMessage } from '../api/chat.js'
+import { requestChatHistory, requestSendChatImage, requestSendChatMessage } from '../api/chat.js'
+import { API_BASE_URL } from '../api/config.js'
 import { requestOpenClawAgentStatus } from '../api/openclaw.js'
 import { formatStatusText } from '../utils/status-display.js'
 
@@ -32,12 +33,19 @@ function createMessageViewModel(message, overrides = {}) {
   const role = String(message?.role || 'assistant').trim() || 'assistant'
   const kind = role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : 'system'
   const content = String(message?.content || '').trim()
+  const type = message?.type === 'image' ? 'image' : 'text'
+  const rawImageUrl = String(message?.imageUrl || '').trim()
+  const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, '')
 
   return {
     id: message?.id || `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     role,
     kind,
     content,
+    type,
+    imageUrl: rawImageUrl.startsWith('/') ? `${backendOrigin}${rawImageUrl}` : rawImageUrl,
+    imageName: String(message?.imageName || '').trim(),
+    mimeType: String(message?.mimeType || '').trim(),
     displayText: content,
     streaming: false,
     createdAt: message?.createdAt || new Date().toISOString(),
@@ -288,6 +296,26 @@ export const useChatStore = defineStore('chat', {
         this.messages = this.messages.filter((message) => message.id !== tempAssistantId)
         this.appendSystemMessage(messageText, 'send-error')
         throw error
+      } finally {
+        this.sending = false
+      }
+    },
+    async sendImage(tempFilePath) {
+      if (!tempFilePath) {
+        throw new Error('请选择要发送的图片')
+      }
+
+      this.sending = true
+
+      try {
+        const result = await requestSendChatImage(tempFilePath)
+        this.messages = [
+          ...this.messages,
+          createMessageViewModel(result.userMessage),
+          createMessageViewModel(result.replyMessage),
+        ]
+        this.setTransport(result.transport)
+        return result
       } finally {
         this.sending = false
       }

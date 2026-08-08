@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { prisma } from '../utils/prisma.js'
 import { createHttpError } from '../utils/response.js'
 import { getOpenClawStatus, sendChatToOpenClaw } from '../integrations/openclaw/service.js'
@@ -26,9 +29,25 @@ function serializeMessage(message) {
   return {
     id: message.id,
     role: message.role,
+    type: message.type || 'text',
     content: message.content,
+    imageUrl: message.imageUrl || '',
+    imageName: message.imageName || '',
+    mimeType: message.mimeType || '',
     createdAt: message.createdAt,
   }
+}
+
+function getImageExtension(file) {
+  const mimeType = String(file?.mimetype || '').toLowerCase()
+  const extensions = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+  }
+
+  return extensions[mimeType] || path.extname(String(file?.originalname || '')).toLowerCase() || '.img'
 }
 
 export async function getChatHistory(userId) {
@@ -115,5 +134,51 @@ export async function sendChatMessage(userId, content) {
     userMessage: serializeMessage(userMessage),
     replyMessage: serializeMessage(replyMessage),
     transport,
+  }
+}
+
+export async function sendChatImage(userId, file) {
+  if (!file?.buffer?.length) {
+    throw createHttpError(400, '图片文件为空', 'CHAT_IMAGE_EMPTY')
+  }
+
+  const uploadDirectory = path.join(process.cwd(), 'uploads', 'chat')
+  const fileName = `${Date.now()}-${randomUUID()}${getImageExtension(file)}`
+  const imageUrl = `/uploads/chat/${fileName}`
+
+  await mkdir(uploadDirectory, { recursive: true })
+  await writeFile(path.join(uploadDirectory, fileName), file.buffer)
+
+  const userMessage = await prisma.messageCache.create({
+    data: {
+      userId,
+      role: 'user',
+      type: 'image',
+      content: String(file.originalname || '图片'),
+      imageUrl,
+      imageName: String(file.originalname || fileName),
+      mimeType: String(file.mimetype || 'application/octet-stream'),
+    },
+  })
+
+  const replyMessage = await prisma.messageCache.create({
+    data: {
+      userId,
+      role: 'assistant',
+      type: 'text',
+      content: `已收到图片“${file.originalname || fileName}”，并保存到本地 backend。`,
+    },
+  })
+
+  return {
+    userMessage: serializeMessage(userMessage),
+    replyMessage: serializeMessage(replyMessage),
+    transport: {
+      mode: 'mock',
+      fallback: false,
+      status: 'healthy',
+      message: '图片已通过本地 backend 保存。',
+      apiMode: 'local-image',
+    },
   }
 }

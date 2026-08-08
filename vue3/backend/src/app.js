@@ -1,6 +1,7 @@
 import './bootstrap/loadRuntimeEnv.js'
 import cors from 'cors'
 import express from 'express'
+import path from 'node:path'
 import authRoutes from './routes/auth.js'
 import deviceRoutes from './routes/device.js'
 import chatRoutes from './routes/chat.js'
@@ -57,6 +58,7 @@ app.use(
 )
 
 app.use(express.json())
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
 app.get('/', (_req, res) => {
   res.json({
