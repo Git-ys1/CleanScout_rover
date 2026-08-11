@@ -50,6 +50,18 @@ function getImageExtension(file) {
   return extensions[mimeType] || path.extname(String(file?.originalname || '')).toLowerCase() || '.img'
 }
 
+function normalizeOriginalFileName(value) {
+  const originalName = String(value || '').trim()
+
+  if (!originalName) {
+    return ''
+  }
+
+  const decodedName = Buffer.from(originalName, 'latin1').toString('utf8')
+
+  return decodedName.includes('\uFFFD') ? originalName : decodedName
+}
+
 export async function getChatHistory(userId) {
   const messages = await prisma.messageCache.findMany({
     where: { userId },
@@ -145,6 +157,7 @@ export async function sendChatImage(userId, file) {
   const uploadDirectory = path.join(process.cwd(), 'uploads', 'chat')
   const fileName = `${Date.now()}-${randomUUID()}${getImageExtension(file)}`
   const imageUrl = `/uploads/chat/${fileName}`
+  const originalName = normalizeOriginalFileName(file.originalname) || fileName
 
   await mkdir(uploadDirectory, { recursive: true })
   await writeFile(path.join(uploadDirectory, fileName), file.buffer)
@@ -154,9 +167,9 @@ export async function sendChatImage(userId, file) {
       userId,
       role: 'user',
       type: 'image',
-      content: String(file.originalname || '图片'),
+      content: originalName,
       imageUrl,
-      imageName: String(file.originalname || fileName),
+      imageName: originalName,
       mimeType: String(file.mimetype || 'application/octet-stream'),
     },
   })
@@ -166,7 +179,7 @@ export async function sendChatImage(userId, file) {
       userId,
       role: 'assistant',
       type: 'text',
-      content: `已收到图片“${file.originalname || fileName}”，并保存到本地 backend。`,
+      content: `已收到图片“${originalName}”，并保存到本地 backend。`,
     },
   })
 
