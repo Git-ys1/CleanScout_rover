@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "smoke:chat-image": "node scripts/smoke-chat-image.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

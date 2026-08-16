@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { requestChatHistory } from '../api/chat.js'
-import { requestOpenClawAgentStatus, requestSendOpenClawMessage } from '../api/openclaw.js'
+import { requestChatHistory, requestSendChatImage, requestSendChatMessage } from '../api/chat.js'
+import { API_BASE_URL } from '../api/config.js'
+import { requestOpenClawAgentStatus } from '../api/openclaw.js'
 import { formatStatusText } from '../utils/status-display.js'
 
 let streamingRunId = 0
@@ -32,12 +33,19 @@ function createMessageViewModel(message, overrides = {}) {
   const role = String(message?.role || 'assistant').trim() || 'assistant'
   const kind = role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : 'system'
   const content = String(message?.content || '').trim()
+  const type = message?.type === 'image' ? 'image' : 'text'
+  const rawImageUrl = String(message?.imageUrl || '').trim()
+  const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, '')
 
   return {
     id: message?.id || `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     role,
     kind,
     content,
+    type,
+    imageUrl: rawImageUrl.startsWith('/') ? `${backendOrigin}${rawImageUrl}` : rawImageUrl,
+    imageName: String(message?.imageName || '').trim(),
+    mimeType: String(message?.mimeType || '').trim(),
     displayText: content,
     streaming: false,
     createdAt: message?.createdAt || new Date().toISOString(),
@@ -76,35 +84,24 @@ function buildTransportSystemMessage(transport) {
   return `当前链路为${modeText}，状态为${statusText}，接口模式为${apiText}，展示方式为${streamingText}。`
 }
 
-function isRecoverableOpenClawRequestError(error) {
+function isRecoverableChatRequestError(error) {
   const code = String(error?.code || '').toUpperCase()
   const message = String(error?.message || '').toLowerCase()
 
   return (
     code === 'NETWORK_ERROR' ||
-    code === 'OPENCLAW_WORKER_TIMEOUT' ||
     message.includes('timeout') ||
     message.includes('request:fail') ||
     message.includes('请求超时')
   )
 }
 
-function formatOpenClawRequestError(error) {
-  const code = String(error?.code || '')
-
-  if (code === 'PC_OPENCLAW_WORKER_OFFLINE') {
-    return 'pc-openclaw-worker 当前离线，请先确认 UbuntuPC worker 已启动并连接云端。'
+function formatChatRequestError(error) {
+  if (String(error?.code || '') === 'NETWORK_ERROR') {
+    return '无法连接本地 backend，请确认 127.0.0.1:3000 已启动。'
   }
 
-  if (code === 'OPENCLAW_WORKER_TIMEOUT') {
-    return 'OpenClaw 回复超时，可能仍在本机生成。已尝试同步最新对话记录。'
-  }
-
-  if (code === 'NETWORK_ERROR') {
-    return '前端请求连接中断，后端可能仍在等待 worker 返回。已尝试同步最新对话记录。'
-  }
-
-  return error?.message || '消息发送失败，请稍后重试。'
+  return error?.message || '本地消息发送失败，请稍后重试。'
 }
 
 function sleep(ms) {
@@ -224,19 +221,14 @@ export const useChatStore = defineStore('chat', {
             createdAt: new Date().toISOString(),
           },
           {
-            displayText: '已发送到云端，正在等待 UbuntuPC worker 与 OpenClaw 返回…',
+            displayText: '已发送到本地 backend，正在等待处理结果…',
             streaming: true,
           }
         ),
       ]
 
       try {
-        const result = await requestSendOpenClawMessage({
-          deviceId: DEFAULT_DEVICE_ID,
-          conversationId: 'conv-cleanscout-001',
-          message: content,
-          mode: 'chat',
-        })
+        const result = await requestSendChatMessage(content)
 
         this.replaceMessage(tempUserId, createMessageViewModel(result.userMessage))
         this.replaceMessage(
@@ -263,8 +255,8 @@ export const useChatStore = defineStore('chat', {
 
         return result
       } catch (error) {
-        const recoverable = isRecoverableOpenClawRequestError(error)
-        const messageText = formatOpenClawRequestError(error)
+        const recoverable = isRecoverableChatRequestError(error)
+        const messageText = formatChatRequestError(error)
 
         if (recoverable) {
           this.replaceMessage(
@@ -282,16 +274,16 @@ export const useChatStore = defineStore('chat', {
               }
             )
           )
-          this.appendSystemMessage('如果 OpenClaw 稍后返回，页面会自动同步历史记录；无需切换页面手动刷新。', 'openclaw-recovering')
+          this.appendSystemMessage('后端可能已经收到消息，页面将自动同步本地历史记录。', 'chat-recovering')
 
           await sleep(1800)
 
           try {
             await this.loadHistory()
             await this.syncTransportStatus({ appendNotice: false })
-            this.appendSystemMessage('已自动同步 OpenClaw 对话记录。', 'openclaw-history-sync')
+            this.appendSystemMessage('已自动同步本地对话记录。', 'chat-history-sync')
           } catch (_syncError) {
-            this.appendSystemMessage('自动同步历史记录失败，请稍后手动刷新对话页。', 'openclaw-history-sync-failed')
+            this.appendSystemMessage('自动同步历史记录失败，请稍后手动刷新对话页。', 'chat-history-sync-failed')
           }
 
           return {
@@ -304,6 +296,26 @@ export const useChatStore = defineStore('chat', {
         this.messages = this.messages.filter((message) => message.id !== tempAssistantId)
         this.appendSystemMessage(messageText, 'send-error')
         throw error
+      } finally {
+        this.sending = false
+      }
+    },
+    async sendImage(tempFilePath) {
+      if (!tempFilePath) {
+        throw new Error('请选择要发送的图片')
+      }
+
+      this.sending = true
+
+      try {
+        const result = await requestSendChatImage(tempFilePath)
+        this.messages = [
+          ...this.messages,
+          createMessageViewModel(result.userMessage),
+          createMessageViewModel(result.replyMessage),
+        ]
+        this.setTransport(result.transport)
+        return result
       } finally {
         this.sending = false
       }

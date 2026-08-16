@@ -43,7 +43,15 @@
         <view v-else class="bubble-shell" :class="message.kind">
           <view class="bubble-card" :class="message.kind">
             <text class="bubble-role">{{ message.kind === 'user' ? '你' : '系统助手' }}</text>
-            <text class="bubble-text">{{ message.displayText || message.content }}</text>
+            <image
+              v-if="message.type === 'image'"
+              class="bubble-image"
+              :src="message.imageUrl"
+              mode="widthFix"
+              @tap="previewImage(message.imageUrl)"
+            />
+            <text v-else class="bubble-text">{{ message.displayText || message.content }}</text>
+            <text v-if="message.type === 'image'" class="bubble-image-name">{{ message.imageName || message.content }}</text>
             <text v-if="message.streaming" class="bubble-streaming">生成中…</text>
             <text class="bubble-time">{{ formatDate(message.createdAt) }}</text>
           </view>
@@ -82,6 +90,13 @@
       />
 
       <view class="composer-actions">
+        <button
+          class="image-button v-pressable"
+          :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'"
+          @tap="handleChooseImage"
+        >
+          选择图片
+        </button>
         <button
           class="voice-button v-pressable"
           :disabled="!canUseVoiceAction"
@@ -369,6 +384,35 @@ async function handleSend() {
   }
 }
 
+function handleChooseImage() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album'],
+    async success(result) {
+      try {
+        await chatStore.sendImage(result.tempFilePaths?.[0])
+      } catch (error) {
+        uni.showToast({
+          title: error.message || '图片发送失败',
+          icon: 'none',
+        })
+      }
+    },
+  })
+}
+
+function previewImage(url) {
+  if (!url) {
+    return
+  }
+
+  uni.previewImage({
+    current: url,
+    urls: [url],
+  })
+}
+
 function applySuggestion(text) {
   chatStore.setDraftText(text)
 }
@@ -534,6 +578,23 @@ function formatHeartbeatAge(value) {
   word-break: break-word;
 }
 
+.bubble-image {
+  display: block;
+  width: 360rpx;
+  max-width: 100%;
+  margin-top: 10rpx;
+  border-radius: 18rpx;
+  background: rgba(31, 82, 99, 0.08);
+}
+
+.bubble-image-name {
+  display: block;
+  margin-top: 8rpx;
+  color: var(--v-text-muted);
+  font-size: 20rpx;
+  word-break: break-all;
+}
+
 .bubble-streaming {
   display: block;
   margin-top: 8rpx;
@@ -645,6 +706,7 @@ function formatHeartbeatAge(value) {
   margin-top: 10rpx;
 }
 
+.image-button,
 .voice-button,
 .composer-button {
   flex: 1;
@@ -652,6 +714,12 @@ function formatHeartbeatAge(value) {
   border-radius: 999rpx;
   font-size: 26rpx;
   font-weight: 800;
+}
+
+.image-button {
+  flex: 0.72;
+  background: rgba(31, 82, 99, 0.1);
+  color: var(--v-color-primary);
 }
 
 .voice-button {
@@ -665,11 +733,13 @@ function formatHeartbeatAge(value) {
   color: #ffffff;
 }
 
+.image-button[disabled],
 .voice-button[disabled],
 .composer-button[disabled] {
   opacity: 0.58;
 }
 
+.image-button::after,
 .voice-button::after,
 .composer-button::after {
   border: none;
