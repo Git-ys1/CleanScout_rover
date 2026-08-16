@@ -38,16 +38,28 @@ function serializeMessage(message) {
   }
 }
 
-function getImageExtension(file) {
-  const mimeType = String(file?.mimetype || '').toLowerCase()
-  const extensions = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
+function detectImageType(buffer) {
+  if (buffer?.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) {
+    return { mimeType: 'image/jpeg', extension: '.jpg' }
   }
 
-  return extensions[mimeType] || path.extname(String(file?.originalname || '')).toLowerCase() || '.img'
+  if (buffer?.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { mimeType: 'image/png', extension: '.png' }
+  }
+
+  const gifHeader = buffer?.subarray(0, 6).toString('ascii')
+  if (gifHeader === 'GIF87a' || gifHeader === 'GIF89a') {
+    return { mimeType: 'image/gif', extension: '.gif' }
+  }
+
+  if (
+    buffer?.subarray(0, 4).toString('ascii') === 'RIFF'
+    && buffer?.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return { mimeType: 'image/webp', extension: '.webp' }
+  }
+
+  return null
 }
 
 function normalizeOriginalFileName(value) {
@@ -154,8 +166,15 @@ export async function sendChatImage(userId, file) {
     throw createHttpError(400, '图片文件为空', 'CHAT_IMAGE_EMPTY')
   }
 
+  const detectedType = detectImageType(file.buffer)
+  const declaredMimeType = String(file.mimetype || '').toLowerCase()
+
+  if (!detectedType || detectedType.mimeType !== declaredMimeType) {
+    throw createHttpError(415, '图片内容与声明格式不匹配', 'CHAT_IMAGE_SIGNATURE_INVALID')
+  }
+
   const uploadDirectory = path.join(process.cwd(), 'uploads', 'chat')
-  const fileName = `${Date.now()}-${randomUUID()}${getImageExtension(file)}`
+  const fileName = `${Date.now()}-${randomUUID()}${detectedType.extension}`
   const imageUrl = `/uploads/chat/${fileName}`
   const originalName = normalizeOriginalFileName(file.originalname) || fileName
 
@@ -170,7 +189,7 @@ export async function sendChatImage(userId, file) {
       content: originalName,
       imageUrl,
       imageName: originalName,
-      mimeType: String(file.mimetype || 'application/octet-stream'),
+      mimeType: detectedType.mimeType,
     },
   })
 
