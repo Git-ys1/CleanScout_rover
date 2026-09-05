@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BS · 多模态助手</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#202a39;font:16px/1.65 system-ui,sans-serif}main{max-width:860px;margin:32px auto;padding:0 20px}header{display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:28px}small,#status{color:#64748b}button{cursor:pointer;border:0;border-radius:10px;padding:10px 20px;background:#2857dd;color:white}button:disabled{opacity:.5;cursor:wait}#messages{min-height:42vh;margin:24px 0}.bubble{background:white;border:1px solid #e3e8f0;border-radius:15px;padding:16px 20px;margin:14px 0;white-space:pre-wrap;overflow-wrap:anywhere}.user{background:#e8efff;margin-left:12%}.assistant{margin-right:8%}.bubble img,#preview{display:block;max-width:100%;max-height:300px;border-radius:10px;margin-top:12px}form{background:white;padding:18px;border-radius:16px}textarea,input[type=url]{width:100%;padding:10px;border:1px solid #d5dce8;border-radius:8px;font:inherit;margin-bottom:10px}textarea{resize:vertical}label{display:block;margin:8px 0}.actions{display:flex;justify-content:space-between;align-items:center;gap:10px}#status{min-height:28px}#preview[hidden]{display:none}
+</style>
+<main><header><div><h1>BS 多模态助手</h1><small>聊问题，也看懂图片</small></div><button id="new" type="button">新会话</button></header>
+<div id="messages" aria-live="polite"></div>
+<form id="form"><textarea id="text" rows="3" placeholder="输入问题，或上传图片让我看看……" aria-label="消息"></textarea>
+<label>本地图片（最多 5 MB） <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+<input id="url" type="url" placeholder="也可以粘贴公网 HTTPS 图片地址" aria-label="图片地址">
+<img id="preview" alt="待发送图片" hidden>
+<div class="actions"><small>本地图片与图片地址任选一种</small><button id="send">发送</button></div></form>
+<p id="status" role="status"></p></main>
+<script>
+const $=id=>document.getElementById(id);
+let session=localStorage.getItem('bs-session')||crypto.randomUUID();
+localStorage.setItem('bs-session',session);
+let busy=false,previewURL;
+function add(role,content){const box=document.createElement('div');box.className='bubble '+role;const title=document.createElement('strong');title.textContent=role==='user'?'你':'BS';box.append(title);const blocks=typeof content==='string'?[{type:'text',text:content}]:content;for(const part of blocks){if(part.type==='text'){const p=document.createElement('div');p.textContent=part.text;box.append(p)}else if(part.type==='image_url'){const img=document.createElement('img');img.src=part.image_url.url;img.referrerPolicy='no-referrer';img.alt='用户图片';box.append(img)}}$('messages').append(box);box.scrollIntoView({block:'end'})}
+async function api(path,options){const res=await fetch(path,options);const data=await res.json();if(!res.ok)throw Error(data.error||'请求失败');return data}
+async function restore(){const data=await api('/api/messages?session_id='+encodeURIComponent(session));$('messages').replaceChildren();data.messages.forEach(m=>add(m.role,m.content))}
+function clearImage(){if(previewURL)URL.revokeObjectURL(previewURL);$('preview').hidden=true;$('preview').removeAttribute('src');$('file').value='';$('url').value=''}
+$('file').onchange=()=>{if(previewURL)URL.revokeObjectURL(previewURL);const file=$('file').files[0];$('preview').hidden=!file;if(file){previewURL=URL.createObjectURL(file);$('preview').src=previewURL;$('url').value=''}};
+$('new').onclick=()=>{if(busy)return;session=crypto.randomUUID();localStorage.setItem('bs-session',session);$('messages').replaceChildren();$('text').value='';clearImage();$('status').textContent='已开始新会话。'};
+function asDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('无法读取图片'));reader.readAsDataURL(file)})}
+$('form').onsubmit=async event=>{event.preventDefault();if(busy)return;busy=true;for(const el of [$('send'),$('new'),$('text'),$('file'),$('url')])el.disabled=true;
+try{const text=$('text').value.trim(),file=$('file').files[0];if(file&&file.size>5*1024*1024)throw Error('图片不能超过 5 MB');if(file&&$('url').value.trim())throw Error('请选择本地图片或 URL 中的一种');const image=file?await asDataURL(file):$('url').value.trim();if(!text&&!image)throw Error('请输入文字或选择图片');$('status').textContent='BS 正在思考……';const data=await api('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:session,message:text,image})});add('user',image?[{type:'text',text:text||'请描述这张图片的内容。'},{type:'image_url',image_url:{url:image}}]:text);add('assistant',data.reply);$('text').value='';clearImage();$('status').textContent='';}
+catch(error){$('status').textContent=error.message+'（输入已保留）'}finally{busy=false;for(const el of [$('send'),$('new'),$('text'),$('file'),$('url')])el.disabled=false}};
+(async()=>{try{await restore();const data=await api('/api/status');if(!data.configured)$('status').textContent='请先在 bs/.env 中填写 AGNES_API_KEY。'}catch(error){$('status').textContent=error.message}})();
+</script></html>
