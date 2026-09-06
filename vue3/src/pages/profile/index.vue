@@ -1,62 +1,47 @@
 <template>
-  <view class="profile-page v-page">
-    <view class="profile-card">
-      <view class="avatar-block">{{ (userInfo?.username || 'U').slice(0, 1).toUpperCase() }}</view>
-      <view class="profile-copy">
-        <text class="profile-kicker">账户</text>
-        <text class="profile-title">{{ userInfo?.username || '未登录' }}</text>
-        <StatusBadge :value="authStore.role || 'user'" />
+  <view class="account-page">
+    <view class="account-content">
+      <view class="account-header">
+        <view class="avatar">{{ (userInfo?.username || 'U').slice(0, 1).toUpperCase() }}</view>
+        <view class="identity"><text class="username">{{ userInfo?.username || '未获取账号' }}</text><text class="muted">{{ roleLabel }}</text></view>
       </view>
+      <view class="group">
+        <view class="row"><text class="row-label">账号权限</text><text class="row-value">{{ authStore.role === 'admin' ? '可查看状态、控制移动与风机，并使用管理台' : '可查看设备状态，控制操作需管理员权限' }}</text></view>
+        <button class="row connection-toggle" @tap="showConnection = !showConnection"><text class="row-label">连接信息</text><text class="row-value">查看接入方式 {{ showConnection ? '⌃' : '⌄' }}</text></button>
+        <view v-if="showConnection" class="connection-details">
+          <view class="row"><text class="row-label">服务入口</text><text class="row-value">应用后台服务（API）</text></view>
+          <view class="row"><text class="row-label">接口地址</text><text class="row-value">{{ API_BASE_URL }}</text></view>
+          <view class="row"><text class="row-label">设备接入方式</text><text class="row-value">{{ connectionMode }}</text></view>
+          <text class="muted explanation">设备实际连接方式和在线状态请查看首页的“连接信息”。此处展示配置地址，不代表连接正常。</text>
+        </view>
+      </view>
+      <view v-if="authStore.role === 'admin'" class="group">
+        <button class="row" @tap="goToAdminConsole"><text>管理台</text><text class="row-value">用户与系统管理 ›</text></button>
+      </view>
+      <view class="group"><button class="logout" :disabled="loggingOut" :loading="loggingOut" @tap="handleLogout">退出登录</button></view>
     </view>
-
-    <view class="summary-grid">
-      <view class="summary-card v-card">
-        <text class="summary-value">{{ isLoggedIn ? '已登录' : '未登录' }}</text>
-        <text class="summary-label">登录状态</text>
-      </view>
-      <view class="summary-card v-card">
-        <text class="summary-value">{{ roleLabel }}</text>
-        <text class="summary-label">当前权限</text>
-      </view>
-      <view class="summary-card v-card">
-        <text class="summary-value">云端 API</text>
-        <text class="summary-label">后端入口</text>
-      </view>
-      <view class="summary-card v-card">
-        <text class="summary-value">边缘中继</text>
-        <text class="summary-label">设备链路</text>
-      </view>
-    </view>
-
-    <view v-if="authStore.role === 'admin'" class="admin-card v-pressable" @tap="goToAdminConsole">
-      <view>
-        <text class="admin-card-title">管理台</text>
-        <text class="admin-card-desc">用户、系统开关与接入状态集中管理。</text>
-      </view>
-      <text class="admin-arrow">进入</text>
-    </view>
-
-    <button class="logout-button v-pressable" @tap="handleLogout">退出登录</button>
-
     <!-- #ifdef H5 -->
     <H5TabBarFallback current="profile" />
     <!-- #endif -->
   </view>
 </template>
-
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { onShow } from '@dcloudio/uni-app'
 import { useAppStore } from '../../stores/app.js'
 import { useAuthStore } from '../../stores/auth.js'
 import { ensureLoggedIn } from '../../utils/auth-guard.js'
 import H5TabBarFallback from '../../components/H5TabBarFallback.vue'
-import StatusBadge from '../../components/StatusBadge.vue'
+import { API_BASE_URL } from '../../api/config.js'
+import { requestRosStatus } from '../../api/integrations.js'
+const showConnection = ref(false)
+const loggingOut = ref(false)
+const connectionMode = ref('暂未获取')
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
-const { userInfo, isLoggedIn } = storeToRefs(authStore)
+const { userInfo } = storeToRefs(authStore)
 
 const roleLabel = computed(() => {
   if (authStore.role === 'admin') {
@@ -79,9 +64,18 @@ onShow(async () => {
 
   appStore.setCurrentTab('profile')
   await authStore.fetchMe()
+  try {
+    const status = await requestRosStatus()
+    connectionMode.value = ({ 'edge-relay': '设备中继（边缘中继）', rosbridge: '机器人直连', mock: '演示链路' })[status.transport] || '状态未知'
+  } catch { connectionMode.value = '暂未获取' }
 })
 
 async function handleLogout() {
+  if (loggingOut.value) return
+  const confirmed = await new Promise(resolve => uni.showModal({ title: '退出登录', content: '确定退出当前账号？', confirmText: '退出', cancelText: '取消', success: result => resolve(result.confirm), fail: () => resolve(false) }))
+  if (!confirmed) return
+  loggingOut.value = true
+  try {
   await authStore.logout()
   uni.showToast({
     title: '已退出登录',
@@ -90,142 +84,30 @@ async function handleLogout() {
   setTimeout(() => {
     uni.reLaunch({ url: '/pages/auth/login' })
   }, 160)
+  } catch (error) { uni.showToast({ title: error.message || '退出失败，请重试', icon: 'none' }) }
+  finally { loggingOut.value = false }
 }
 
 function goToAdminConsole() {
   uni.navigateTo({ url: '/pages/admin/index' })
 }
 </script>
-
-<style>
-.profile-page {
-  min-height: 100vh;
-  padding: 28rpx;
-  box-sizing: border-box;
-}
-
-.profile-card {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-  padding: 32rpx;
-  border-radius: 36rpx;
-  background:
-    radial-gradient(circle at 96% 0%, rgba(213, 138, 58, 0.18), transparent 28%),
-    linear-gradient(135deg, #17384a, #1f5263 64%, #5f98a4);
-  box-shadow: var(--v-shadow-float);
-}
-
-.avatar-block {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 34rpx;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--v-color-primary-deep);
-  font-size: 48rpx;
-  font-weight: 900;
-}
-
-.profile-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.profile-kicker {
-  display: block;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 22rpx;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.profile-title {
-  display: block;
-  margin: 8rpx 0 12rpx;
-  font-size: 42rpx;
-  font-weight: 900;
-  color: #ffffff;
-}
-
-.summary-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18rpx;
-  margin-top: 22rpx;
-}
-
-.summary-card {
-  flex: 1 1 40%;
-  min-width: 260rpx;
-  padding: 26rpx;
-  box-sizing: border-box;
-}
-
-.summary-value {
-  display: block;
-  font-size: 30rpx;
-  font-weight: 900;
-  color: var(--v-text-main);
-}
-
-.summary-label {
-  display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
-  color: var(--v-text-muted);
-}
-
-.admin-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
-  margin-top: 20rpx;
-  padding: 30rpx;
-  border-radius: 32rpx;
-  background:
-    radial-gradient(circle at 90% 12%, rgba(255, 255, 255, 0.18), transparent 26%),
-    linear-gradient(135deg, var(--v-color-primary-deep), var(--v-color-primary) 68%, var(--v-color-accent));
-  box-shadow: var(--v-shadow-card);
-}
-
-.admin-card-title {
-  display: block;
-  font-size: 34rpx;
-  font-weight: 900;
-  color: #ffffff;
-}
-
-.admin-card-desc {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.admin-arrow {
-  flex: 0 0 auto;
-  padding: 12rpx 22rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--v-color-primary);
-  font-size: 24rpx;
-  font-weight: 900;
-}
-
-.logout-button {
-  margin-top: 24rpx;
-  border-radius: 999rpx;
-  background: rgba(200, 93, 74, 0.14);
-  color: var(--v-color-danger);
-  font-weight: 800;
-}
-
-.logout-button::after {
-  border: none;
-}
+<style scoped>
+.account-page { min-height: 100vh; padding: 16px 16px calc(80px + env(safe-area-inset-bottom)); box-sizing: border-box; background: #f5f5f5; color: #1f2329; font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+.account-content { max-width: 700px; margin: auto; }
+.account-header { display: flex; align-items: center; gap: 16px; background: white; padding: 24px 20px; border-radius: 12px; }
+.avatar { display: flex; justify-content: center; align-items: center; flex: 0 0 56px; height: 56px; border-radius: 12px; background: #e8f5ed; color: #07a35a; font-size: 26px; font-weight: 600; }
+.identity { min-width: 0; }
+.username { display: block; font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.muted { display: block; font-size: 14px; color: #667085; }
+.group { margin-top: 16px; padding: 0 18px; background: white; border-radius: 12px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 14px 0; box-sizing: border-box; border-bottom: 1px solid #f0f1f2; }
+.row:last-child { border-bottom: 0; }
+.row-label { flex: 0 0 80px; }
+.row-value { color: #667085; font-size: 14px; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+button { width: 100%; margin: 0; background: white; border-radius: 0; text-align: left; font: inherit; color: inherit; }
+button::after { border: 0; }
+.connection-details { padding-bottom: 16px; }
+.explanation { margin-top: 8px; }
+.logout { min-height: 52px; padding: 12px 0; text-align: center; color: #c43232; }
 </style>
