@@ -3,7 +3,7 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "控制总览"
+        "navigationBarTitleText": "设备概况"
       }
     },
     {

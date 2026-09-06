@@ -21,6 +21,7 @@ model User {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   messages     MessageCache[]
+  chatRequests ChatRequest[]
 }
 
 model DeviceCache {
@@ -67,4 +68,18 @@ model SystemConfig {
   maintenanceMessage  String   @default("")
   openclawEnabled     Boolean  @default(false)
   updatedAt           DateTime @updatedAt
+}
+
+model ChatRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  requestId   String
+  fingerprint String
+  status      String   @default("processing")
+  claim       String
+  response    String?
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, requestId])
 }
