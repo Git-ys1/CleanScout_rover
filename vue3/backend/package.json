@@ -12,7 +12,9 @@
     "prisma:migrate": "prisma db push",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
-    "smoke:chat-image": "node scripts/smoke-chat-image.mjs"
+    "smoke:chat-image": "node scripts/smoke-chat-image.mjs",
+    "test:chat": "node --test scripts/chat-multimodal.test.mjs",
+    "verify:chat-live": "node scripts/live-chat-agnes.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
