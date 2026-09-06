@@ -4,6 +4,7 @@
   "private": true,
   "description": "V线设备前端控制端立项冻结工程（uni-app Vue3 CLI）",
   "scripts": {
+    "test:chat-store": "node --test scripts/test-chat-store.mjs",
     "local:edge": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-local-edge.ps1",
     "dev:custom": "uni -p",
     "dev:h5": "uni --mode h5.local",

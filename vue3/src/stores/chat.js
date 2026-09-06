@@ -1,331 +1,100 @@
 import { defineStore } from 'pinia'
-import { requestChatHistory, requestSendChatImage, requestSendChatMessage } from '../api/chat.js'
-import { API_BASE_URL } from '../api/config.js'
-import { requestOpenClawAgentStatus } from '../api/openclaw.js'
-import { formatStatusText } from '../utils/status-display.js'
+import { requestChatHistory, requestChatStatus, requestSendChatImage, requestSendChatMessage, downloadChatImage } from '../api/chat.js'
+import { AUTH_TOKEN_STORAGE_KEY } from '../utils/constants.js'
 
-let streamingRunId = 0
-const DEFAULT_DEVICE_ID = 'cleanscout-001'
-const DEFAULT_AGENT_ID = 'pc-yusu-main'
+const token = () => uni.getStorageSync(AUTH_TOKEN_STORAGE_KEY) || ''
+const defaults = () => ({ mode: '', status: 'idle', message: '正在读取聊天模式…', fallback: false, displayStreaming: 'none' })
+const newId = () => globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`
 
-function getDefaultTransport() {
-  return {
-    mode: 'mock',
-    fallback: false,
-    status: 'disabled',
-    message: '当前默认使用模拟链路。',
-    model: 'openclaw/default',
-    apiMode: 'chat',
-    deviceId: DEFAULT_DEVICE_ID,
-    agentId: DEFAULT_AGENT_ID,
-    pcWorkerOnline: false,
-    openclawReachable: false,
-    pendingRequests: 0,
-    chatTimeoutMs: 0,
-    lastHeartbeatAgeMs: null,
-    routeMode: 'pc-worker',
-    realtimeStreaming: false,
-    displayStreaming: 'frontend-typewriter',
+async function viewMessage(message) {
+  const result = { ...message, kind: message.role, displayText: message.content, streaming: false }
+  if (message.type === 'image') {
+    try { result.imageUrl = await downloadChatImage(message.imageUrl) }
+    catch (error) { result.imageUrl = ''; result.imageError = error.message }
   }
-}
-
-function createMessageViewModel(message, overrides = {}) {
-  const role = String(message?.role || 'assistant').trim() || 'assistant'
-  const kind = role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : 'system'
-  const content = String(message?.content || '').trim()
-  const type = message?.type === 'image' ? 'image' : 'text'
-  const rawImageUrl = String(message?.imageUrl || '').trim()
-  const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, '')
-
-  return {
-    id: message?.id || `local-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    role,
-    kind,
-    content,
-    type,
-    imageUrl: rawImageUrl.startsWith('/') ? `${backendOrigin}${rawImageUrl}` : rawImageUrl,
-    imageName: String(message?.imageName || '').trim(),
-    mimeType: String(message?.mimeType || '').trim(),
-    displayText: content,
-    streaming: false,
-    createdAt: message?.createdAt || new Date().toISOString(),
-    ...overrides,
-  }
-}
-
-function createSystemMessage(content, code = 'info') {
-  return createMessageViewModel(
-    {
-      id: `system-${code}-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
-      role: 'system',
-      content,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      kind: 'system',
-    }
-  )
-}
-
-function buildTransportSystemMessage(transport) {
-  const modeText = formatStatusText(transport?.mode, '未知链路')
-  const statusText = formatStatusText(transport?.status, '未知状态')
-  const apiText = formatStatusText(transport?.apiMode, '未知模式')
-  const streamingText = transport?.realtimeStreaming
-    ? '真流式返回'
-    : transport?.displayStreaming === 'frontend-typewriter'
-      ? '一次性返回，前端打字机展示'
-      : '一次性返回'
-
-  if (transport?.fallback) {
-    return `当前链路已回退到${modeText}，状态为${statusText}，接口模式为${apiText}，展示方式为${streamingText}。`
-  }
-
-  return `当前链路为${modeText}，状态为${statusText}，接口模式为${apiText}，展示方式为${streamingText}。`
-}
-
-function isRecoverableChatRequestError(error) {
-  const code = String(error?.code || '').toUpperCase()
-  const message = String(error?.message || '').toLowerCase()
-
-  return (
-    code === 'NETWORK_ERROR' ||
-    message.includes('timeout') ||
-    message.includes('request:fail') ||
-    message.includes('请求超时')
-  )
-}
-
-function formatChatRequestError(error) {
-  if (String(error?.code || '') === 'NETWORK_ERROR') {
-    return '无法连接本地 backend，请确认 127.0.0.1:3000 已启动。'
-  }
-
-  return error?.message || '本地消息发送失败，请稍后重试。'
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
+  return result
 }
 
 export const useChatStore = defineStore('chat', {
-  state: () => ({
-    messages: [],
-    sending: false,
-    draftText: '',
-    transport: getDefaultTransport(),
-  }),
+  state: () => ({ messages: [], sending: false, draftText: '', pendingImage: '', pendingSend: null,
+    errorText: '', transport: defaults(), generation: 0, historyRevision: 0 }),
   actions: {
-    setDraftText(text) {
-      this.draftText = text
+    setDraftText(text) { this.draftText = text },
+    setImage(filePath) { if (!this.sending) this.pendingImage = filePath || '' },
+    setTransport(value) { this.transport = { ...defaults(), ...value } },
+    appendSystemMessage(content) {
+      this.messages.push({ id: newId(), role: 'system', kind: 'system', content, displayText: content })
     },
-    setTransport(transport) {
-      this.transport = {
-        ...getDefaultTransport(),
-        ...(transport || {}),
+    async syncTransportStatus() {
+      const owner = token(), generation = this.generation
+      try {
+        const status = await requestChatStatus()
+        if (owner === token() && generation === this.generation) this.setTransport(status)
+        return status
+      } catch (error) {
+        if (owner === token() && generation === this.generation) this.setTransport({ status: 'error', message: error.message })
+        throw error
       }
-    },
-    replaceMessage(messageId, nextMessage) {
-      this.messages = this.messages.map((message) => (message.id === messageId ? nextMessage : message))
-    },
-    appendSystemMessage(content, code = 'info') {
-      this.messages = [...this.messages, createSystemMessage(content, code)]
-    },
-    async syncTransportStatus({ appendNotice = true } = {}) {
-      const status = await requestOpenClawAgentStatus(DEFAULT_DEVICE_ID)
-
-      this.setTransport({
-        mode: status?.activeTransport || 'mock',
-        fallback: false,
-        status: status?.status || 'disabled',
-        message: status?.message || getDefaultTransport().message,
-        model: status?.model || getDefaultTransport().model,
-        apiMode: status?.apiMode || getDefaultTransport().apiMode,
-        deviceId: status?.deviceId || DEFAULT_DEVICE_ID,
-        agentId: status?.agentId || DEFAULT_AGENT_ID,
-        pcWorkerOnline: Boolean(status?.pcWorkerOnline),
-        openclawReachable: Boolean(status?.openclawReachable),
-        lastHeartbeatAt: status?.lastHeartbeatAt || '',
-        lastHeartbeatAgeMs: status?.lastHeartbeatAgeMs ?? null,
-        pendingRequests: status?.pendingRequests || 0,
-        chatTimeoutMs: status?.chatTimeoutMs || 0,
-        routeMode: status?.routeMode || 'pc-worker',
-        realtimeStreaming: Boolean(status?.realtimeStreaming),
-        displayStreaming: status?.displayStreaming || 'frontend-typewriter',
-      })
-
-      if (appendNotice) {
-        this.appendSystemMessage(buildTransportSystemMessage(this.transport), 'transport')
-      }
-
-      return this.transport
     },
     async loadHistory() {
-      const messages = await requestChatHistory()
-      this.messages = Array.isArray(messages) ? messages.map((message) => createMessageViewModel(message)) : []
+      const owner = token(), generation = this.generation
+      const revision = this.historyRevision
+      try {
+        const history = await requestChatHistory()
+        const messages = await Promise.all((history || []).map(viewMessage))
+        if (owner === token() && generation === this.generation && revision === this.historyRevision) this.messages = messages
+      } catch (error) {
+        if (owner === token() && generation === this.generation) this.errorText = '历史记录加载失败：' + error.message
+        throw error
+      }
       return this.messages
     },
-    async streamAssistantMessage(messageId, fullText) {
-      const runId = Date.now()
-      streamingRunId = runId
-      const normalizedText = String(fullText || '')
-      const totalLength = normalizedText.length
-      let cursor = 0
-
-      while (cursor < totalLength) {
-        if (streamingRunId !== runId) {
-          return
-        }
-
-        const step = totalLength > 180 ? 3 : totalLength > 90 ? 2 : 1
-        cursor = Math.min(totalLength, cursor + step)
-        this.messages = this.messages.map((message) =>
-          message.id === messageId
-            ? {
-                ...message,
-                displayText: normalizedText.slice(0, cursor),
-                streaming: cursor < totalLength,
-              }
-            : message
-        )
-        await sleep(18)
-      }
-    },
     async sendMessage(inputText) {
+      if (this.sending) return
       const content = String(inputText ?? this.draftText).trim()
-
-      if (!content) {
-        throw new Error('消息内容不能为空')
+      const image = this.pendingImage
+      if (!content && !image) throw new Error('请输入问题或选择图片')
+      const owner = token(), generation = this.generation
+      // Preserve the same ID and input on timeout/failure; the server replays a completed request.
+      if (!this.pendingSend || this.pendingSend.content !== content || this.pendingSend.image !== image) {
+        this.pendingSend = { content, image, requestId: newId() }
       }
-
+      const request = this.pendingSend
+      this.historyRevision++
+      this.errorText = ''
       this.sending = true
-
-      const tempUserId = `temp-user-${Date.now()}`
-      const tempAssistantId = `temp-assistant-${Date.now()}`
-
-      this.messages = [
-        ...this.messages,
-        createMessageViewModel({
-          id: tempUserId,
-          role: 'user',
-          content,
-          createdAt: new Date().toISOString(),
-        }),
-        createMessageViewModel(
-          {
-            id: tempAssistantId,
-            role: 'assistant',
-            content: '',
-            createdAt: new Date().toISOString(),
-          },
-          {
-            displayText: '已发送到本地 backend，正在等待处理结果…',
-            streaming: true,
-          }
-        ),
-      ]
-
       try {
-        const result = await requestSendChatMessage(content)
-
-        this.replaceMessage(tempUserId, createMessageViewModel(result.userMessage))
-        this.replaceMessage(
-          tempAssistantId,
-          createMessageViewModel(result.replyMessage, {
-            displayText: '',
-            streaming: true,
-          })
-        )
-
+        const result = image ? await requestSendChatImage(image, content, request.requestId)
+          : await requestSendChatMessage(content, request.requestId)
+        const pair = await Promise.all([viewMessage(result.userMessage), viewMessage(result.replyMessage)])
+        if (owner !== token() || generation !== this.generation) return
+        this.historyRevision++
+        const ids = new Set(pair.map(item => item.id))
+        this.messages = [...this.messages.filter(item => !ids.has(item.id)), ...pair]
         this.setTransport(result.transport)
         this.draftText = ''
-
-        await this.streamAssistantMessage(tempAssistantId, result.replyMessage?.content || '')
-
-        this.replaceMessage(tempAssistantId, createMessageViewModel(result.replyMessage))
-
-        if (result.transport?.fallback) {
-          this.appendSystemMessage(
-            `当前对话已回退到${formatStatusText(result.transport.mode)}，原因：${result.transport.message || '上游链路不可用。'}`,
-            'fallback'
-          )
-        }
-
+        this.pendingImage = ''
+        this.pendingSend = null
         return result
       } catch (error) {
-        const recoverable = isRecoverableChatRequestError(error)
-        const messageText = formatChatRequestError(error)
-
-        if (recoverable) {
-          this.replaceMessage(
-            tempAssistantId,
-            createMessageViewModel(
-              {
-                id: tempAssistantId,
-                role: 'assistant',
-                content: messageText,
-                createdAt: new Date().toISOString(),
-              },
-              {
-                displayText: messageText,
-                streaming: false,
-              }
-            )
-          )
-          this.appendSystemMessage('后端可能已经收到消息，页面将自动同步本地历史记录。', 'chat-recovering')
-
-          await sleep(1800)
-
-          try {
-            await this.loadHistory()
-            await this.syncTransportStatus({ appendNotice: false })
-            this.appendSystemMessage('已自动同步本地对话记录。', 'chat-history-sync')
-          } catch (_syncError) {
-            this.appendSystemMessage('自动同步历史记录失败，请稍后手动刷新对话页。', 'chat-history-sync-failed')
-          }
-
-          return {
-            ok: false,
-            recovered: true,
-            error,
-          }
+        if (owner === token() && generation === this.generation) {
+          this.errorText = (error.message || '发送失败') + '；输入已保留，再次点击发送可重试。'
+          this.setTransport({ ...this.transport, status: 'error' })
         }
-
-        this.messages = this.messages.filter((message) => message.id !== tempAssistantId)
-        this.appendSystemMessage(messageText, 'send-error')
         throw error
       } finally {
-        this.sending = false
-      }
-    },
-    async sendImage(tempFilePath) {
-      if (!tempFilePath) {
-        throw new Error('请选择要发送的图片')
-      }
-
-      this.sending = true
-
-      try {
-        const result = await requestSendChatImage(tempFilePath)
-        this.messages = [
-          ...this.messages,
-          createMessageViewModel(result.userMessage),
-          createMessageViewModel(result.replyMessage),
-        ]
-        this.setTransport(result.transport)
-        return result
-      } finally {
-        this.sending = false
+        if (owner === token() && generation === this.generation) this.sending = false
       }
     },
     reset() {
-      streamingRunId = Date.now()
+      this.generation++
       this.messages = []
       this.sending = false
       this.draftText = ''
-      this.transport = getDefaultTransport()
+      this.pendingImage = ''
+      this.pendingSend = null
+      this.errorText = ''
+      this.transport = defaults()
     },
   },
 })

@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 .DS_Store
 dist
+.test-tmp/
 *.local
 !.env.h5.local
 !.env.app.local
