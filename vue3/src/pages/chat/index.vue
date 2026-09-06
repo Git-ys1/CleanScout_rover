@@ -14,13 +14,14 @@
       <view class="transport-banner" :class="{ warn: transport.fallback, error: transport.status === 'error' }">
         <text class="transport-label">{{ transportBannerText }}</text>
       </view>
-      <view class="agent-meta">
+      <view v-if="transport.mode === 'openclaw'" class="agent-meta">
         <text>设备：{{ transport.deviceId || 'cleanscout-001' }}</text>
         <text>Worker：{{ transport.agentId || 'pc-yusu-main' }}</text>
         <text>{{ transport.pcWorkerOnline ? 'Worker 在线' : 'Worker 离线' }}</text>
         <text>{{ streamingModeText }}</text>
         <text v-if="transport.pendingRequests">处理中：{{ transport.pendingRequests }}</text>
       </view>
+      <view v-else class="agent-meta"><text v-if="transport.model">模型：{{ transport.model }}</text><text>{{ streamingModeText }}</text></view>
     </view>
 
     <scroll-view
@@ -44,13 +45,14 @@
           <view class="bubble-card" :class="message.kind">
             <text class="bubble-role">{{ message.kind === 'user' ? '你' : '系统助手' }}</text>
             <image
-              v-if="message.type === 'image'"
+              v-if="message.type === 'image' && message.imageUrl"
               class="bubble-image"
               :src="message.imageUrl"
               mode="widthFix"
               @tap="previewImage(message.imageUrl)"
             />
-            <text v-else class="bubble-text">{{ message.displayText || message.content }}</text>
+            <text class="bubble-text">{{ message.displayText || message.content }}</text>
+            <text v-if="message.imageError" class="chat-error">{{ message.imageError }}</text>
             <text v-if="message.type === 'image'" class="bubble-image-name">{{ message.imageName || message.content }}</text>
             <text v-if="message.streaming" class="bubble-streaming">生成中…</text>
             <text class="bubble-time">{{ formatDate(message.createdAt) }}</text>
@@ -82,11 +84,18 @@
         <text class="voice-meta-text">{{ voiceHintText }}</text>
       </view>
 
+      <view v-if="pendingImage" class="pending-image-row">
+        <image class="pending-image" :src="pendingImage" mode="aspectFit" @tap="previewImage(pendingImage)" />
+        <button :disabled="sending" @tap="chatStore.setImage('')">移除图片</button>
+      </view>
+      <text v-if="sending" class="chat-notice">正在发送并等待回复，请勿重复点击…（最长约 150 秒）</text>
+      <text v-if="errorText" class="chat-error" role="alert">{{ errorText }}</text>
       <textarea
         v-model="draftText"
         class="composer-input"
-        maxlength="240"
-        placeholder="输入任务，或先语音识别后确认发送"
+        maxlength="12000"
+        :disabled="sending"
+        placeholder="输入问题，可先选择图片再发送"
       />
 
       <view class="composer-actions">
@@ -110,7 +119,7 @@
           :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'"
           @tap="handleSend"
         >
-          发送消息
+          {{ errorText ? '重试发送' : '发送消息' }}
         </button>
       </view>
     </view>
@@ -136,7 +145,7 @@ import { formatStatusText } from '../../utils/status-display.js'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
-const { messages, draftText, sending, transport } = storeToRefs(chatStore)
+const { messages, draftText, sending, transport, pendingImage, errorText } = storeToRefs(chatStore)
 const recorder = useSpeechRecorder()
 
 const scrollAnchorId = ref(`chat-bottom-${Date.now()}`)
@@ -155,7 +164,7 @@ const suggestions = ['前进', '停止', '查看状态', '打开风机']
 const composerBottomOffset = computed(() =>
   isH5 ? 'calc(136rpx + env(safe-area-inset-bottom))' : 'calc(20rpx + env(safe-area-inset-bottom))'
 )
-const composerSpacerHeight = computed(() => (isH5 ? '250rpx' : '220rpx'))
+const composerSpacerHeight = computed(() => `${(isH5 ? 320 : 290) + (pendingImage.value ? 150 : 0) + (errorText.value ? 80 : 0)}rpx`)
 
 const transportBannerText = computed(() => {
   const modeText = formatStatusText(transport.value.mode, '未知链路')
@@ -391,7 +400,7 @@ function handleChooseImage() {
     sourceType: ['album'],
     async success(result) {
       try {
-        await chatStore.sendImage(result.tempFilePaths?.[0])
+        chatStore.setImage(result.tempFilePaths?.[0])
       } catch (error) {
         uni.showToast({
           title: error.message || '图片发送失败',
@@ -448,6 +457,10 @@ function formatHeartbeatAge(value) {
 </script>
 
 <style>
+.pending-image-row { display: flex; align-items: center; gap: 20rpx; }
+.pending-image { width: 130rpx; height: 130rpx; }
+.chat-notice, .chat-error { display: block; font-size: 24rpx; margin-top: 8rpx; }
+.chat-error { color: #ad342d; }
 .chat-page {
   display: flex;
   flex-direction: column;
