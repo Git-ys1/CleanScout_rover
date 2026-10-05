@@ -39,6 +39,7 @@ function getAgentRuntimeConfig() {
     enabled: parseBoolean(process.env.AGENT_WS_ENABLED),
     sharedSecret: normalizeString(process.env.AGENT_SHARED_SECRET),
     chatTimeoutMs: parsePositiveInt(process.env.OPENCLAW_CHAT_TIMEOUT_MS, 60000),
+    orangePiChatTimeoutMs: parsePositiveInt(process.env.ORANGEPI_CHAT_TIMEOUT_MS, 150000),
     heartbeatTimeoutMs: parsePositiveInt(process.env.AGENT_HEARTBEAT_TIMEOUT_MS, 30000),
   }
 }
@@ -106,6 +107,9 @@ class AgentRegistry {
       openclawReachable: Boolean(payload?.openclawReachable),
       gatewayBaseUrl: normalizeString(payload?.gatewayBaseUrl),
       model: normalizeString(payload?.model, 'openclaw/default'),
+      yoloReachable: Boolean(payload?.yoloReachable),
+      modelReady: Boolean(payload?.modelReady),
+      latestFrameAt: normalizeString(payload?.latestFrameAt),
       pendingRequests: new Set(),
     }
 
@@ -139,6 +143,18 @@ class AgentRegistry {
       agent.model = normalizeString(payload.model, agent.model)
     }
 
+    if (payload?.yoloReachable !== undefined) {
+      agent.yoloReachable = Boolean(payload.yoloReachable)
+    }
+
+    if (payload?.modelReady !== undefined) {
+      agent.modelReady = Boolean(payload.modelReady)
+    }
+
+    if (payload?.latestFrameAt !== undefined) {
+      agent.latestFrameAt = normalizeString(payload.latestFrameAt)
+    }
+
     return agent
   }
 
@@ -157,7 +173,7 @@ class AgentRegistry {
 
         if (pending) {
           clearTimeout(pending.timer)
-          pending.reject(createAgentError('AGENT_DISCONNECTED', 'pc-openclaw-worker disconnected'))
+          pending.reject(createAgentError('AGENT_DISCONNECTED', `${agent.agentType} disconnected`))
           this.pendingRequests.delete(requestId)
         }
       }
@@ -198,6 +214,22 @@ class AgentRegistry {
     return null
   }
 
+  findOrangePiAgent(deviceId) {
+    const targetDeviceId = normalizeDeviceId(deviceId)
+
+    for (const agent of this.agents.values()) {
+      if (
+        agent.deviceId === targetDeviceId &&
+        agent.agentType === 'orangepi-yolo-agent' &&
+        this.isAgentOnline(agent)
+      ) {
+        return agent
+      }
+    }
+
+    return null
+  }
+
   getOpenClawStatus(deviceId) {
     const targetDeviceId = normalizeDeviceId(deviceId)
     const agent = this.findOpenClawAgent(targetDeviceId)
@@ -216,6 +248,34 @@ class AgentRegistry {
       model: agent?.model || 'openclaw/default',
       agentId: agent?.agentId || '',
       agentType: agent?.agentType || 'pc-openclaw-worker',
+      version: agent?.version || '',
+      capabilities: agent?.capabilities || [],
+      registeredAt: agent?.registeredAt || '',
+      lastHeartbeatAt,
+      lastHeartbeatAgeMs,
+      pendingRequests: agent?.pendingRequests?.size || 0,
+    }
+  }
+
+  getOrangePiStatus(deviceId) {
+    const targetDeviceId = normalizeDeviceId(deviceId)
+    const agent = this.findOrangePiAgent(targetDeviceId)
+    const lastHeartbeatAt = agent?.lastHeartbeatAt || ''
+    const lastHeartbeatTime = lastHeartbeatAt ? new Date(lastHeartbeatAt).getTime() : 0
+    const lastHeartbeatAgeMs = Number.isFinite(lastHeartbeatTime) && lastHeartbeatTime > 0
+      ? Date.now() - lastHeartbeatTime
+      : null
+
+    return {
+      ok: true,
+      deviceId: targetDeviceId,
+      agentOnline: Boolean(agent),
+      yoloReachable: Boolean(agent?.yoloReachable),
+      modelReady: Boolean(agent?.modelReady),
+      latestFrameAt: agent?.latestFrameAt || '',
+      model: agent?.model || '',
+      agentId: agent?.agentId || '',
+      agentType: agent?.agentType || 'orangepi-yolo-agent',
       version: agent?.version || '',
       capabilities: agent?.capabilities || [],
       registeredAt: agent?.registeredAt || '',
@@ -246,6 +306,7 @@ class AgentRegistry {
       this.pendingRequests.set(requestId, {
         requestId,
         agentKey: agent.key,
+        kind: 'openclaw',
         startedAt,
         timer,
         resolve,
@@ -271,11 +332,12 @@ class AgentRegistry {
     })
   }
 
-  resolveOpenClawChat(payload) {
+  resolveOpenClawChat(socket, payload) {
     const requestId = normalizeString(payload?.requestId)
     const pending = this.pendingRequests.get(requestId)
+    const sender = this.getBySocket(socket)
 
-    if (!pending) {
+    if (!pending || pending.kind !== 'openclaw' || sender?.key !== pending.agentKey) {
       return false
     }
 
@@ -292,6 +354,84 @@ class AgentRegistry {
       if (payload?.model) {
         agent.model = normalizeString(payload.model, agent.model)
       }
+    }
+
+    pending.resolve({
+      ...payload,
+      agent,
+      latencyMs: Date.now() - pending.startedAt,
+    })
+
+    return true
+  }
+
+  sendOrangePiChat({ deviceId, conversationId, messages, userId, timeoutMs, requestId: providedRequestId }) {
+    const agent = this.findOrangePiAgent(deviceId)
+
+    if (!agent) {
+      throw createAgentError('ORANGEPI_AGENT_OFFLINE', '香橙派 Agent 当前不在线')
+    }
+
+    const requestId = normalizeString(providedRequestId, randomUUID())
+    const startedAt = Date.now()
+    const requestTimeoutMs = parsePositiveInt(timeoutMs, getAgentRuntimeConfig().orangePiChatTimeoutMs)
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        agent.pendingRequests.delete(requestId)
+        this.pendingRequests.delete(requestId)
+        reject(createAgentError('ORANGEPI_AGENT_TIMEOUT', '香橙派 Agent 响应超时', 504))
+      }, requestTimeoutMs)
+
+      this.pendingRequests.set(requestId, {
+        requestId,
+        agentKey: agent.key,
+        kind: 'orangepi',
+        startedAt,
+        timer,
+        resolve,
+        reject,
+      })
+      agent.pendingRequests.add(requestId)
+
+      const sent = safeSend(agent.socket, {
+        type: 'ORANGEPI_CHAT_REQUEST',
+        requestId,
+        conversationId,
+        deviceId: agent.deviceId,
+        userId,
+        messages,
+      })
+
+      if (!sent) {
+        clearTimeout(timer)
+        agent.pendingRequests.delete(requestId)
+        this.pendingRequests.delete(requestId)
+        reject(createAgentError('AGENT_SOCKET_CLOSED', '香橙派 Agent socket 已关闭'))
+      }
+    })
+  }
+
+  resolveOrangePiChat(socket, payload) {
+    const requestId = normalizeString(payload?.requestId)
+    const pending = this.pendingRequests.get(requestId)
+    const sender = this.getBySocket(socket)
+
+    if (!pending || pending.kind !== 'orangepi' || sender?.key !== pending.agentKey) {
+      return false
+    }
+
+    clearTimeout(pending.timer)
+    this.pendingRequests.delete(requestId)
+
+    const agent = this.agents.get(pending.agentKey)
+
+    if (agent) {
+      agent.pendingRequests.delete(requestId)
+      if (payload?.yoloReachable !== undefined) agent.yoloReachable = Boolean(payload.yoloReachable)
+      if (payload?.modelReady !== undefined) agent.modelReady = Boolean(payload.modelReady)
+      if (payload?.latestFrameAt !== undefined) agent.latestFrameAt = normalizeString(payload.latestFrameAt)
+      if (payload?.model) agent.model = normalizeString(payload.model, agent.model)
     }
 
     pending.resolve({

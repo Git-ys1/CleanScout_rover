@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useChatStore } from './chat.js'
 import {
   requestCurrentUser,
   requestLogin,
@@ -45,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     applySession(token, userInfo) {
+      if (this.token !== token || this.userInfo?.id !== userInfo?.id) useChatStore().reset()
       this.token = token || ''
       this.userInfo = userInfo || null
       this.role = userInfo?.role || ''
@@ -55,6 +57,7 @@ export const useAuthStore = defineStore('auth', {
       this.applySession(token, this.userInfo)
     },
     clearSession() {
+      useChatStore().reset()
       this.token = ''
       this.userInfo = null
       this.role = ''

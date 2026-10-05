@@ -12,6 +12,9 @@ import openclawRoutes from './routes/openclaw.js'
 import rosRoutes from './routes/ros.js'
 import systemRoutes from './routes/system.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { authRequired } from './middleware/authRequired.js'
+import { appAvailabilityRequired } from './middleware/appAvailabilityRequired.js'
+import { imageAsset } from './controllers/chatController.js'
 
 const app = express()
 
@@ -58,6 +61,8 @@ app.use(
 )
 
 app.use(express.json())
+// Chat images must never fall through to the public upload directory.
+app.use('/uploads/chat', authRequired, appAvailabilityRequired, imageAsset)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
 app.get('/', (_req, res) => {

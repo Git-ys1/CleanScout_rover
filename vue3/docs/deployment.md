@@ -321,6 +321,12 @@ JWT_SECRET="<生产 JWT secret，至少 32 位随机字符串>"
 JWT_EXPIRES_IN=7d
 CORS_ALLOWED_ORIGINS=https://h5.hzhhds.top,https://admin.hzhhds.top,https://cleanscoutrover-management.netlify.app
 
+CHAT_PROVIDER=orangepi
+ORANGEPI_CHAT_TIMEOUT_MS=150000
+AGENT_WS_ENABLED=true
+AGENT_WS_PATH=/ws/agents
+AGENT_SHARED_SECRET=<云端与香橙派一致的随机 token，至少 32 位，不入仓>
+
 OPENCLAW_ENABLED=false
 OPENCLAW_BASE_URL=http://127.0.0.1:18789
 OPENCLAW_API_MODE=chat
@@ -343,6 +349,8 @@ EDGE_DEVICE_BOOTSTRAP_TOKEN=<生产 edge device token，至少 32 位随机字�
 说明：
 
 - `OPENCLAW_ENABLED=false` 时，`OPENCLAW_BASE_URL` 和 `OPENCLAW_BEARER_TOKEN` 不参与运行。
+- `CHAT_PROVIDER=orangepi` 时，原聊天页通过 backend 把消息发送给 `orangepi-yolo-agent`；Agent 返回的 YOLO JPEG 由 backend 保存为当前用户的助手图片消息。
+- 香橙派 Agent 主动连接 `wss://api.hzhhds.top/ws/agents`，前端不直连香橙派；`AGENT_SHARED_SECRET` 只保存在 VPS `/etc/vline-backend.env` 和香橙派 `/home/orangepi/Agent/.cloud-agent-token`。
 - `ROS_TRANSPORT=edge-relay` 时，云端不走 `ROSBRIDGE_URL`，树莓派通过 `wss://api.hzhhds.top/edge/ros` 主动连接 backend。
 - `CORS_ALLOWED_ORIGINS` 只给浏览器 H5 / admin web 使用；微信小程序合法域名在微信后台配置。
 - H5 同时支持自定义域名和 Netlify 默认域名时，两个 Origin 都必须加入 CORS。
