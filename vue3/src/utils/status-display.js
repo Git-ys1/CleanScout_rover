@@ -1,5 +1,6 @@
 const STATUS_META_MAP = {
   agnes: { text: 'Agnes 图文对话', tone: 'brand' },
+  orangepi: { text: '香橙派 Agent', tone: 'brand' },
   mock: { text: '模拟链路', tone: 'warn' },
   openclaw: { text: 'OpenClaw 链路', tone: 'brand' },
   rosbridge: { text: 'ROS 桥接', tone: 'brand' },

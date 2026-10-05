@@ -64,7 +64,7 @@ function sendAgentError(socket, error) {
 }
 
 export function attachAgentWsServer(server) {
-  const wss = new WebSocketServer({ noServer: true })
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 8 * 1024 * 1024 })
 
   wss.on('connection', (socket, request) => {
     socket.cleanScoutAgentRemoteAddress = request.socket?.remoteAddress || ''
@@ -123,10 +123,22 @@ export function attachAgentWsServer(server) {
         }
 
         if (payload.type === 'OPENCLAW_CHAT_RESULT') {
-          const resolved = agentRegistry.resolveOpenClawChat(payload)
+          const resolved = agentRegistry.resolveOpenClawChat(socket, payload)
 
           if (!resolved) {
             logAgent('chat-result-orphan', {
+              requestId: payload.requestId || '',
+              agentId: agentRegistry.getBySocket(socket)?.agentId || '',
+            })
+          }
+          return
+        }
+
+        if (payload.type === 'ORANGEPI_CHAT_RESULT') {
+          const resolved = agentRegistry.resolveOrangePiChat(socket, payload)
+
+          if (!resolved) {
+            logAgent('orangepi-result-orphan', {
               requestId: payload.requestId || '',
               agentId: agentRegistry.getBySocket(socket)?.agentId || '',
             })

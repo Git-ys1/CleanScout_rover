@@ -3,25 +3,34 @@
     <view class="page-header v-card">
       <view class="header-main">
         <view>
-          <text class="page-kicker">智能控制入口</text>
-          <text class="page-title">对话</text>
+          <text class="page-title">智能助手</text>
         </view>
         <view class="transport-row">
           <StatusBadge :value="transport.mode" />
           <StatusBadge :value="transport.status" />
+          <button class="detail-toggle" @tap="showDetails = !showDetails">{{ showDetails ? '收起' : '详情' }}</button>
         </view>
       </view>
-      <view class="transport-banner" :class="{ warn: transport.fallback, error: transport.status === 'error' }">
+      <view v-if="showDetails || transport.status === 'error' || transport.fallback" class="transport-banner" :class="{ warn: transport.fallback, error: transport.status === 'error' }">
         <text class="transport-label">{{ transportBannerText }}</text>
       </view>
-      <view v-if="transport.mode === 'openclaw'" class="agent-meta">
+      <view v-if="showDetails && transport.mode === 'orangepi'" class="agent-meta">
+        <text>设备：{{ transport.deviceId || 'cleanscout-001' }}</text>
+        <text>Agent：{{ transport.agentId || 'orangepi-rk3588-main' }}</text>
+        <text>{{ transport.agentOnline ? 'Agent 在线' : 'Agent 离线' }}</text>
+        <text>{{ transport.yoloReachable ? 'YOLO 实时画面正常' : 'YOLO 画面不可用' }}</text>
+        <text>{{ transport.modelReady ? '模型已就绪' : '模型未就绪' }}</text>
+        <text>{{ streamingModeText }}</text>
+        <text v-if="transport.pendingRequests">处理中：{{ transport.pendingRequests }}</text>
+      </view>
+      <view v-else-if="showDetails && transport.mode === 'openclaw'" class="agent-meta">
         <text>设备：{{ transport.deviceId || 'cleanscout-001' }}</text>
         <text>Worker：{{ transport.agentId || 'pc-yusu-main' }}</text>
         <text>{{ transport.pcWorkerOnline ? 'Worker 在线' : 'Worker 离线' }}</text>
         <text>{{ streamingModeText }}</text>
         <text v-if="transport.pendingRequests">处理中：{{ transport.pendingRequests }}</text>
       </view>
-      <view v-else class="agent-meta"><text v-if="transport.model">模型：{{ transport.model }}</text><text>{{ streamingModeText }}</text></view>
+      <view v-else-if="showDetails" class="agent-meta"><text v-if="transport.model">模型：{{ transport.model }}</text><text>{{ streamingModeText }}</text></view>
     </view>
 
     <scroll-view
@@ -29,8 +38,8 @@
       scroll-y
       :scroll-into-view="scrollAnchorId"
       scroll-with-animation
-      :style="{ paddingBottom: composerSpacerHeight }"
     >
+      <view v-if="!messages.length" class="empty-chat">发送消息，香橙派 Agent 将结合最新 YOLO 画面回答</view>
       <view
         v-for="message in messages"
         :key="message.id"
@@ -43,7 +52,7 @@
 
         <view v-else class="bubble-shell" :class="message.kind">
           <view class="bubble-card" :class="message.kind">
-            <text class="bubble-role">{{ message.kind === 'user' ? '你' : '系统助手' }}</text>
+            <text class="bubble-role">{{ message.kind === 'user' ? '你' : '香橙派 Agent' }}</text>
             <image
               v-if="message.type === 'image' && message.imageUrl"
               class="bubble-image"
@@ -62,21 +71,20 @@
       <view :id="scrollAnchorId" class="scroll-anchor"></view>
     </scroll-view>
 
-    <view class="composer-spacer" :style="{ height: composerSpacerHeight }"></view>
-
-    <view class="composer-card" :style="{ bottom: composerBottomOffset }">
-      <view class="suggestion-row">
+    <view class="composer-card">
+      <view v-if="showTools" class="suggestion-row">
         <button
           v-for="item in suggestions"
           :key="item"
           class="suggestion-chip v-pressable"
+          :disabled="sending"
           @tap="applySuggestion(item)"
         >
           {{ item }}
         </button>
       </view>
 
-      <view class="voice-meta-row">
+      <view v-if="showTools || voiceState === 'recording' || voiceState === 'transcribing'" class="voice-meta-row">
         <view class="voice-meta-left">
           <StatusBadge :value="voiceBadgeValue" />
           <StatusBadge :value="asrBadgeValue" />
@@ -88,18 +96,22 @@
         <image class="pending-image" :src="pendingImage" mode="aspectFit" @tap="previewImage(pendingImage)" />
         <button :disabled="sending" @tap="chatStore.setImage('')">移除图片</button>
       </view>
-      <text v-if="sending" class="chat-notice">正在发送并等待回复，请勿重复点击…（最长约 150 秒）</text>
+      <text v-if="sending" class="chat-notice">消息已发送，正在等待香橙派 Agent 获取 YOLO 画面并回复…</text>
       <text v-if="errorText" class="chat-error" role="alert">{{ errorText }}</text>
+      <view class="input-row">
+      <button class="tool-toggle" :aria-label="showTools ? '收起工具' : '图片和语音工具'" @tap="showTools = !showTools">{{ showTools ? '−' : '+' }}</button>
       <textarea
         v-model="draftText"
         class="composer-input"
         maxlength="12000"
         :disabled="sending"
-        placeholder="输入问题，可先选择图片再发送"
+        placeholder="输入消息…"
       />
-
-      <view class="composer-actions">
+      <button class="composer-button" :loading="sending" :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'" @tap="handleSend">{{ errorText ? '重试' : '发送' }}</button>
+      </view>
+      <view v-if="showTools" class="composer-actions">
         <button
+          v-if="transport.mode !== 'orangepi'"
           class="image-button v-pressable"
           :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'"
           @tap="handleChooseImage"
@@ -112,14 +124,6 @@
           @tap="handleVoiceAction"
         >
           {{ voiceButtonText }}
-        </button>
-        <button
-          class="composer-button v-pressable"
-          :loading="sending"
-          :disabled="sending || voiceState === 'recording' || voiceState === 'transcribing'"
-          @tap="handleSend"
-        >
-          {{ errorText ? '重试发送' : '发送消息' }}
         </button>
       </view>
     </view>
@@ -149,7 +153,8 @@ const { messages, draftText, sending, transport, pendingImage, errorText } = sto
 const recorder = useSpeechRecorder()
 
 const scrollAnchorId = ref(`chat-bottom-${Date.now()}`)
-const isH5 = typeof window !== 'undefined'
+const showDetails = ref(false)
+const showTools = ref(false)
 const asrStatus = ref({
   enabled: false,
   provider: 'funasr',
@@ -159,12 +164,14 @@ const asrStatus = ref({
   model: '',
 })
 const voiceState = ref('idle')
-const suggestions = ['前进', '停止', '查看状态', '打开风机']
-
-const composerBottomOffset = computed(() =>
-  isH5 ? 'calc(136rpx + env(safe-area-inset-bottom))' : 'calc(20rpx + env(safe-area-inset-bottom))'
-)
-const composerSpacerHeight = computed(() => `${(isH5 ? 320 : 290) + (pendingImage.value ? 150 : 0) + (errorText.value ? 80 : 0)}rpx`)
+const suggestions = computed(() => {
+  if (transport.value.mode === 'orangepi') {
+    return ['当前 YOLO 看到了什么？', '画面中检测到瓶子了吗？', '请返回截图并描述检测框']
+  }
+  return transport.value.mode === 'openclaw'
+    ? ['前进', '停止', '查看状态', '打开风机']
+    : ['描述这张图片', '有哪些值得注意的细节？', '请简要总结']
+})
 
 const transportBannerText = computed(() => {
   const modeText = formatStatusText(transport.value.mode, '未知链路')
@@ -401,6 +408,7 @@ function handleChooseImage() {
     async success(result) {
       try {
         chatStore.setImage(result.tempFilePaths?.[0])
+        showTools.value = false
       } catch (error) {
         uni.showToast({
           title: error.message || '图片发送失败',
@@ -456,7 +464,7 @@ function formatHeartbeatAge(value) {
 }
 </script>
 
-<style>
+<style scoped>
 .pending-image-row { display: flex; align-items: center; gap: 20rpx; }
 .pending-image { width: 130rpx; height: 130rpx; }
 .chat-notice, .chat-error { display: block; font-size: 24rpx; margin-top: 8rpx; }
@@ -756,5 +764,74 @@ function formatHeartbeatAge(value) {
 .voice-button::after,
 .composer-button::after {
   border: none;
+}
+
+/* Keep the header and composer in flow: only the message pane scrolls. */
+.chat-page {
+  height: calc(100vh - var(--window-top, 0px) - var(--window-bottom, 0px));
+  height: calc(100dvh - var(--window-top, 0px) - var(--window-bottom, 0px));
+  min-height: 0;
+  padding: 0;
+  background: #ededed;
+}
+.page-header, .composer-card {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  flex: 0 0 auto;
+  border-radius: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  background: #f7f7f7;
+}
+.page-header { padding: 10px 16px; border-bottom: 1px solid #dedede; }
+.page-title { font-size: 16px; font-weight: 600; }
+.header-main { gap: 8px; }
+.transport-row { gap: 6px; align-items: center; }
+.detail-toggle { margin: 0; padding: 0 5px; font-size: 12px; line-height: 28px; background: transparent; color: #66766c; }
+.detail-toggle::after, .tool-toggle::after { border: 0; }
+.transport-banner { margin-top: 8px; padding: 8px; border-radius: 6px; max-height: 90px; overflow-y: auto; }
+.transport-label, .agent-meta { font-size: 12px; }
+.agent-meta { margin-top: 6px; }
+.chat-list { height: 0; flex: 1 1 0; width: 100%; max-width: 980px; margin: 0 auto; padding: 0; }
+.message-row { padding: 0 18px; margin-top: 18px; }
+.message-row + .message-row { margin-top: 16px; }
+.bubble-card { max-width: 82%; padding: 10px 13px; border-radius: 7px; box-shadow: none; }
+.bubble-card.user { background: #a9e97a; border-radius: 7px 2px 7px 7px; }
+.bubble-card.assistant { background: #fff; border-radius: 2px 7px 7px 7px; }
+.bubble-role { font-size: 11px; font-weight: 400; color: #627166; }
+.bubble-text { font-size: 15px; line-height: 1.65; margin-top: 3px; color: #222; user-select: text; }
+.bubble-image { width: 240px; max-width: 100%; margin-top: 6px; border-radius: 5px; }
+.bubble-image-name { font-size: 11px; margin-top: 5px; }
+.bubble-time { font-size: 10px; margin-top: 5px; color: #78867c; text-align: right; }
+.scroll-anchor { height: 18px; }
+.empty-chat { padding: 40px 20px; text-align: center; color: #88918b; font-size: 14px; }
+.composer-card { position: static; padding: 9px 14px; border: 0; border-top: 1px solid #dedede; backdrop-filter: none; max-height: 45%; overflow-y: auto; }
+.input-row { display: flex; align-items: center; gap: 9px; }
+.tool-toggle { flex: 0 0 32px; width: 32px; height: 36px; padding: 0; margin: 0; background: transparent; font-size: 28px; line-height: 34px; color: #52635a; }
+.composer-input { flex: 1; width: 0; min-width: 0; height: 42px; min-height: 42px; margin: 0; padding: 9px 10px; box-sizing: border-box; border-radius: 6px; background: white; font-size: 15px; line-height: 24px; }
+.composer-button { flex: 0 0 auto; min-height: 36px; margin: 0; padding: 0 16px; border-radius: 5px; background: #07a653; font-size: 14px; line-height: 36px; }
+.suggestion-row { gap: 7px; padding-bottom: 8px; }
+.suggestion-chip { margin: 0; min-height: 28px; padding: 0 10px; font-size: 12px; line-height: 28px; font-weight: 400; }
+.voice-meta-row { margin-bottom: 8px; }
+.voice-meta-text { font-size: 11px; }
+.composer-actions { margin-top: 8px; gap: 8px; }
+.image-button, .voice-button { flex: 0 1 130px; min-height: 34px; margin: 0; font-size: 13px; line-height: 34px; border-radius: 5px; font-weight: 400; }
+.pending-image-row { gap: 10px; margin-bottom: 8px; }
+.pending-image { width: 52px; height: 52px; }
+.pending-image-row button { margin: 0; font-size: 12px; line-height: 28px; }
+.chat-notice, .chat-error { font-size: 12px; margin: 0 0 7px; line-height: 1.5; }
+.chat-page :deep(.h5-tabbar-fallback) { flex: 0 0 auto; }
+.chat-page :deep(.h5-tabbar-spacer) { height: calc(62px + env(safe-area-inset-bottom)); }
+.chat-page :deep(.h5-tabbar-shell) { height: calc(62px + env(safe-area-inset-bottom)); padding: 4px 12px env(safe-area-inset-bottom); box-sizing: border-box; box-shadow: none; }
+.chat-page :deep(.h5-tabbar-item) { padding: 3px 0; }
+.chat-page :deep(.h5-tabbar-icon) { width: 22px; height: 22px; }
+.chat-page :deep(.h5-tabbar-label) { margin-top: 2px; font-size: 11px; }
+@media (max-width: 480px) {
+  .page-header { padding: 8px 10px; }
+  .message-row { padding: 0 12px; }
+  .composer-card { padding: 8px; }
+  .input-row { gap: 6px; }
+  .bubble-card { max-width: 86%; }
 }
 </style>

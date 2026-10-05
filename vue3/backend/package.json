@@ -14,6 +14,7 @@
     "prisma:seed": "prisma db seed",
     "smoke:chat-image": "node scripts/smoke-chat-image.mjs",
     "test:chat": "node --test scripts/chat-multimodal.test.mjs",
+    "test:orangepi-agent": "node --test scripts/orangepi-agent.test.mjs",
     "verify:chat-live": "node scripts/live-chat-agnes.mjs"
   },
   "prisma": {

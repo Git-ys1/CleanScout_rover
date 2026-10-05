@@ -1,0 +1,12 @@
+{
+  "cloud_ws_url": "wss://api.hzhhds.top/ws/agents",
+  "device_id": "cleanscout-001",
+  "agent_id": "orangepi-rk3588-main",
+  "heartbeat_seconds": 10,
+  "reconnect_seconds": 3,
+  "max_frame_age_seconds": 10,
+  "fresh_frame_wait_seconds": 5,
+  "debug_roots": [
+    "/home/orangepi/rk3588_ai/debug_logs"
+  ]
+}

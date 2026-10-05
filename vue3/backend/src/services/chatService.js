@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma.js'
 import { createHttpError } from '../utils/response.js'
 import { getOpenClawStatus, sendChatToOpenClaw } from '../integrations/openclaw/service.js'
 import { callAgnes, getAgnesConfig } from '../integrations/agnes/client.js'
+import { getOrangePiAgentStatus, sendOrangePiAgentChat } from './orangePiAgentService.js'
 
 const userQueues = new Map()
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -52,7 +53,7 @@ function normalizeOriginalFileName(value) {
 
 export function getChatMode() {
   const mode = String(process.env.CHAT_PROVIDER || 'openclaw').trim().toLowerCase()
-  if (!['agnes', 'openclaw', 'mock'].includes(mode)) throw createHttpError(503, 'CHAT_PROVIDER 配置无效', 'CHAT_CONFIG_INVALID')
+  if (!['agnes', 'orangepi', 'openclaw', 'mock'].includes(mode)) throw createHttpError(503, 'CHAT_PROVIDER 配置无效', 'CHAT_CONFIG_INVALID')
   return mode
 }
 
@@ -65,6 +66,7 @@ export async function getChatStatus() {
       message: config.key ? 'Agnes 图片理解与文字对话；内容将发送至云端模型。' : '服务端未配置 AGNES_API_KEY',
       displayStreaming: 'none', realtimeStreaming: false }
   }
+  if (mode === 'orangepi') return getOrangePiAgentStatus()
   if (mode === 'mock') return { mode, activeTransport: mode, status: 'ready', fallback: false, message: '模拟模式：不会调用模型或理解图片。' }
   const status = await getOpenClawStatus()
   return { ...status, mode: status.activeTransport, fallback: status.activeTransport !== 'openclaw' }
@@ -120,6 +122,10 @@ async function generate(userId, history, current, file) {
   if (mode === 'agnes') {
     return { replyText: await callAgnes(await modelMessages(userId, history, current, file)),
       transport: { ...(await getChatStatus()), status: 'healthy' } }
+  }
+  if (mode === 'orangepi') {
+    if (file) throw createHttpError(422, '香橙派模式会自动获取 YOLO 画面，请直接发送文字', 'CHAT_IMAGE_PROVIDER_UNSUPPORTED')
+    return sendOrangePiAgentChat({ userId, content: current.content, historyMessages: history })
   }
   const transport = await getChatStatus()
   if (mode === 'openclaw' && transport.activeTransport === 'openclaw' && transport.status === 'healthy') {
@@ -184,7 +190,7 @@ async function sendTurn(userId, content, file, requestedId) {
       ] }, data: { claim, status: 'processing' } })
       if (!acquired.count) throw createHttpError(409, '此消息仍在处理中，请稍后使用原请求重试', 'CHAT_REQUEST_PENDING')
     }
-    let imagePath
+    const savedImagePaths = []
     try {
       const history = (await prisma.messageCache.findMany({ where: { userId, role: { in: ['user', 'assistant'] } },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 24 })).reverse()
@@ -196,8 +202,27 @@ async function sendTurn(userId, content, file, requestedId) {
         current.imageUrl = `/uploads/chat/${name}`
         current.imageName = normalizeOriginalFileName(file.originalname) || name
         await mkdir(uploadDirectory(), { recursive: true })
-        imagePath = path.join(uploadDirectory(), name)
+        const imagePath = path.join(uploadDirectory(), name)
         await writeFile(imagePath, file.buffer)
+        savedImagePaths.push(imagePath)
+      }
+      const replyData = { userId, role: 'assistant', content: result.replyText }
+      if (result.replyImage?.buffer) {
+        const replyType = detectImageType(result.replyImage.buffer)
+        if (!replyType || replyType.mimeType !== result.replyImage.mimeType || result.replyImage.buffer.length > MAX_IMAGE_BYTES) {
+          throw createHttpError(502, '香橙派 Agent 返回的截图格式无效', 'ORANGEPI_IMAGE_INVALID')
+        }
+        const name = `${Date.now()}-${randomUUID()}${replyType.extension}`
+        await mkdir(uploadDirectory(), { recursive: true })
+        const imagePath = path.join(uploadDirectory(), name)
+        await writeFile(imagePath, result.replyImage.buffer)
+        savedImagePaths.push(imagePath)
+        Object.assign(replyData, {
+          type: 'image',
+          imageUrl: `/uploads/chat/${name}`,
+          imageName: normalizeOriginalFileName(result.replyImage.imageName) || name,
+          mimeType: replyType.mimeType,
+        })
       }
       return await prisma.$transaction(async (tx) => {
         // A stale worker must not commit after another process reclaimed its request.
@@ -206,14 +231,14 @@ async function sendTurn(userId, content, file, requestedId) {
         if (!owned.count) throw createHttpError(409, '请求已由其他处理器接管，请重试获取结果', 'CHAT_REQUEST_PENDING')
         const now = new Date(Math.max(Date.now(), new Date(history.at(-1)?.createdAt || 0).getTime() + 1))
         const userMessage = await tx.messageCache.create({ data: { userId, ...current, createdAt: now } })
-        const replyMessage = await tx.messageCache.create({ data: { userId, role: 'assistant',
-          content: result.replyText, createdAt: new Date(now.getTime() + 1) } })
+        const replyMessage = await tx.messageCache.create({ data: {
+          ...replyData, createdAt: new Date(now.getTime() + 1) } })
         const response = { userMessage: serializeMessage(userMessage), replyMessage: serializeMessage(replyMessage), transport: result.transport }
         await tx.chatRequest.update({ where: { id: record.id }, data: { response: JSON.stringify(response) } })
         return response
       })
     } catch (error) {
-      if (imagePath) await unlink(imagePath).catch(() => {})
+      await Promise.all(savedImagePaths.map(imagePath => unlink(imagePath).catch(() => {})))
       await prisma.chatRequest.updateMany({ where: { id: record.id, claim, status: 'processing' },
         data: { status: 'failed' } })
       if (error.status) throw error
